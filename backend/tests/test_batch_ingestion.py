@@ -208,6 +208,24 @@ def test_parse_paths_reports_explicit_unsupported_file(tmp_path: Path) -> None:
     assert batch.errors[0].code == "UNSUPPORTED_FORMAT"
 
 
+def test_explicit_unsupported_file_wins_over_size_validation(
+    tmp_path: Path,
+) -> None:
+    unsupported = tmp_path / "large.bin"
+    unsupported.write_bytes(b"12345")
+
+    batch = make_service(
+        RecordingTextParser(),
+        max_file_size_bytes=4,
+    ).parse_paths(
+        [unsupported],
+        authorized_roots=[tmp_path],
+    )
+
+    assert batch.failed == 1
+    assert batch.errors[0].code == "UNSUPPORTED_FORMAT"
+
+
 def test_parse_paths_reports_missing_input_path(tmp_path: Path) -> None:
     missing = tmp_path / "missing.txt"
 

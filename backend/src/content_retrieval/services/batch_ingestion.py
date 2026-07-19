@@ -185,6 +185,7 @@ class BatchIngestionService:
                 continue
 
             try:
+                parser = self._registry.resolve(path)
                 size_bytes = path.stat().st_size
                 if size_bytes > self._max_file_size_bytes:
                     raise FileTooLargeError(
@@ -207,7 +208,6 @@ class BatchIngestionService:
                     continue
 
                 seen_content[file_id] = path
-                parser = self._registry.resolve(path)
                 result = parser.parse(path)
             except ParseError as error:
                 batch.errors.append(error)
