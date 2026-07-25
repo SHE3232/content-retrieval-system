@@ -135,6 +135,22 @@ def test_manifest_hashes_directories_deterministically(tmp_path: Path) -> None:
         entry.verify()
 
 
+def test_directory_hash_ignores_download_cache_metadata(tmp_path: Path) -> None:
+    from content_retrieval.embeddings.manifest import sha256_path
+
+    model_dir = tmp_path / "model"
+    cache_dir = model_dir / ".cache" / "huggingface"
+    cache_dir.mkdir(parents=True)
+    (model_dir / "weights.bin").write_bytes(b"weights")
+    (cache_dir / "download.json").write_text("first", encoding="utf-8")
+
+    first = sha256_path(model_dir)
+    (cache_dir / "download.json").write_text("changed", encoding="utf-8")
+    second = sha256_path(model_dir)
+
+    assert first == second
+
+
 def test_manifest_rejects_duplicate_ids_and_unknown_models(tmp_path: Path) -> None:
     from content_retrieval.embeddings.manifest import (
         ModelManifest,

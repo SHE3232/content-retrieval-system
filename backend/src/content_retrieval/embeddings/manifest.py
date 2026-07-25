@@ -35,7 +35,12 @@ def sha256_path(path: Path) -> str:
 
     digest = hashlib.sha256()
     files = sorted(
-        (candidate for candidate in resolved.rglob("*") if candidate.is_file()),
+        (
+            candidate
+            for candidate in resolved.rglob("*")
+            if candidate.is_file()
+            and ".cache" not in candidate.relative_to(resolved).parts
+        ),
         key=lambda candidate: candidate.relative_to(resolved).as_posix(),
     )
     if not files:
