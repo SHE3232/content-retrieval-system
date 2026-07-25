@@ -30,6 +30,12 @@ TEXT_MODEL_FILES = [
     "tokenizer_config.json",
     "unigram.json",
 ]
+MOBILECLIP_FILES = [
+    "LICENSE",
+    "README.md",
+    "config.json",
+    "mobileclip_s0.pt",
+]
 
 
 def upsert_manifest(path: Path, entry: dict[str, object]) -> None:
@@ -99,7 +105,6 @@ def download_text_model(
         repo_id=repo_id,
         revision=revision,
         local_dir=str(target),
-        local_dir_use_symlinks=False,
         allow_patterns=TEXT_MODEL_FILES,
     )
 
@@ -128,6 +133,63 @@ def download_text_model(
         "sha256": sha256_path(target),
         "license_name": license_name,
         "runtime": "sentence-transformers",
+        "source_repo": repo_id,
+        "revision": revision,
+    }
+    upsert_manifest(manifest_path, entry)
+    return entry
+
+
+def download_mobileclip_model(
+    *,
+    repo_id: str,
+    revision: str,
+    expected_sha256: str,
+    model_root: Path,
+    manifest_path: Path,
+    snapshot_downloader: Callable[..., str] | None = None,
+) -> dict[str, object]:
+    if not revision.strip():
+        raise ValueError("revision must be pinned")
+    if len(expected_sha256) != 64:
+        raise ValueError("expected_sha256 must be a SHA-256 digest")
+
+    root = model_root.resolve()
+    target = (root / "mobileclip").resolve()
+    if not target.is_relative_to(root):
+        raise ValueError("MobileCLIP target resolves outside model_root")
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if snapshot_downloader is None:
+        from huggingface_hub import snapshot_download
+
+        snapshot_downloader = snapshot_download
+    snapshot_downloader(
+        repo_id=repo_id,
+        revision=revision,
+        local_dir=str(target),
+        allow_patterns=MOBILECLIP_FILES,
+    )
+
+    weights_path = target / "mobileclip_s0.pt"
+    if not weights_path.is_file():
+        raise FileNotFoundError(f"MobileCLIP weights are missing: {weights_path}")
+    actual_sha256 = sha256_path(weights_path)
+    if actual_sha256 != expected_sha256:
+        raise ValueError(
+            "MobileCLIP weight SHA-256 mismatch: "
+            f"expected {expected_sha256}, got {actual_sha256}"
+        )
+
+    entry: dict[str, object] = {
+        "model_id": "mobileclip-s0-v1",
+        "space_id": "mobileclip-image-text-v1",
+        "modality": "image_text",
+        "dimensions": 512,
+        "relative_path": weights_path.relative_to(root).as_posix(),
+        "sha256": actual_sha256,
+        "license_name": "Apple Machine Learning Research Model License",
+        "runtime": "pytorch-mobileclip",
         "source_repo": repo_id,
         "revision": revision,
     }

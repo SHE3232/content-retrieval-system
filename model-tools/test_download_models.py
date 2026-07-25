@@ -44,7 +44,6 @@ def test_download_text_model_saves_a_pinned_snapshot_and_updates_manifest(
         "local_dir": str(
             (tmp_path / "models" / "text" / "text-multilingual-v1").resolve()
         ),
-        "local_dir_use_symlinks": False,
         "allow_patterns": [
             "1_Pooling/config.json",
             "README.md",
@@ -101,3 +100,75 @@ def test_download_text_model_preserves_other_manifest_entries(
         "text-multilingual-v1",
     ]
     assert payload["models"][1]["dimensions"] == 384
+
+
+def test_download_mobileclip_verifies_weight_hash_and_updates_manifest(
+    tmp_path: Path,
+) -> None:
+    import hashlib
+
+    from download_models import download_mobileclip_model
+
+    weights = b"mobileclip-weights"
+    expected_hash = hashlib.sha256(weights).hexdigest()
+    calls: dict[str, object] = {}
+
+    def fake_snapshot_download(**kwargs: object) -> str:
+        calls.update(kwargs)
+        target = Path(str(kwargs["local_dir"]))
+        target.mkdir(parents=True)
+        (target / "mobileclip_s0.pt").write_bytes(weights)
+        (target / "LICENSE_MODELS").write_text(
+            "research license",
+            encoding="utf-8",
+        )
+        return str(target)
+
+    manifest_path = tmp_path / "model-manifest.json"
+    entry = download_mobileclip_model(
+        repo_id="apple/MobileCLIP-S0",
+        revision="pinned-revision",
+        expected_sha256=expected_hash,
+        model_root=tmp_path / "models",
+        manifest_path=manifest_path,
+        snapshot_downloader=fake_snapshot_download,
+    )
+
+    assert calls["revision"] == "pinned-revision"
+    assert calls["allow_patterns"] == [
+        "LICENSE",
+        "README.md",
+        "config.json",
+        "mobileclip_s0.pt",
+    ]
+    assert entry["model_id"] == "mobileclip-s0-v1"
+    assert entry["space_id"] == "mobileclip-image-text-v1"
+    assert entry["dimensions"] == 512
+    assert entry["sha256"] == expected_hash
+    assert entry["license_name"] == (
+        "Apple Machine Learning Research Model License"
+    )
+
+
+def test_download_mobileclip_rejects_an_unexpected_weight_hash(
+    tmp_path: Path,
+) -> None:
+    import pytest
+
+    from download_models import download_mobileclip_model
+
+    def fake_snapshot_download(**kwargs: object) -> str:
+        target = Path(str(kwargs["local_dir"]))
+        target.mkdir(parents=True)
+        (target / "mobileclip_s0.pt").write_bytes(b"tampered")
+        return str(target)
+
+    with pytest.raises(ValueError, match="SHA-256"):
+        download_mobileclip_model(
+            repo_id="apple/MobileCLIP-S0",
+            revision="pinned-revision",
+            expected_sha256="0" * 64,
+            model_root=tmp_path / "models",
+            manifest_path=tmp_path / "manifest.json",
+            snapshot_downloader=fake_snapshot_download,
+        )
