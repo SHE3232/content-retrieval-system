@@ -27,6 +27,14 @@ tools/tika/*.sha512
 third_party/mobileclip-src/
 third_party/*.zip
 
+# Locally converted model artifacts (reports remain versionable)
+output/week3/conversion/**/*.tflite
+output/week3/conversion/**/*.npy
+output/week3/conversion/*.tflite
+output/week3/conversion/*.npy
+output/week3/conversion/**/*.json
+output/week3/conversion/*.json
+
 # IDE and OS files
 .vscode/
 .idea/

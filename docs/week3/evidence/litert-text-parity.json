@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "model_id": "text-multilingual-v1",
+  "source_runtime": "transformers-pytorch",
+  "converted_runtime": "litert-torch-0.8.0",
+  "passed": true,
+  "sample": {
+    "batch_size": 1,
+    "sequence_length": 32,
+    "embedding_dimensions": 384
+  },
+  "metrics": {
+    "cosine_similarity": 0.9999999999995273,
+    "max_absolute_error": 1.4901161193847656e-07,
+    "mean_absolute_error": 3.9917874043264114e-08,
+    "element_count": 384
+  },
+  "thresholds": {
+    "min_cosine_similarity": 0.999,
+    "max_absolute_error": 0.0001
+  },
+  "artifact": {
+    "relative_path": "output/week3/conversion/text-multilingual-v1.tflite",
+    "size_bytes": 469826768,
+    "sha256": "4e2f60e73ea1406db2394eca70bb1ecb6109dba14e10b3d48e4863c0ba9a997c",
+    "included_in_public_package": false
+  }
+}

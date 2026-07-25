@@ -1,0 +1,28 @@
+[project]
+name = "content-retrieval-conversion-tools"
+version = "0.1.0"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "litert-torch==0.8.0",
+    "numpy>=2.0",
+    "open-clip-torch>=2.20",
+    "pillow>=11.3",
+    "timm>=0.9.5",
+    "torch>=2.8",
+    "torchvision>=0.23",
+    "transformers>=4.55,<5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
