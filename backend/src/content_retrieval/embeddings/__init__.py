@@ -7,6 +7,7 @@ from .mobileclip import (
     MobileClipEncoderBackend,
 )
 from .sentence_transformer import SentenceTransformerBackend
+from .service import MultimodalEmbeddingService, cosine_similarity
 from .text import TextEmbeddingEngine, TextEncoderBackend
 
 __all__ = [
@@ -16,7 +17,9 @@ __all__ = [
     "LocalMobileClipBackend",
     "MobileClipEmbeddingEngine",
     "MobileClipEncoderBackend",
+    "MultimodalEmbeddingService",
     "SentenceTransformerBackend",
     "TextEmbeddingEngine",
     "TextEncoderBackend",
+    "cosine_similarity",
 ]
