@@ -1,0 +1,34 @@
+# Python environments and caches
+.venv/
+**/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local databases and downloaded models
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+!models/model-manifest.example.json
+
+# External datasets are restored from the manifest, not committed
+datasets/raw/*
+!datasets/raw/.gitkeep
+datasets/processed/**/corpus.jsonl
+datasets/processed/**/queries.jsonl
+datasets/processed/**/qrels.tsv
+
+# Downloaded third-party runtimes
+tools/tika/*.jar
+tools/tika/*.sha512
+
+# Locally downloaded source archives
+third_party/mobileclip-src/
+third_party/*.zip
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

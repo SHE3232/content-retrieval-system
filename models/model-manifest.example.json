@@ -1,0 +1,25 @@
+{
+  "schema_version": "1",
+  "models": [
+    {
+      "model_id": "text-multilingual-v1",
+      "space_id": "text-semantic-v1",
+      "modality": "text",
+      "dimensions": 384,
+      "relative_path": "text/paraphrase-multilingual-MiniLM-L12-v2",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "license_name": "Apache-2.0",
+      "runtime": "sentence-transformers"
+    },
+    {
+      "model_id": "mobileclip-s0-v1",
+      "space_id": "mobileclip-image-text-v1",
+      "modality": "image_text",
+      "dimensions": 512,
+      "relative_path": "mobileclip/mobileclip_s0.pt",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "license_name": "Apple Machine Learning Research Model License",
+      "runtime": "pytorch-mobileclip"
+    }
+  ]
+}
