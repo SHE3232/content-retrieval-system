@@ -1,4 +1,8 @@
 from pathlib import Path
+import re
+
+
+_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
 class ParseError(Exception):
@@ -126,3 +130,50 @@ class InternalParseError(ParseError):
 
     def __init__(self, path: Path) -> None:
         super().__init__(path, f"Unexpected error while parsing {path.name}")
+
+
+class ProcessingError(Exception):
+    """Base class for controlled chunking and embedding failures."""
+
+    code = "PROCESSING_ERROR"
+    retryable = False
+    stage = "processing"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        file_id: str | None = None,
+        chunk_id: str | None = None,
+    ) -> None:
+        if file_id is not None and not _SHA256_PATTERN.fullmatch(file_id):
+            raise ValueError("file_id must be a hexadecimal SHA-256 digest")
+        if chunk_id is not None and not _SHA256_PATTERN.fullmatch(chunk_id):
+            raise ValueError("chunk_id must be a hexadecimal SHA-256 digest")
+        self.file_id = file_id
+        self.chunk_id = chunk_id
+        super().__init__(message)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "code": self.code,
+            "message": str(self),
+            "retryable": self.retryable,
+            "stage": self.stage,
+            "file_id": self.file_id,
+            "chunk_id": self.chunk_id,
+        }
+
+
+class ChunkingError(ProcessingError):
+    """A parsed document cannot be converted into source-located text chunks."""
+
+    code = "CHUNKING_ERROR"
+    stage = "chunking"
+
+
+class EmbeddingError(ProcessingError):
+    """A text chunk cannot be converted into an embedding vector."""
+
+    code = "EMBEDDING_ERROR"
+    stage = "embedding"
