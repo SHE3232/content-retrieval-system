@@ -1,0 +1,201 @@
+query_id,split,source_row,document_url,question,relevant_passages,candidate_count
+nq-0008da4a6cacce3f,validation,6168,https://en.wikipedia.org//w/index.php?title=Claire_Holt&amp;oldid=821287389,who played emma in h2o just add water,15,48
+nq-001f67bedf728dd6,validation,1600,https://en.wikipedia.org//w/index.php?title=Kick-off_(association_football)&amp;oldid=809482705,who kicks the ball first to start a football game,1,9
+nq-003f4f54cf0cdcf0,validation,656,https://en.wikipedia.org//w/index.php?title=Draining_and_development_of_the_Everglades&amp;oldid=827475511,what were the results of the development of florida's railroads,1,51
+nq-004c31f27df64ecd,validation,163,https://en.wikipedia.org//w/index.php?title=List_of_Max_Steel_(2013)_episodes&amp;oldid=805676362,will there be a max steel season 2,1,138
+nq-00583cb98b4c5867,validation,4118,https://en.wikipedia.org//w/index.php?title=Statue_of_Liberty&amp;oldid=821440375,where was the statue of liberty originally built,38;56,139
+nq-007214f23549e1a2,validation,5277,https://en.wikipedia.org//w/index.php?title=List_of_The_Next_Step_episodes&amp;oldid=822289380,when does season 6 of the next step start,3,343
+nq-007d6437a90617cf,validation,1445,https://en.wikipedia.org//w/index.php?title=List_of_The_Next_Step_episodes&amp;oldid=837737769,when is the next step season 3 coming out,4;150,337
+nq-0081ee47832010f0,validation,3578,https://en.wikipedia.org//w/index.php?title=Life_of_Pi&amp;oldid=822164300,what is the tigers name in life of pi,13,48
+nq-008ba4327c446eb2,validation,5250,https://en.wikipedia.org//w/index.php?title=European_colonization_of_the_Americas&amp;oldid=822173061,who were the first non native settlers in the us,12,151
+nq-0099fc99935793bd,validation,3321,https://en.wikipedia.org//w/index.php?title=Category:Hotel_types&amp;oldid=766350044,what are three different types of hotel properties,4,24
+nq-009db7f703db7a73,validation,6731,https://en.wikipedia.org//w/index.php?title=Ride-along&amp;oldid=766107308,can i do a ride along with a police officer,1,17
+nq-00aa9bc712048d22,validation,4692,https://en.wikipedia.org//w/index.php?title=Spanish_conquest_of_the_Inca_Empire&amp;oldid=815578696,who led the conquest of the incas in south america,143,226
+nq-00b1ff738376cc28,validation,7280,https://en.wikipedia.org//w/index.php?title=International_rankings_of_India&amp;oldid=837368060,what is the rank of india in economic growth,52,249
+nq-00b7a95f2e75bfb7,validation,2669,https://en.wikipedia.org//w/index.php?title=United_States_customary_units&amp;oldid=838195590,what kind of metric system does the us use,1,162
+nq-00c7afe32c82fd78,validation,1885,https://en.wikipedia.org//w/index.php?title=Superpower&amp;oldid=819474002,what made the united states and the soviet union emerge from the war as superpowers,7,36
+nq-010b27ed4338da25,validation,130,https://en.wikipedia.org//w/index.php?title=Conscription_in_the_United_States&amp;oldid=837083052,when was the last time the military drafted,7;61,104
+nq-010bd1a732a13fb4,validation,2651,https://en.wikipedia.org//w/index.php?title=Coming_to_America&amp;oldid=837573310,who played the jewish man in coming to america,31;32,90
+nq-010d90acb0c2789e,validation,1295,https://en.wikipedia.org//w/index.php?title=List_of_polygons&amp;oldid=832651067,what is the name of the shape with 100 sides,104,226
+nq-01194f309e76863e,validation,5657,https://en.wikipedia.org//w/index.php?title=Democratic_National_Convention&amp;oldid=803533535,who selects the delegates that attend the national conventions,21,23
+nq-0131addd76047ed5,validation,2065,https://en.wikipedia.org//w/index.php?title=Moscow_Kremlin&amp;oldid=838359034,what was the original purpose of the kremlin,19,49
+nq-013414003ac446ce,validation,2804,https://en.wikipedia.org//w/index.php?title=List_of_circuses_and_circus_owners&amp;oldid=797037096,how many circuses are there in the uk,1,149
+nq-014a72cb45f44fc2,validation,6444,https://en.wikipedia.org//w/index.php?title=Lotta_Love&amp;oldid=816045647,who wrote it's gonna take a lot of love,32,64
+nq-01646d97be49fe4f,validation,1477,"https://en.wikipedia.org//w/index.php?title=Solar_eclipse_of_August_21,_2017&amp;oldid=807052172",when does the eclipse end in the us,22,265
+nq-0171c1ae0d1be86b,validation,1483,https://en.wikipedia.org//w/index.php?title=Printing_press&amp;oldid=832353244,who developed the first printing press in 1430s,34,81
+nq-01723e66e268b37a,validation,7597,https://en.wikipedia.org//w/index.php?title=Graveyard_Shift_(SpongeBob_SquarePants)&amp;oldid=827281552,which episode of spongebob is the hash slinging slasher,17;19,25
+nq-017359dfb5e42f80,validation,2038,https://en.wikipedia.org//w/index.php?title=Gotham_by_Gaslight&amp;oldid=833015857,whos jack the ripper in gotham by gaslight,29,57
+nq-01b9f9734750c710,validation,3688,https://en.wikipedia.org//w/index.php?title=Letter_and_spirit_of_the_law&amp;oldid=795439256,the letter of the law versus the spirit of the law,2,16
+nq-01c0db3d0622608b,validation,2945,https://en.wikipedia.org//w/index.php?title=The_Adventures_of_Rocky_and_Bullwinkle_and_Friends_(TV_series)&amp;oldid=807011426,who owns the rights to rocky and bullwinkle,64,172
+nq-01c938e394dae0aa,validation,6237,https://en.wikipedia.org//w/index.php?title=National_Football_League_Draft&amp;oldid=838427133,who picks the players in the nfl draft,46;56;58,133
+nq-01daec0309ea071f,validation,7030,https://en.wikipedia.org//w/index.php?title=DNA_replication&amp;oldid=838242893,where does the synthesis of new dna from existing dna occurs,2,61
+nq-01f8d7476f205ab0,validation,1540,https://en.wikipedia.org//w/index.php?title=Capture_of_USS_Chesapeake&amp;oldid=817848169,which us ship was captured off the coast of massachusetts by the british,1;57,102
+nq-02016a4a5cb5f427,validation,2897,https://en.wikipedia.org//w/index.php?title=Dynastic_cycle&amp;oldid=820421764,in the dynastic cycle what is the right to rule called,3;22,35
+nq-020883dc7a53709d,validation,5590,https://en.wikipedia.org//w/index.php?title=Dave_Madden&amp;oldid=817616686,who played mr. kincaid on the partridge family,15,67
+nq-022386198e90c2fc,validation,5725,https://en.wikipedia.org//w/index.php?title=Null_hypothesis&amp;oldid=820284450,when do you retain or reject the null hypothesis,1,76
+nq-023693f684941a3a,validation,4585,https://en.wikipedia.org//w/index.php?title=Darlene_Cates&amp;oldid=836413884,who played the mom on what's eating gilbert grape,7,23
+nq-0246b2ad3d73524a,validation,3498,https://en.wikipedia.org//w/index.php?title=The_Nightmare_Before_Christmas&amp;oldid=837646752,was nightmare before christmas originally a disney movie,27,75
+nq-025b1c784408db3a,validation,4335,https://en.wikipedia.org//w/index.php?title=Tarun_Ram_Phukan&amp;oldid=834001063,where was the first session of the assam association held in1905,5,7
+nq-02662425dd3330b0,validation,4923,https://en.wikipedia.org//w/index.php?title=Frontal_lobe&amp;oldid=818652722,what part of brain is responsible for complex thinking,28,67
+nq-028a9f57c5de8a34,validation,1407,https://en.wikipedia.org//w/index.php?title=Scramble_for_Africa&amp;oldid=834233397,by 1914 which of the following african countries were still independent,80,254
+nq-02993ce10c344ec4,validation,5140,https://en.wikipedia.org//w/index.php?title=Rennes&amp;oldid=836458353,what is the most famous building in rennes,139,380
+nq-02ad07419409aed0,validation,2664,https://en.wikipedia.org//w/index.php?title=Chinese_Buddhism&amp;oldid=819320738,an influential religion to enter china along the silk route during the han dynasty was,26;27;40,149
+nq-02b22ff050260217,validation,3529,https://en.wikipedia.org//w/index.php?title=List_of_United_States_federal_legislation&amp;oldid=817694035,a legislative act passed by congress is an example of,3,18
+nq-02b41f323932b284,validation,7656,https://en.wikipedia.org//w/index.php?title=June_Gable&amp;oldid=818174225,who played joey's agent estelle on friends,5,10
+nq-02b535b4ff74d3bc,validation,79,https://en.wikipedia.org//w/index.php?title=Bull&amp;oldid=822131675,what are bulls used for on a farm,12;20,24
+nq-02c6817a13363252,validation,3732,https://en.wikipedia.org//w/index.php?title=History_of_sustainability&amp;oldid=836051840,when did the term sustainability start to be used,13,17
+nq-02c7c146e8640de9,validation,4656,https://en.wikipedia.org//w/index.php?title=Long_John_Silver&amp;oldid=838030650,how did long john silver lose his leg in treasure island,18,96
+nq-02d10ed9f3d8421c,validation,2822,https://en.wikipedia.org//w/index.php?title=Flag_of_Hungary&amp;oldid=835898308,who's flag is red white and green,23;24,134
+nq-02dbbe3f6c2ca1f0,validation,654,https://en.wikipedia.org//w/index.php?title=The_Island_of_Doctor_Moreau&amp;oldid=819300658,how does montgomery died in the island of dr moreau,19,99
+nq-02f7a880e0181ebb,validation,5283,https://en.wikipedia.org//w/index.php?title=Can%27t_Change_Me&amp;oldid=831165554,chris cornell she's going to change the world,22,39
+nq-0308714e7ba9b922,validation,3196,https://en.wikipedia.org//w/index.php?title=Acute_hemolytic_transfusion_reaction&amp;oldid=821817747,what happens to the rbc in acute hemolytic reaction,3,31
+nq-030d51fb04c32818,validation,1052,https://en.wikipedia.org//w/index.php?title=Fifty_Shades_of_Grey_(film)&amp;oldid=837933868,who made the movie fifty shades of grey,32;33,134
+nq-031863897f4d537b,validation,2854,https://en.wikipedia.org//w/index.php?title=Panama_Canal&amp;oldid=822293104,who was president when the panama canal was built,30;36,363
+nq-0319ad7b00446597,validation,5905,https://en.wikipedia.org//w/index.php?title=Michael_Jordan&amp;oldid=821905305,when did michael jordan get his last ring,21,249
+nq-03331cd52dde1e83,validation,1436,https://en.wikipedia.org//w/index.php?title=World_War_II&amp;oldid=819520599,who started ww2 and how did it start,120,264
+nq-0347fcc93e37c59f,validation,2121,https://en.wikipedia.org//w/index.php?title=Ol%27_Dirty_Bastard&amp;oldid=838411948,the rza the gza the ol dirty bza,16,83
+nq-03626fbe73f626b1,validation,1993,https://en.wikipedia.org//w/index.php?title=Autopsy&amp;oldid=835155415,which of these terms means using scientific procedures to identify a deceased person,21,67
+nq-03683f152bdcbf50,validation,7476,https://en.wikipedia.org//w/index.php?title=Bruno_Tonioli&amp;oldid=817586766,where is bruno from dancing with the stars,24,26
+nq-038d00b234580782,validation,6449,https://en.wikipedia.org//w/index.php?title=Adobe_Flash&amp;oldid=837034719,what is the primary purpose for adding flash elements to a website,19;24,194
+nq-03bb174e1916b789,validation,1090,https://en.wikipedia.org//w/index.php?title=Remember_the_Titans&amp;oldid=838142936,where did remember the titans camp take place,26,124
+nq-03c846109b48291b,validation,177,https://en.wikipedia.org//w/index.php?title=Gotham_(season_4)&amp;oldid=838505278,when does the new gotham season come out,18;69,157
+nq-03f3ad0f2ddbfb01,validation,2583,https://en.wikipedia.org//w/index.php?title=United_States_Postal_Service&amp;oldid=807326580,the president of the united states has the power to lead the us postal service,18,347
+nq-03f8e2ff19ed153e,validation,159,https://en.wikipedia.org//w/index.php?title=Chinese_New_Year&amp;oldid=837556606,when is chinese new year and what year is it,35,300
+nq-0407a8db62c55e62,validation,3094,https://en.wikipedia.org//w/index.php?title=List_of_urban_parks_by_size&amp;oldid=830235582,what's the largest city park in the united states,3,165
+nq-041bdefabd292f95,validation,94,https://en.wikipedia.org//w/index.php?title=Jenny_Humphrey&amp;oldid=834153008,when does jenny humphrey come back to gossip girl,33,37
+nq-043be6ecf1957b01,validation,1079,"https://en.wikipedia.org//w/index.php?title=Chinese_Immigration_Act,_1923&amp;oldid=810563134",when was the immigration act passed in canada,1,9
+nq-043dc3a234608a15,validation,1554,https://en.wikipedia.org//w/index.php?title=List_of_career_achievements_by_Tiger_Woods&amp;oldid=818091857,how many wins does tiger woods have on the pga tour,3;4;191,604
+nq-043f7d19390b5a36,validation,5791,https://en.wikipedia.org//w/index.php?title=List_of_cities_and_towns_in_Georgia_(country)&amp;oldid=819388271,capital of georgia the former soviet republic 7 letters,2;59,79
+nq-0442e3e99d11a9e9,validation,6299,https://en.wikipedia.org//w/index.php?title=Full-time&amp;oldid=804397538,hours of work to be considered full time,2;3,28
+nq-044bac47bb2f0382,validation,4164,https://en.wikipedia.org//w/index.php?title=California_Gold_Rush&amp;oldid=821899431,how did the california gold rush affect the growth of california,7;68,90
+nq-044f081977799a20,validation,2106,https://en.wikipedia.org//w/index.php?title=Different_Drum&amp;oldid=812552104,who sang you and i travel to the beat of a different drum,19,44
+nq-048c64fecf376be9,validation,3764,https://en.wikipedia.org//w/index.php?title=List_of_English_football_champions&amp;oldid=806932993,when was the last time arsenal win premier league,106,204
+nq-049912ac339d0f58,validation,430,https://en.wikipedia.org//w/index.php?title=The_Boy_in_the_Striped_Pyjamas&amp;oldid=838288447,when does the boy in the striped pajamas take place,14,19
+nq-049fe285390e33cd,validation,224,https://en.wikipedia.org//w/index.php?title=The_Chain&amp;oldid=819324349,when was the chain first used for f1,86,89
+nq-04b180b2f4b9c9c2,validation,2559,https://en.wikipedia.org//w/index.php?title=John_Obi_Mikel&amp;oldid=837018756,how many goals did mikel score for chelsea,71,135
+nq-04b9d120d2483796,validation,4805,https://en.wikipedia.org//w/index.php?title=Republic_Day_(India)&amp;oldid=819482131,who was the chief guest of india on independence day 2017,19;28,111
+nq-04bb17d1eed0e858,validation,6098,https://en.wikipedia.org//w/index.php?title=New_Deal&amp;oldid=806858713,how did the new deal create a new meaning for liberalism,58;167,339
+nq-04bbc450343b66bc,validation,828,https://en.wikipedia.org//w/index.php?title=YouTube_Play_Button&amp;oldid=838480654,when do you get a gold play button,4;6,9
+nq-04c3172f5b9e1f28,validation,1054,https://en.wikipedia.org//w/index.php?title=Supercars_Championship&amp;oldid=820741327,what engine is in a holden v8 supercar,50,164
+nq-04c3e683c8cb8ce0,validation,5098,https://en.wikipedia.org//w/index.php?title=Foreign_policy_of_the_United_States&amp;oldid=820878034,what role does the president play in foreign affairs,73,287
+nq-04c5f0f92acffdbe,validation,455,https://en.wikipedia.org//w/index.php?title=Cell_nucleus&amp;oldid=811624751,the primary function of the nucleus is to,11,81
+nq-04c858bc274b7e00,validation,5745,https://en.wikipedia.org//w/index.php?title=List_of_European_cities_by_population_within_city_limits&amp;oldid=837557761,5 cities with the highest population in europe,7,46
+nq-04df3e51b37500a3,validation,1861,https://en.wikipedia.org//w/index.php?title=Royal_Rumble&amp;oldid=837792387,who lasted the longest in the royal rumble,153,324
+nq-04e57aa4ec7e4079,validation,7426,https://en.wikipedia.org//w/index.php?title=Wreck-It_Ralph&amp;oldid=821055938,who plays the girl in wreck it ralph,31;33;44,156
+nq-050c795d0d692116,validation,3314,https://en.wikipedia.org//w/index.php?title=Cost_of_raising_a_child&amp;oldid=788344537,how much does.it cost to raise a child,8,69
+nq-0512f6d4683da610,validation,210,https://en.wikipedia.org//w/index.php?title=Yam_(vegetable)&amp;oldid=819078404,where is the food stored in a yam plant,11;13,173
+nq-051a291b48c43e44,validation,6286,https://en.wikipedia.org//w/index.php?title=Adventure_Time_(season_10)&amp;oldid=838238395,when does the last episode of adventure time air,23,51
+nq-051f046ef122d415,validation,6932,https://en.wikipedia.org//w/index.php?title=Hardball_(film)&amp;oldid=792614892,who played g baby in the movie hardball,21;26;31,43
+nq-0555ba15380460e0,validation,4929,https://en.wikipedia.org//w/index.php?title=Rain_shadow&amp;oldid=833601288,what effect do the atlas mountains have on rainfall,50,60
+nq-0556264fdfe5aa6e,validation,4972,https://en.wikipedia.org//w/index.php?title=List_of_Lost_Girl_episodes&amp;oldid=817100894,how many seasons are there for lost girl,2;5,129
+nq-05815f90b9bb2e1f,validation,6396,https://en.wikipedia.org//w/index.php?title=Ark_of_the_Covenant&amp;oldid=837788356,where was the ark of the covenant built,1;2,52
+nq-05853c546c554f1a,validation,2307,https://en.wikipedia.org//w/index.php?title=English_Channel&amp;oldid=819095416,where does the english channel begin and end,20,231
+nq-0586d2c83ce6e5e4,validation,7461,https://en.wikipedia.org//w/index.php?title=Kickstarter&amp;oldid=837759384,what is the purpose of a website kick starter,10;15,73
+nq-0588a1b8fc903390,validation,5155,https://en.wikipedia.org//w/index.php?title=The_Perks_of_Being_a_Wallflower&amp;oldid=816631066,who was charlie writing to in perks of being a wallflower movie,16,36
+nq-058a9bb746acfc79,validation,1545,https://en.wikipedia.org//w/index.php?title=The_Flash_(season_4)&amp;oldid=838436882,when is season 4 of flash coming out,16,165
+nq-058f4fad0144328f,validation,7417,https://en.wikipedia.org//w/index.php?title=Conscription_in_the_United_Kingdom&amp;oldid=834481476,when was national service abolished in the uk,9;28,55
+nq-0599c77306340ba1,validation,2539,https://en.wikipedia.org//w/index.php?title=NCIS:_Los_Angeles_(season_9)&amp;oldid=838524017,when do new episodes of ncis los angeles return,15;35,102
+nq-059c806f836793e5,validation,2371,https://en.wikipedia.org//w/index.php?title=The_Bachelor_(season_17)&amp;oldid=838515157,contestants on sean's season of the bachelor,15,156
+nq-05a0af8fe464d06e,validation,963,https://en.wikipedia.org//w/index.php?title=List_of_earthquakes_in_Iran&amp;oldid=817516263,when was the last time iran had an earthquake,2,61
+nq-05a65b2d4441c2b5,validation,3635,https://en.wikipedia.org//w/index.php?title=The_Green_Mile_(novel)&amp;oldid=817207928,who was toot toot in the green mile,33;44,54
+nq-05c3bb3c0224b3bd,validation,905,https://en.wikipedia.org//w/index.php?title=Acetate&amp;oldid=809653414,what is the name for the ch3coo- ion,27,51
+nq-05cf99cb1577e572,validation,6013,https://en.wikipedia.org//w/index.php?title=Guardians_of_the_Galaxy_Vol._2&amp;oldid=838513411,when did gaurdians of the galaxy 2 come out,25;27,111
+nq-05d499261cc74a53,validation,3107,https://en.wikipedia.org//w/index.php?title=Cabinet_of_Namibia&amp;oldid=836903195,who is the minister of youth in namibia,49;123,258
+nq-05dc6b38741e85c1,validation,1777,https://en.wikipedia.org//w/index.php?title=Warriors_(novel_series)&amp;oldid=819060410,when does the next warrior book come out,77,192
+nq-05e4104a6fe5b397,validation,807,https://en.wikipedia.org//w/index.php?title=Kate_Walsh_(actress)&amp;oldid=805135357,who plays addison shepherd on grey's anatomy,8;15,103
+nq-060e087505235532,validation,7617,https://en.wikipedia.org//w/index.php?title=Digestive_enzyme&amp;oldid=837603625,what is the name of the protease which is released in the stomach,27,75
+nq-062f67448edf6ab1,validation,1984,https://en.wikipedia.org//w/index.php?title=U.S._history_of_alcohol_minimum_purchase_age_by_state&amp;oldid=805324534,when did the drinking age turn from 18 to 21,2,65
+nq-063655ec80b0714c,validation,2726,https://en.wikipedia.org//w/index.php?title=Who%27s_Gonna_Fill_Their_Shoes&amp;oldid=773123440,george jones who's gonna fill their shoes meaning,14,43
+nq-0672ae0e49bd1409,validation,182,https://en.wikipedia.org//w/index.php?title=The_Price_Is_Right_(1956_U.S._game_show)&amp;oldid=837368380,what year did the price is right first air,20,88
+nq-06791ee5e091c058,validation,1846,https://en.wikipedia.org//w/index.php?title=Outline_of_medicine&amp;oldid=838232561,branches of medicine based on nature of treatment,4,257
+nq-067e6224b4b12e45,validation,5145,https://en.wikipedia.org//w/index.php?title=Percy_Jackson_%26_the_Olympians:_The_Lightning_Thief&amp;oldid=837732728,where was percy jackson and the olympians filmed,59,116
+nq-06857d750fa0cb96,validation,7507,https://en.wikipedia.org//w/index.php?title=Rob_Dyrdek%27s_Fantasy_Factory&amp;oldid=800046128,when did rob dyrdek's fantasy factory end,33,55
+nq-06965e12819a5c28,validation,7598,https://en.wikipedia.org//w/index.php?title=The_High_Chaparral&amp;oldid=835483695,where was the tv show high chaparral filmed,36,47
+nq-069c344875132e8f,validation,5535,https://en.wikipedia.org//w/index.php?title=List_of_One_Piece_episodes_(season_15)&amp;oldid=815961212,what episode does luffy get to fishman island,14,167
+nq-069f022ba2b00f90,validation,2046,https://en.wikipedia.org//w/index.php?title=Pro_Football_Hall_of_Fame&amp;oldid=835417983,who was selected for the 2018 football hall of fame,10;59,60
+nq-06a4014060fe41b6,validation,862,https://en.wikipedia.org//w/index.php?title=List_of_countries_and_dependencies_by_population&amp;oldid=807075469,what is the rank of pakistan in population,7,249
+nq-06a45622e3432093,validation,3432,https://en.wikipedia.org//w/index.php?title=My_Next_Guest_Needs_No_Introduction_with_David_Letterman&amp;oldid=838074810,when will the next episode of my next guest needs no introduction,33,46
+nq-06acf6ce927244ed,validation,1951,https://en.wikipedia.org//w/index.php?title=February_29&amp;oldid=837730946,when do you celebrate birthday if born on feb 29,24,263
+nq-06dc975576587054,validation,3987,https://en.wikipedia.org//w/index.php?title=The_Goonies&amp;oldid=804261975,where was the last scene of goonies filmed,52,68
+nq-06e47fc129f1ffb8,validation,6401,https://en.wikipedia.org//w/index.php?title=2017_NFL_season&amp;oldid=822296238,when is the end of the football season,15,516
+nq-06f31721eb1d4720,validation,6375,https://en.wikipedia.org//w/index.php?title=Castleford&amp;oldid=820657800,a town in west yorkshire on the river aire home to a rugby league team,32,72
+nq-06fa832c726707ee,validation,6135,https://en.wikipedia.org//w/index.php?title=Suburbanization&amp;oldid=816389049,suburbanization of more developed countries is mostly due to,7,24
+nq-07036dedc35a6084,validation,6994,https://en.wikipedia.org//w/index.php?title=The_Lion_King_II:_Simba%27s_Pride&amp;oldid=806927406,who voiced simba in the lion king 2,34;35,74
+nq-07190a5617114363,validation,3719,https://en.wikipedia.org//w/index.php?title=Von&amp;oldid=810651096,what is the meaning of the name von,2,23
+nq-072330e512771f65,validation,7695,https://en.wikipedia.org//w/index.php?title=Get_Outta_Dodge&amp;oldid=821149508,where does the saying get out of dodge come from,12,24
+nq-072aa717a7cabb0b,validation,3780,https://en.wikipedia.org//w/index.php?title=Volcanology_of_Iceland&amp;oldid=809293829,what type of plate boundary is associated with iceland and its volcanic eruptions,3,12
+nq-0733fdb24db4e00f,validation,1213,https://en.wikipedia.org//w/index.php?title=List_of_islands_by_area&amp;oldid=835675898,is australia the largest island in the world,1;2,343
+nq-073519851553c19b,validation,352,https://en.wikipedia.org//w/index.php?title=Felix_Baumgartner&amp;oldid=838185880,who is the guy that jumped from space,6,30
+nq-0737d77e4d736681,validation,5958,https://en.wikipedia.org//w/index.php?title=Buffy_the_Vampire_Slayer_(film)&amp;oldid=838542151,who played buffy the vampire slayer in the movie,22;29,80
+nq-073fe008a8eea4d5,validation,3337,https://en.wikipedia.org//w/index.php?title=World_population&amp;oldid=838237335,it took 130 years for the human population to double from 1 billion to 2 billion,224,244
+nq-073ff0e8c797b62a,validation,1482,https://en.wikipedia.org//w/index.php?title=Varsity_Blues_(film)&amp;oldid=834217987,when did the movie varsity blues come out,23,95
+nq-07431a51b5be2e1e,validation,1035,"https://en.wikipedia.org//w/index.php?title=Lake_Placid,_New_York&amp;oldid=828672540",how many times has lake placid hosted the winter olympics,36,133
+nq-0751bce2997e99da,validation,7274,https://en.wikipedia.org//w/index.php?title=Los_Angeles_Stadium_at_Hollywood_Park&amp;oldid=838306529,los angeles stadium at hollywood park opening date,19,50
+nq-075d2884c20b8bc7,validation,1248,https://en.wikipedia.org//w/index.php?title=I%27m_a_Celebrity...Get_Me_Out_of_Here!_(UK_TV_series)&amp;oldid=816633278,where is im a celebrity get me out of here 2017 filmed,26;38,471
+nq-07667bedc831565d,validation,5539,https://en.wikipedia.org//w/index.php?title=Baby_(Justin_Bieber_song)&amp;oldid=836966856,who sings the rap in baby by justin bieber,41,128
+nq-076a7fde9ecc09a8,validation,3402,https://en.wikipedia.org//w/index.php?title=Justice_of_the_peace&amp;oldid=837060636,what is the job of justice of the peace,2,170
+nq-076df6fc3b8cc6be,validation,4347,https://en.wikipedia.org//w/index.php?title=Accounts_receivable&amp;oldid=815166986,what is the source of information for account receivables,42,67
+nq-078b85717ea47015,validation,4974,https://en.wikipedia.org//w/index.php?title=Demography_of_the_United_States&amp;oldid=821901614,what percentage of the us population is over 50,548,610
+nq-0792c7c9afd2417e,validation,483,https://en.wikipedia.org//w/index.php?title=Wisden_Leading_Cricketer_in_the_World&amp;oldid=835868007,has been honoured with the wisden leading cricketer in the world award for 2016,5,154
+nq-0794e30c43761056,validation,5395,https://en.wikipedia.org//w/index.php?title=Intermountain_West&amp;oldid=810366889,where is the intermountain region located on a map,2,23
+nq-07a613fe7409ea58,validation,7670,"https://en.wikipedia.org//w/index.php?title=Monsters,_Inc.&amp;oldid=806239845",who plays the voice of sulley in monsters inc,29;30,139
+nq-07b04831a29027d9,validation,922,https://en.wikipedia.org//w/index.php?title=Milling_(machining)&amp;oldid=836914172,tools made from high-speed tool steel are generally used for what type of machining operations,4;10,109
+nq-07b20f62e8192d8e,validation,468,https://en.wikipedia.org//w/index.php?title=Patent&amp;oldid=835934217,patents to produce and sell inventions are conveyed by the federal government for a period​ of,76;112,162
+nq-07b4f27eda6787e2,validation,3264,https://en.wikipedia.org//w/index.php?title=Jeep&amp;oldid=837725447,what type of car is a jeep considered,17;18;20,359
+nq-07c3c6ca4cd32b6e,validation,6334,https://en.wikipedia.org//w/index.php?title=Cry-Baby&amp;oldid=820871799,who sings in cry baby for johnny depp,31;32,76
+nq-07d0c2cc140f34a8,validation,5499,https://en.wikipedia.org//w/index.php?title=Red_Bull&amp;oldid=822186025,when did red bull come to the united states,30,176
+nq-07d1ab026e8cceec,validation,2992,https://en.wikipedia.org//w/index.php?title=Constitutional_Convention_(United_States)&amp;oldid=822370142,who proposed the virginia plan at the constitutional convention,1;6,106
+nq-07d8206ccee4a7c4,validation,4434,https://en.wikipedia.org//w/index.php?title=Mickey_Mouse_Clubhouse&amp;oldid=819493055,who does the voice of mickey mouse on mickey mouse clubhouse,32;33,80
+nq-080e08a3ba3ea88b,validation,4366,https://en.wikipedia.org//w/index.php?title=Eurostar&amp;oldid=838264920,where does the eurostar train arrives in london,27,221
+nq-084ea10d62bf8d26,validation,639,https://en.wikipedia.org//w/index.php?title=Ursula_(The_Little_Mermaid)&amp;oldid=837743034,who was ursula the sea witch based on,12;20,76
+nq-08556f8f5c71e38a,validation,5581,https://en.wikipedia.org//w/index.php?title=French_and_Indian_War&amp;oldid=817994817,who were the major leaders of the french and indian war,2,129
+nq-0858150315fe9b8d,validation,2469,https://en.wikipedia.org//w/index.php?title=Peanut_butter_and_jelly_sandwich&amp;oldid=838543003,who invented peanut butter and jelly sandwich yahoo,12,19
+nq-08787a604b52661e,validation,4949,https://en.wikipedia.org//w/index.php?title=Afro-Eurasia&amp;oldid=830702513,when did african isolation from the european old world occur,15,67
+nq-08a04317b62ed29c,validation,4503,https://en.wikipedia.org//w/index.php?title=Reaper&amp;oldid=818701654,when was the reaper invented by cyrus mccormick,11;18,25
+nq-08a06c48705bd6c4,validation,7790,https://en.wikipedia.org//w/index.php?title=Reconstruction_Era&amp;oldid=821997502,in american history what was the purpose of the period known as reconstruction,40,312
+nq-08a6187474df2ef1,validation,2320,https://en.wikipedia.org//w/index.php?title=Hot_cross_bun&amp;oldid=834185777,what is the white stuff on hot cross buns,18,19
+nq-08d1b28e49230462,validation,4841,https://en.wikipedia.org//w/index.php?title=Sasuke_Uchiha&amp;oldid=838247541,how old was sasuke when his clan died,29,46
+nq-08d81f882b07d56c,validation,5117,https://en.wikipedia.org//w/index.php?title=Mark_of_the_Year&amp;oldid=819112693,who won mark and goal of the year 2017,17,67
+nq-08df5061bdbf11d1,validation,4653,https://en.wikipedia.org//w/index.php?title=Gestalt_psychology&amp;oldid=813519132,today gestalt psychology ideas are part of which branch of psychology,24,91
+nq-08f16496d915b410,validation,5391,https://en.wikipedia.org//w/index.php?title=2018_Winter_Olympics_medal_table&amp;oldid=834495492,who won the medals in 2018 winter olympics,21,59
+nq-093cb221af3c3f1b,validation,4084,https://en.wikipedia.org//w/index.php?title=Centipede&amp;oldid=835288948,how many pairs of legs does a centipede have,20,93
+nq-09590e029646c144,benchmark,848,https://en.wikipedia.org//w/index.php?title=Inigo_Montoya&amp;oldid=813736246,inigo montoya. you killed my father. prepare to die,11,17
+nq-0974393273fbea76,benchmark,7825,https://en.wikipedia.org//w/index.php?title=Eric_Forman&amp;oldid=804312311,who does eric end up with in that 70s show,49;52,70
+nq-098331113989b77e,benchmark,711,https://en.wikipedia.org//w/index.php?title=Former_Presidents_Act&amp;oldid=797671551,how long do former presidents get secret service protection,3;9,11
+nq-0993b4225365376a,benchmark,2918,https://en.wikipedia.org//w/index.php?title=List_of_Beyblade_Burst_Super_Z_episodes&amp;oldid=836571869,when is beyblade burst super z coming out,1,10
+nq-09a997288ee3aa4c,benchmark,6102,"https://en.wikipedia.org//w/index.php?title=Fort_Myers,_Florida&amp;oldid=807273784",where is fort myers located at in florida,7;31;32,185
+nq-09c507d0f143d18c,benchmark,7014,https://en.wikipedia.org//w/index.php?title=Who_Let_the_Dogs_Out%3F&amp;oldid=807276668,what movies have the song who let the dogs out,22;26,70
+nq-09c601fdb313c1c4,benchmark,2134,https://en.wikipedia.org//w/index.php?title=Kerris_Dorsey&amp;oldid=817169147,who plays brad pitt's daughter in moneyball,6,40
+nq-09f53565723d85eb,benchmark,7469,https://en.wikipedia.org//w/index.php?title=J&amp;oldid=822294838,when was the letter j introduced to the alphabet,16,62
+nq-09f5904f63b0c845,benchmark,3147,https://en.wikipedia.org//w/index.php?title=Mickey_Mouse&amp;oldid=837265898,where did the idea of mickey mouse come from,23,160
+nq-0a000e8f877a5a10,benchmark,6957,https://en.wikipedia.org//w/index.php?title=List_of_best-selling_girl_groups&amp;oldid=807140940,who is the biggest selling female group of all time,8,447
+nq-0a077e7adbfbc9d3,benchmark,5482,https://en.wikipedia.org//w/index.php?title=The_Walking_Dead_(season_8)&amp;oldid=838546770,when does walking dead season 8 second half start,14;94,154
+nq-0a14fbe39928703c,benchmark,3825,https://en.wikipedia.org//w/index.php?title=White_Witch&amp;oldid=819210326,where does the white witch live in narnia,33,58
+nq-0a15e037f1beadea,benchmark,6439,https://en.wikipedia.org//w/index.php?title=War_for_the_Planet_of_the_Apes&amp;oldid=819507104,when does planet of the apes come out 2017,32,151
+nq-0a15e83863d0cd8f,benchmark,5267,https://en.wikipedia.org//w/index.php?title=Ides_of_March&amp;oldid=836537193,who said beware of the ides of march,5,7
+nq-0a5feffd33962410,benchmark,7179,https://en.wikipedia.org//w/index.php?title=NCAA_Division_I_Men%27s_Basketball_Tournament&amp;oldid=837764824,why are there 64 teams in the ncaa tournament,10,958
+nq-0a61cf9eff681d8c,benchmark,4256,https://en.wikipedia.org//w/index.php?title=Naz_Khialvi&amp;oldid=830396793,what is the meaning of gorakh dhanda in urdu,8,13
+nq-0a7bc54686bc0d9b,benchmark,2639,https://en.wikipedia.org//w/index.php?title=1994_NCAA_Division_I_Men%27s_Basketball_Tournament&amp;oldid=836595631,who won the ncaa basketball championship in 1994,21,359
+nq-0aba3d72d0050c3e,benchmark,881,https://en.wikipedia.org//w/index.php?title=Gothic_art&amp;oldid=837584320,who is credited with creating the gothic art movement,3,41
+nq-0ac1e9879bb179c7,benchmark,5874,https://en.wikipedia.org//w/index.php?title=Blighted_ovum&amp;oldid=805649389,gestational sac and yolk sac but no baby at 7 weeks,2;8,10
+nq-0ac9b38a901f677f,benchmark,876,https://en.wikipedia.org//w/index.php?title=Wentworth_(TV_series)&amp;oldid=838169744,when does wentworth season 6 start in australia,37,267
+nq-0ad84204ca5865b5,benchmark,4761,https://en.wikipedia.org//w/index.php?title=Heaven_(Los_Lonely_Boys_song)&amp;oldid=768576488,who sang the song how far is heaven,20,37
+nq-0ae0ed08adac4646,benchmark,5994,https://en.wikipedia.org//w/index.php?title=Vapour_pressure_of_water&amp;oldid=837002082,vapor pressure of water at 100c in torr,1,80
+nq-0ae465fcc212f2ac,benchmark,4207,https://en.wikipedia.org//w/index.php?title=Vincenzo_Peruggia&amp;oldid=835617527,who stole the mona lisa from the louvre in 1911,7,28
+nq-0af28bbce24ae80b,benchmark,4681,https://en.wikipedia.org//w/index.php?title=Tim_Hortons&amp;oldid=838190632,when did tim hortons open in the usa,52,127
+nq-0afa2b9daa38ffe7,benchmark,2814,https://en.wikipedia.org//w/index.php?title=Jeff_East&amp;oldid=836453221,who played young clark kent in 1978 superman,9,48
+nq-0b0140cf13677219,benchmark,7732,https://en.wikipedia.org//w/index.php?title=C_(musical_note)&amp;oldid=837146536,which note is middle c on a piano,3,52
+nq-0b2c27c7e7454d1e,benchmark,7573,https://en.wikipedia.org//w/index.php?title=Florida%27s_Natural_Growers&amp;oldid=817270304,where does florida natural orange juice come from,6;12,13
+nq-0b34ea690d740b53,benchmark,5901,https://en.wikipedia.org//w/index.php?title=Cooling_tower&amp;oldid=815896413,why does cooling water run through the condenser,3,178
+nq-0b418b8dcf6b66b3,benchmark,1969,https://en.wikipedia.org//w/index.php?title=Vincent_D%27Onofrio&amp;oldid=838168900,who played gomer pyle in full metal jacket,14,165
+nq-0b4a8843ecbe1d42,benchmark,2404,https://en.wikipedia.org//w/index.php?title=God_of_War_(franchise)&amp;oldid=838473441,when was the last god of war made,27;54,125
+nq-0b4dd26df261b310,benchmark,7733,https://en.wikipedia.org//w/index.php?title=List_of_Curious_George_characters&amp;oldid=821888467,what kind of dog is charkie from curious george,22,155
+nq-0b60c15f8d09076e,benchmark,4170,https://en.wikipedia.org//w/index.php?title=The_Crossing_(TV_series)&amp;oldid=838475719,where did they film the show the crossing,27;45,66
+nq-0b6c00a9e32cd328,benchmark,6938,"https://en.wikipedia.org//w/index.php?title=Hawaii_Five-0_(2010_TV_series,_season_8)&amp;oldid=819350164",when does season 8 of hawaii five o premiere,14,104
+nq-0b7057956e2eaff9,benchmark,1339,https://en.wikipedia.org//w/index.php?title=James_Monroe_Iglehart&amp;oldid=814493391,who plays the genie in aladdin the musical,7,30
+nq-0b72520f95d79924,benchmark,2343,https://en.wikipedia.org//w/index.php?title=Over_the_Garden_Wall&amp;oldid=833703927,who plays the woodsman in over the garden wall,42;55,183
+nq-0b7b669461012584,benchmark,6053,https://en.wikipedia.org//w/index.php?title=Australia&amp;oldid=822364349,what is australia's location in the world and region,49;63,158
+nq-0bb277f44549b403,benchmark,5926,https://en.wikipedia.org//w/index.php?title=The_Fast_and_the_Furious&amp;oldid=822372331,when did the fast and furious movies come out,106,213
+nq-0bbacc7082082a0e,benchmark,3395,https://en.wikipedia.org//w/index.php?title=Honda_Fit&amp;oldid=835979580,what is the weight of a honda fit,232,359
+nq-0bca84a9db0fbcec,benchmark,117,https://en.wikipedia.org//w/index.php?title=School_uniforms_by_country&amp;oldid=837724283,do all private schools have uniforms in america,186;187;189,202
+nq-0bd321ec36079fd2,benchmark,5432,https://en.wikipedia.org//w/index.php?title=The_Winds_of_Winter&amp;oldid=838407346,when does book 6 of game of thrones release,11,33

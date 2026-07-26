@@ -1,0 +1,27 @@
+{
+  "schema_version": "1",
+  "dataset": "COCO 2017 validation",
+  "split": "benchmark",
+  "frozen_test_split": true,
+  "model_id": "mobileclip-s0-v1",
+  "space_id": "mobileclip-image-text-v1",
+  "image_count": 40,
+  "caption_query_count": 201,
+  "dimensions": 512,
+  "batch_size": 16,
+  "elapsed_seconds": 5.818699599942192,
+  "metrics": {
+    "recall@1": 0.9104477611940298,
+    "recall@5": 1.0,
+    "recall@10": 1.0,
+    "median_rank": 1.0
+  },
+  "full_report": {
+    "relative_path": "output/week3/coco-benchmark.json",
+    "sha256": "d88df151010939a3397472c24c801bede84a2d8118ec3a2aa6c0380905f9a56a"
+  },
+  "subset_metadata": {
+    "relative_path": "datasets/processed/coco/metadata.json",
+    "sha256": "ade76af2d6aa0b4b4c6575e997d91d03fffe32295639b7e85e28c2bacb092610"
+  }
+}

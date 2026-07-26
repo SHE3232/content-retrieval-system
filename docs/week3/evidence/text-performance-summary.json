@@ -1,0 +1,31 @@
+{
+  "schema_version": "1",
+  "model_id": "text-multilingual-v1",
+  "space_id": "text-semantic-v1",
+  "model_size_bytes": 499561295,
+  "device": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python": "3.10.18"
+  },
+  "measurements": [
+    {
+      "batch_size": 1,
+      "iterations": 10,
+      "p50_latency_ms": 21.179750037845224,
+      "p95_latency_ms": 24.86689994111657,
+      "throughput_items_per_second": 46.14681056753548
+    },
+    {
+      "batch_size": 16,
+      "iterations": 10,
+      "p50_latency_ms": 46.70659999828786,
+      "p95_latency_ms": 49.929099972359836,
+      "throughput_items_per_second": 346.5024477276606
+    }
+  ],
+  "full_report": {
+    "relative_path": "output/week3/text-performance.json",
+    "sha256": "15e88708f59a92041ce9ebd6511c647ca205406798e638343dae02d266a2aa6f"
+  }
+}

@@ -188,6 +188,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "mobileclip" },
+    { name = "numpy" },
     { name = "sentence-transformers" },
 ]
 
@@ -199,6 +200,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "mobileclip", directory = "../third_party/mobileclip-src/ml-mobileclip-aecfb5453d022e9deff12f81a150ea8f35194baa" },
+    { name = "numpy", specifier = ">=2.0" },
     { name = "sentence-transformers", specifier = ">=5,<6" },
 ]
 

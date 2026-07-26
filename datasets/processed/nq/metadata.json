@@ -1,0 +1,42 @@
+{
+  "dataset": "sentence-transformers/NQ-retrieval",
+  "source_file": "dev.jsonl.gz",
+  "source_url": "https://huggingface.co/datasets/sentence-transformers/NQ-retrieval/resolve/main/dev.jsonl.gz",
+  "source_sha256": "ad23b7e4f50b0f02c9395a4f8fe39946e3e1242edea7c826aaf7ac378f3e8779",
+  "selection": "eligible unique document URLs sorted by stable SHA-256 query ID",
+  "validation_queries": 160,
+  "benchmark_queries": 40,
+  "validation_passages": 20122,
+  "benchmark_passages": 5446,
+  "split_manifest": {
+    "name": "nq_retrieval_split.csv",
+    "sha256": "c9f5bfd4cc8ec920a39ae3b30031b7522d1558b9323a72b5ac9f39eac9b2b6ca",
+    "bytes": 36013
+  },
+  "artifacts": {
+    "benchmark/corpus.jsonl": {
+      "sha256": "8292519e69bdbc341e2b5a09e5c56bfb12957b26c0a4e82090649d39326b3d3a",
+      "bytes": 2544466
+    },
+    "benchmark/qrels.tsv": {
+      "sha256": "3e6634c31158854248a63a0ff15892733b856547cfff6be51d4869202e573c51",
+      "bytes": 2673
+    },
+    "benchmark/queries.jsonl": {
+      "sha256": "a9c2abadbda6f3b7806eaaa264f404dd668888723a7c64fcd29d820ee85b2f17",
+      "bytes": 6048
+    },
+    "validation/corpus.jsonl": {
+      "sha256": "714cb2aa6013bcfe9ec11b1a23f98bd2074749e4f719015fe30ce933e4c2af13",
+      "bytes": 10563771
+    },
+    "validation/qrels.tsv": {
+      "sha256": "c76dcda4292e641d80b2a521d342c34c7fcef3799d3a5831530c7e002e1a9919",
+      "bytes": 10513
+    },
+    "validation/queries.jsonl": {
+      "sha256": "4ceb0d7c9e89f21664cecbf2ad6b7f37982ceb82346bab79aff7b00282ab538d",
+      "bytes": 24943
+    }
+  }
+}

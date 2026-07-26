@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "dataset": "sentence-transformers/NQ-retrieval",
+  "split": "benchmark",
+  "frozen_test_split": true,
+  "model_id": "text-multilingual-v1",
+  "space_id": "text-semantic-v1",
+  "query_count": 40,
+  "corpus_count": 5446,
+  "dimensions": 384,
+  "batch_size": 32,
+  "elapsed_seconds": 48.65204159996938,
+  "metrics": {
+    "recall@1": 0.125,
+    "recall@5": 0.4125,
+    "recall@10": 0.5958333333333334,
+    "mrr@10": 0.28405753968253966,
+    "ndcg@10": 0.3506852652976281
+  },
+  "full_report": {
+    "relative_path": "output/week3/nq-benchmark.json",
+    "sha256": "128e9a4fbe54a07b4ee2829a5e9826e48cac8516d9be3776f1768e04811e7b74"
+  }
+}

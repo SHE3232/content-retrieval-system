@@ -1,0 +1,59 @@
+{
+  "schema_version": "1",
+  "dataset": "COCO 2017 validation",
+  "annotations_source": "http://images.cocodataset.org/annotations/annotations_trainval2017.zip",
+  "selection": "eligible image IDs sorted by SHA-256(coco-2017-val NUL image_id)",
+  "validation_images": 160,
+  "benchmark_images": 40,
+  "total_image_bytes": 32130102,
+  "captions_sha256": "afe3b30e403dd7f228e2373023abbd60042a6e10ec6874d3652df034d289ebb9",
+  "instances_sha256": "e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c810b6f",
+  "license_distribution": [
+    {
+      "license_id": 1,
+      "license_name": "Attribution-NonCommercial-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-nc-sa/2.0/",
+      "image_count": 59
+    },
+    {
+      "license_id": 2,
+      "license_name": "Attribution-NonCommercial License",
+      "license_url": "http://creativecommons.org/licenses/by-nc/2.0/",
+      "image_count": 33
+    },
+    {
+      "license_id": 3,
+      "license_name": "Attribution-NonCommercial-NoDerivs License",
+      "license_url": "http://creativecommons.org/licenses/by-nc-nd/2.0/",
+      "image_count": 51
+    },
+    {
+      "license_id": 4,
+      "license_name": "Attribution License",
+      "license_url": "http://creativecommons.org/licenses/by/2.0/",
+      "image_count": 27
+    },
+    {
+      "license_id": 5,
+      "license_name": "Attribution-ShareAlike License",
+      "license_url": "http://creativecommons.org/licenses/by-sa/2.0/",
+      "image_count": 17
+    },
+    {
+      "license_id": 6,
+      "license_name": "Attribution-NoDerivs License",
+      "license_url": "http://creativecommons.org/licenses/by-nd/2.0/",
+      "image_count": 13
+    }
+  ],
+  "artifacts": {
+    "validation/items.jsonl": {
+      "sha256": "5f6a164da6240e16e08699f942a7f5edbcf36028f230997046d6bc499e88b99c",
+      "bytes": 130728
+    },
+    "benchmark/items.jsonl": {
+      "sha256": "194893ff1fd34ae566162e9b911c93dc3104859f56f68b2921ca01361b03c943",
+      "bytes": 32537
+    }
+  }
+}
