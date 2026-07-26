@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-26T11:09:08+08:00",
+  "generated_at": "2026-07-26T11:22:57+08:00",
   "command": "python -m pytest -q backend --cov=content_retrieval.embeddings --cov-report=term-missing --cov-report=json:output/week3/embedding-coverage.json --cov-fail-under=85",
   "test_result": {
     "passed": 242,
@@ -55,7 +55,7 @@
   ],
   "source_report": {
     "path": "output/week3/embedding-coverage.json",
-    "sha256": "aa4f546b4c1c73069f3738c8b48343ade74086a9694d7046a4a599e4bd205bf2",
+    "sha256": "66da4e6f447695416dd85bd7da6531d7161790a08cad098b9082d935fb813195",
     "coverage_py_version": "7.15.0"
   }
 }

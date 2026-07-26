@@ -36,9 +36,11 @@ model-tools\.venv\Scripts\python.exe model-tools/smoke_test.py
 转换工具在 WSL 的 TensorFlow 环境中运行：
 
 ```bash
-source conversion-tools/.venv/bin/activate
-python -m pytest -q conversion-tools/test_verify_parity.py
-python conversion-tools/smoke_test.py
+cd conversion-tools
+uv sync --locked
+source .venv/bin/activate
+python -m pytest -q test_verify_parity.py
+python smoke_test.py
 ```
 
 ## 已验证基线
