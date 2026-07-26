@@ -24,4 +24,3 @@ print(f"TORCH_VERSION={torch.__version__}")
 print(f"BERT_FORWARD_OK={tuple(bert_output.last_hidden_state.shape) == (1, 3, 32)}")
 print(f"MOBILECLIP_INIT_OK={mobileclip_model is not None}")
 print(f"CUDA_AVAILABLE={torch.cuda.is_available()}")
-

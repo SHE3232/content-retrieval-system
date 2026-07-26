@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-26T11:09:08+08:00",
+  "command": "python -m pytest -q backend --cov=content_retrieval.embeddings --cov-report=term-missing --cov-report=json:output/week3/embedding-coverage.json --cov-fail-under=85",
+  "test_result": {
+    "passed": 242,
+    "skipped": 1
+  },
+  "coverage": {
+    "covered_lines": 359,
+    "statements": 415,
+    "missing_lines": 56,
+    "excluded_lines": 8,
+    "percent": 86.5060240963855,
+    "required_percent": 85.0,
+    "passed": true
+  },
+  "modules": [
+    {
+      "path": "backend/src/content_retrieval/embeddings/__init__.py",
+      "statements": 12,
+      "missing_lines": 5,
+      "percent": 58.33
+    },
+    {
+      "path": "backend/src/content_retrieval/embeddings/manifest.py",
+      "statements": 112,
+      "missing_lines": 17,
+      "percent": 84.82
+    },
+    {
+      "path": "backend/src/content_retrieval/embeddings/mobileclip.py",
+      "statements": 152,
+      "missing_lines": 23,
+      "percent": 84.87
+    },
+    {
+      "path": "backend/src/content_retrieval/embeddings/sentence_transformer.py",
+      "statements": 36,
+      "missing_lines": 7,
+      "percent": 80.56
+    },
+    {
+      "path": "backend/src/content_retrieval/embeddings/service.py",
+      "statements": 39,
+      "missing_lines": 0,
+      "percent": 100.0
+    },
+    {
+      "path": "backend/src/content_retrieval/embeddings/text.py",
+      "statements": 64,
+      "missing_lines": 4,
+      "percent": 93.75
+    }
+  ],
+  "source_report": {
+    "path": "output/week3/embedding-coverage.json",
+    "sha256": "aa4f546b4c1c73069f3738c8b48343ade74086a9694d7046a4a599e4bd205bf2",
+    "coverage_py_version": "7.15.0"
+  }
+}
