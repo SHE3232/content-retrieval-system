@@ -227,7 +227,11 @@ def create_numbering(doc: Document, *, ordered: bool) -> int:
         rpr.extend([fonts, color])
         level.append(rpr)
     abstract.append(level)
-    numbering.append(abstract)
+    first_num = numbering.find(qn("w:num"))
+    if first_num is None:
+        numbering.append(abstract)
+    else:
+        first_num.addprevious(abstract)
     num_id = _next_num_id(numbering)
     num = OxmlElement("w:num")
     num.set(qn("w:numId"), str(num_id))
@@ -767,16 +771,6 @@ def build_weekly_document(nq: dict, coco: dict) -> Path:
             "Flutter 端需要按导出契约实现 tokenizer、EOT index、图像归一化和两个独立集合。",
             "建立 ChromaDB 双集合后，增加真实端到端 P50/P95 与索引增量更新测试。",
             "在目标 Windows/Android 设备复测 LiteRT 线程、内存和批大小，避免只依赖开发机数据。",
-        ],
-        ordered=True,
-    )
-    add_source_list(
-        doc,
-        [
-            "docs/superpowers/specs/2026-07-25-week3-multimodal-embedding-engine-design.md",
-            "docs/week3/evidence/",
-            "datasets/licenses/NOTICE.md",
-            "pytest.ini",
         ],
     )
     return save(doc, "第三周工作周报.docx")
