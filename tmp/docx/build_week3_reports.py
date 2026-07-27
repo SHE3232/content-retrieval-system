@@ -394,11 +394,6 @@ def add_table(
     after.paragraph_format.space_after = Pt(4)
 
 
-def add_source_list(doc: Document, sources: Iterable[str]) -> None:
-    add_heading(doc, "证据与来源", 2)
-    add_list(doc, sources)
-
-
 def save(doc: Document, filename: str) -> Path:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     path = REPORT_DIR / filename
@@ -486,7 +481,6 @@ def build_api_document() -> Path:
             "调用 embed_documents 或 embed_image_queries；分别检查 items 与 errors。",
             "只有 space_id 和 dimensions 兼容时才调用 cosine_similarity。",
         ],
-        ordered=True,
     )
     add_heading(doc, "5. 错误与安全边界")
     add_table(
@@ -507,16 +501,6 @@ def build_api_document() -> Path:
             "日志和报告不保存全文、完整用户路径或向量内容。",
             "MobileCLIP 权重受 Apple Research Model License 约束，不进入公开代码包。",
             "模型清单中的相对路径必须位于配置的模型根目录内。",
-        ],
-    )
-    add_source_list(
-        doc,
-        [
-            "backend/src/content_retrieval/embeddings/",
-            "backend/src/content_retrieval/services/chunking.py",
-            "models/model-manifest.example.json",
-            "docs/week3/evidence/litert-text-parity.json",
-            "docs/week3/evidence/litert-mobileclip-parity.json",
         ],
     )
     return save(doc, "多模态嵌入模块API文档.docx")
@@ -591,15 +575,6 @@ def build_test_document(coverage: dict) -> Path:
             "MobileCLIP 文本模型将 EOT 索引计算放在主机 tokenizer 后处理，TFLite 接收 token IDs 与 EOT index 两个输入。",
             "1 个 skipped 来自既有环境依赖条件，不是第三周功能失败。",
             "覆盖率只衡量执行行，不替代真实模型、数据许可和端侧运行验收。",
-        ],
-    )
-    add_source_list(
-        doc,
-        [
-            "output/week3/embedding-coverage.json",
-            "docs/week3/evidence/litert-text-parity.json",
-            "docs/week3/evidence/litert-mobileclip-parity.json",
-            "pytest.ini",
         ],
     )
     return save(doc, "多模态嵌入模块测试报告.docx")
@@ -679,16 +654,6 @@ def build_accuracy_document(nq: dict, coco: dict, perf: dict) -> Path:
             "COCO 每张图片保留 Flickr/COCO URL、许可证 ID/URL 与文件 SHA-256；图片二进制不进入公开包。",
             "性能结果受 CPU、线程调度、句长和缓存状态影响，应在目标设备上重新测量。",
             "NQ 衍生数据按 CC BY-SA 3.0 保守处理；MobileCLIP 权重按 Apple Research Model License 管理。",
-        ],
-    )
-    add_source_list(
-        doc,
-        [
-            "docs/week3/evidence/nq-benchmark-summary.json",
-            "docs/week3/evidence/coco-benchmark-summary.json",
-            "docs/week3/evidence/text-performance-summary.json",
-            "datasets/processed/nq/metadata.json",
-            "datasets/processed/coco/metadata.json",
         ],
     )
     return save(doc, "模型准确率验证报告.docx")
