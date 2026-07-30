@@ -307,11 +307,11 @@ git commit -m "feat: connect ingestion embeddings and storage"
 - Test: `backend/tests/test_keyword_retrieval.py`
 - Test: `backend/tests/test_rank_fusion.py`
 
-- [ ] **Step 1: Write failing keyword tests**
+- [x] **Step 1: Write failing keyword tests**
 
 Test Unicode/case normalization, matching filename/path/body, BM25 ordering, MIME/path/time filters, and deterministic tie breaks.
 
-- [ ] **Step 2: Run keyword tests and verify RED**
+- [x] **Step 2: Run keyword tests and verify RED**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_keyword_retrieval.py
@@ -319,15 +319,15 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: missing retrieval package.
 
-- [ ] **Step 3: Implement deterministic BM25**
+- [x] **Step 3: Implement deterministic BM25**
 
 Tokenize with case-folded Unicode word runs, preserve CJK single characters and contiguous Latin/digit words, index `name + path + document`, and use BM25 parameters `k1=1.5`, `b=0.75`. Apply `SearchFilters` before ranking and sort equal scores by normalized path then record ID.
 
-- [ ] **Step 4: Verify keyword GREEN**
+- [x] **Step 4: Verify keyword GREEN**
 
 Run Step 2. Expected: all keyword tests pass.
 
-- [ ] **Step 5: Write failing fusion tests**
+- [x] **Step 5: Write failing fusion tests**
 
 ```python
 def test_fusion_aggregates_chunks_before_combining_channels() -> None:
@@ -338,7 +338,7 @@ def test_fusion_aggregates_chunks_before_combining_channels() -> None:
 
 Also prove that image and text raw similarity scores are never directly added.
 
-- [ ] **Step 6: Run fusion tests and verify RED**
+- [x] **Step 6: Run fusion tests and verify RED**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_rank_fusion.py
@@ -346,7 +346,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: missing fusion function.
 
-- [ ] **Step 7: Implement file-level weighted RRF**
+- [x] **Step 7: Implement file-level weighted RRF**
 
 For each channel, keep the best source record per file. Calculate:
 
@@ -357,11 +357,11 @@ normalized = rrf_score / sum(weight / 61 for weight in active_weights)
 
 Keep match reasons, the best text snippet/locator, and deterministic file-level ordering.
 
-- [ ] **Step 8: Run keyword and fusion suites**
+- [x] **Step 8: Run keyword and fusion suites**
 
 Expected: all tests pass.
 
-- [ ] **Step 9: Commit Task 4**
+- [x] **Step 9: Commit Task 4**
 
 ```powershell
 git add backend/src/content_retrieval/retrieval backend/tests/test_keyword_retrieval.py backend/tests/test_rank_fusion.py
