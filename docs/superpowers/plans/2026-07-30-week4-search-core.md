@@ -374,11 +374,11 @@ git commit -m "feat: add keyword ranking and reciprocal rank fusion"
 - Create: `backend/src/content_retrieval/retrieval/service.py`
 - Test: `backend/tests/test_retrieval_service.py`
 
-- [ ] **Step 1: Write failing retrieval-service tests**
+- [x] **Step 1: Write failing retrieval-service tests**
 
 Cover keyword-only, text semantic, text-to-image, all-channel fusion, filters, empty query rejection, repository errors, and duplicate chunk aggregation.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_retrieval_service.py
@@ -386,7 +386,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: missing `RetrievalService`.
 
-- [ ] **Step 3: Implement search orchestration**
+- [x] **Step 3: Implement search orchestration**
 
 Use default channel weights:
 
@@ -396,7 +396,7 @@ Use default channel weights:
 
 Rebuild the in-memory BM25 index from `repository.list_records()` at startup and after successful indexing. Query text and image spaces independently, aggregate each channel by `file_id`, fuse rankings, truncate to `top_k`, and record monotonic elapsed time.
 
-- [ ] **Step 4: Run retrieval suite and all new core tests**
+- [x] **Step 4: Run retrieval suite and all new core tests**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_retrieval_service.py backend/tests/test_chroma_repository.py backend/tests/test_keyword_retrieval.py backend/tests/test_rank_fusion.py
@@ -404,7 +404,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit Task 5**
+- [x] **Step 5: Commit Task 5**
 
 ```powershell
 git add backend/src/content_retrieval/retrieval/service.py backend/tests/test_retrieval_service.py
