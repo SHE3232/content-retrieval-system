@@ -538,23 +538,23 @@ Stage only the runtime, benchmark, tests, lock/config changes, and machine-reada
 - Create: `docs/week4/reports/检索准确率基准报告.docx`
 - Create: `docs/week4/reports/第四周工作周报.docx`
 
-- [ ] **Step 1: Build reports from verified evidence only**
+- [x] **Step 1: Build reports from verified evidence only**
 
 Use Times New Roman throughout, black text/lines, white page/table backgrounds, and no internal source list in the weekly report. Include exact commands, counts, metrics, failure boundaries, and known limitations.
 
-- [ ] **Step 2: Render every DOCX to page images**
+- [x] **Step 2: Render every DOCX to page images**
 
 Use the documents skill renderer. If LibreOffice is unavailable, export read-only with Microsoft Word and rasterize with the bundled Poppler executable.
 
-- [ ] **Step 3: Inspect every page at 100%**
+- [x] **Step 3: Inspect every page at 100%**
 
 Check clipping, table wrapping, headings, page numbers, captions, fonts, and whitespace. Rebuild and re-render after any correction.
 
-- [ ] **Step 4: Audit deliverable consistency**
+- [x] **Step 4: Audit deliverable consistency**
 
 Verify that every number in the DOCX files matches `docs/week4/evidence/*.json` and the final fresh test outputs.
 
-- [ ] **Step 5: Commit Task 8**
+- [x] **Step 5: Commit Task 8**
 
 ```powershell
 git add docs/week4
