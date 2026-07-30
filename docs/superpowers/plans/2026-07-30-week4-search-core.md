@@ -174,7 +174,7 @@ git commit -m "feat: freeze week 4 retrieval contracts"
 - Create: `backend/src/content_retrieval/storage/chroma.py`
 - Test: `backend/tests/test_chroma_repository.py`
 
-- [ ] **Step 1: Write failing repository tests**
+- [x] **Step 1: Write failing repository tests**
 
 Cover:
 
@@ -196,7 +196,7 @@ def test_delete_source_removes_stale_records_only(tmp_path: Path) -> None:
     assert repository.count() == 1
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_chroma_repository.py
@@ -204,11 +204,11 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: import failure because the storage module does not exist.
 
-- [ ] **Step 3: Implement collection and metadata mapping**
+- [x] **Step 3: Implement collection and metadata mapping**
 
 Use `chromadb.PersistentClient`. Create one collection per `space_id` with cosine distance and `embedding_function=None`. Flatten only scalar metadata; serialize timestamps as epoch seconds; store the chunk text in `documents`; never delete the database on startup.
 
-- [ ] **Step 4: Implement repository operations**
+- [x] **Step 4: Implement repository operations**
 
 Provide:
 
@@ -224,7 +224,7 @@ def count(self) -> int: ...
 
 Convert Chroma cosine distance with `similarity = max(-1.0, min(1.0, 1.0 - distance))`. Reject non-normalized vectors, wrong dimensions, and collection metadata mismatches before writing.
 
-- [ ] **Step 5: Run repository tests and full storage regression**
+- [x] **Step 5: Run repository tests and full storage regression**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_chroma_repository.py
@@ -232,7 +232,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: all tests pass without creating repository data outside `tmp_path`.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```powershell
 git add backend/src/content_retrieval/storage backend/tests/test_chroma_repository.py
