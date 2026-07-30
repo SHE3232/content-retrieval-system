@@ -421,7 +421,7 @@ git commit -m "feat: add multimodal hybrid retrieval service"
 - Modify: `backend/src/content_retrieval/api/app.py`
 - Test: `backend/tests/test_week4_api.py`
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 Test:
 
@@ -436,7 +436,7 @@ assert response.json()["hits"][0]["match_reasons"]
 
 Also cover invalid top-k, blank query, filters, unknown jobs, and controlled `503` when runtime services are unavailable.
 
-- [ ] **Step 2: Run API tests and verify RED**
+- [x] **Step 2: Run API tests and verify RED**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_week4_api.py
@@ -444,7 +444,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: routes return 404.
 
-- [ ] **Step 3: Add DTOs and route handlers**
+- [x] **Step 3: Add DTOs and route handlers**
 
 Expose:
 
@@ -455,11 +455,11 @@ Expose:
 
 Keep indexing in `asyncio.to_thread`; never block the event loop with parsing, model inference, or Chroma calls.
 
-- [ ] **Step 4: Extend application dependency injection**
+- [x] **Step 4: Extend application dependency injection**
 
 Accept optional `indexing_service` and `retrieval_service` in `create_app`. Register week-four routes without breaking existing health and ingestion routes. If runtime services are not configured, return a stable `SERVICE_UNAVAILABLE` response instead of importing models or accessing the network.
 
-- [ ] **Step 5: Run API and legacy API suites**
+- [x] **Step 5: Run API and legacy API suites**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_week4_api.py backend/tests/test_api.py backend/tests/test_api_extended.py
@@ -467,7 +467,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: all selected tests pass.
 
-- [ ] **Step 6: Commit Task 6**
+- [x] **Step 6: Commit Task 6**
 
 ```powershell
 git add backend/src/content_retrieval/api backend/tests/test_week4_api.py
