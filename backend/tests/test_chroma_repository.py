@@ -246,6 +246,16 @@ def test_delete_source_clear_and_count_are_collection_wide(tmp_path: Path) -> No
     assert repository.count() == 0
 
 
+def test_delete_records_removes_only_explicit_records(tmp_path: Path) -> None:
+    repository = ChromaVectorRepository(tmp_path / "index")
+    first = make_record(tmp_path, key="a", vector_values=[1.0, 0.0])
+    second = make_record(tmp_path, key="c", vector_values=[0.0, 1.0])
+    repository.upsert([first, second])
+
+    assert repository.delete_records([first]) == 1
+    assert repository.list_records() == [second]
+
+
 def test_repository_rejects_incompatible_collection_or_query(tmp_path: Path) -> None:
     repository = ChromaVectorRepository(tmp_path / "index")
     record = make_record(tmp_path, key="a", vector_values=[1.0, 0.0])

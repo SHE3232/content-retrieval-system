@@ -245,7 +245,7 @@ git commit -m "feat: add persistent Chroma vector repository"
 - Create: `backend/src/content_retrieval/services/indexing.py`
 - Test: `backend/tests/test_indexing_service.py`
 
-- [ ] **Step 1: Write failing indexing tests**
+- [x] **Step 1: Write failing indexing tests**
 
 Cover text chunk pairing, image records, partial embedding failures, idempotent repeated indexing, and same-path changed-content replacement:
 
@@ -263,7 +263,7 @@ def test_changed_file_replaces_records_for_same_source_key(tmp_path: Path) -> No
     assert second.removed_stale_records == first.indexed_records
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_indexing_service.py
@@ -271,19 +271,19 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: import failure for `IndexingService`.
 
-- [ ] **Step 3: Implement deterministic source identity**
+- [x] **Step 3: Implement deterministic source identity**
 
 Resolve the path, apply `os.path.normcase`, encode as UTF-8, and hash with SHA-256. Use the path hash as `source_key`; use the existing content hash as `file_id`. Before writing a changed file, delete records sharing `source_key` but carrying a different `file_id`.
 
-- [ ] **Step 4: Implement text and image record construction**
+- [x] **Step 4: Implement text and image record construction**
 
 For text/document inputs, call `TextChunker.chunk`, embed those exact chunks, and pair vectors by `source_id`. For image inputs, call `MobileClipEmbeddingEngine.embed_images`. Preserve name, path, MIME, modification time, size, page/paragraph locator, and sequence number.
 
-- [ ] **Step 5: Implement batch summaries and partial failure isolation**
+- [x] **Step 5: Implement batch summaries and partial failure isolation**
 
 Return `IndexingResult` counters for parsed, indexed files, indexed records, skipped, failed, unchanged, and removed stale records. Convert per-file failures into controlled stage-aware entries while continuing the batch.
 
-- [ ] **Step 6: Run indexing tests and relevant regressions**
+- [x] **Step 6: Run indexing tests and relevant regressions**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_indexing_service.py backend/tests/test_batch_ingestion.py backend/tests/test_chunking_contracts.py backend/tests/test_text_embeddings.py backend/tests/test_mobileclip_embeddings.py
@@ -291,7 +291,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: all selected tests pass.
 
-- [ ] **Step 7: Commit Task 3**
+- [x] **Step 7: Commit Task 3**
 
 ```powershell
 git add backend/src/content_retrieval/services/indexing.py backend/tests/test_indexing_service.py

@@ -139,6 +139,63 @@ class VectorCandidate:
 
 
 @dataclass(frozen=True, slots=True)
+class IndexingFailure:
+    path: Path
+    code: str
+    message: str
+    stage: str
+    retryable: bool
+    file_id: str | None = None
+    source_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.path.is_absolute():
+            raise ValueError("failure path must be absolute")
+        if not self.code.strip() or not self.message.strip() or not self.stage.strip():
+            raise ValueError("failure diagnostics must not be blank")
+        if self.file_id is not None:
+            _require_sha256(self.file_id, "file_id")
+        if self.source_id is not None:
+            _require_sha256(self.source_id, "source_id")
+
+
+@dataclass(frozen=True, slots=True)
+class IndexingResult:
+    parsed_files: int
+    indexed_files: int
+    indexed_records: int
+    skipped_files: int
+    failed_files: int
+    partial_files: int
+    unchanged_files: int
+    removed_stale_records: int
+    failures: tuple[IndexingFailure, ...] = ()
+
+    def __post_init__(self) -> None:
+        counters = {
+            "parsed_files": self.parsed_files,
+            "indexed_files": self.indexed_files,
+            "indexed_records": self.indexed_records,
+            "skipped_files": self.skipped_files,
+            "failed_files": self.failed_files,
+            "partial_files": self.partial_files,
+            "unchanged_files": self.unchanged_files,
+            "removed_stale_records": self.removed_stale_records,
+        }
+        if any(value < 0 for value in counters.values()):
+            raise ValueError("indexing counters must be non-negative")
+        categorized = (
+            self.indexed_files + self.failed_files + self.unchanged_files
+        )
+        if self.parsed_files != categorized:
+            raise ValueError(
+                "parsed_files must equal indexed, failed, and unchanged files"
+            )
+        if self.partial_files > self.indexed_files:
+            raise ValueError("partial_files cannot exceed indexed_files")
+
+
+@dataclass(frozen=True, slots=True)
 class SearchHit:
     file_id: str
     source_id: str

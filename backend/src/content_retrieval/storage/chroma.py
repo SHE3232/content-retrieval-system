@@ -207,6 +207,33 @@ class ChromaVectorRepository:
                 ) from error
         return deleted
 
+    def delete_records(self, records: Iterable[IndexRecord]) -> int:
+        grouped: dict[str, list[IndexRecord]] = defaultdict(list)
+        for record in records:
+            grouped[record.space_id].append(record)
+
+        deleted = 0
+        for space_id in sorted(grouped):
+            batch = grouped[space_id]
+            collection = self._collection_for_vector(
+                batch[0].vector,
+                create=False,
+            )
+            if collection is None:
+                continue
+            ids = sorted({record.record_id for record in batch})
+            try:
+                result = collection.get(ids=ids, include=[])
+                existing_ids = list(result["ids"])
+                if existing_ids:
+                    collection.delete(ids=existing_ids)
+                    deleted += len(existing_ids)
+            except Exception as error:
+                raise StorageError(
+                    "Chroma record deletion failed"
+                ) from error
+        return deleted
+
     def clear(self) -> int:
         collections = self._collections()
         deleted = sum(collection.count() for collection in collections)

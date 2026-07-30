@@ -11,6 +11,8 @@ from content_retrieval.domain.errors import (
 from content_retrieval.domain.models import EmbeddingVector
 from content_retrieval.domain.retrieval import (
     IndexRecord,
+    IndexingFailure,
+    IndexingResult,
     SearchFilters,
     SearchHit,
     SearchResult,
@@ -207,4 +209,41 @@ def test_search_result_requires_ranked_bounded_hits(tmp_path: Path) -> None:
             snippet=record.document,
             page_number=None,
             paragraph_number=1,
+        )
+
+
+def test_indexing_result_rejects_inconsistent_counts(tmp_path: Path) -> None:
+    failure = IndexingFailure(
+        path=(tmp_path / "broken.txt").resolve(),
+        code="EMBEDDING_ERROR",
+        message="cannot embed",
+        stage="embedding",
+        retryable=False,
+        file_id=FILE_ID,
+        source_id=SOURCE_ID,
+    )
+    result = IndexingResult(
+        parsed_files=2,
+        indexed_files=2,
+        indexed_records=3,
+        skipped_files=1,
+        failed_files=0,
+        partial_files=1,
+        unchanged_files=0,
+        removed_stale_records=2,
+        failures=(failure,),
+    )
+
+    assert result.failures == (failure,)
+
+    with pytest.raises(ValueError, match="parsed_files"):
+        IndexingResult(
+            parsed_files=1,
+            indexed_files=1,
+            indexed_records=1,
+            skipped_files=0,
+            failed_files=1,
+            partial_files=0,
+            unchanged_files=0,
+            removed_stale_records=0,
         )
