@@ -57,6 +57,13 @@ class MultimodalEmbeddingService:
         """Embed text queries in the joint MobileCLIP image-text space."""
         return self.mobileclip_engine.embed_queries(queries)
 
+    def embed_text_queries(
+        self,
+        queries: Iterable[str],
+    ) -> BatchProcessingResult:
+        """Embed text queries in the document text semantic space."""
+        return self.text_engine.embed_queries(queries)
+
 
 def cosine_similarity(
     left: EmbeddingVector,

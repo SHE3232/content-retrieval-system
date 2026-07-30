@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+import hashlib
 import math
 from typing import Protocol, runtime_checkable
 
@@ -49,6 +50,27 @@ class TextEmbeddingEngine:
         for start in range(0, len(source), self.batch_size):
             batch = source[start : start + self.batch_size]
             self._embed_batch(batch, result)
+        return result
+
+    def embed_queries(self, queries: Iterable[str]) -> BatchProcessingResult:
+        """Embed local text queries in the document text semantic space."""
+        result = BatchProcessingResult()
+        valid: list[tuple[int, str, str]] = []
+        for input_index, query in enumerate(queries):
+            normalized = " ".join(query.split())
+            if not normalized:
+                result.errors.append(EmbeddingError("query text is empty"))
+                continue
+            query_id = hashlib.sha256(
+                f"{self.backend.model_id}\0{normalized}".encode("utf-8")
+            ).hexdigest()
+            valid.append((input_index, normalized, query_id))
+
+        for start in range(0, len(valid), self.batch_size):
+            self._embed_query_batch(
+                valid[start : start + self.batch_size],
+                result,
+            )
         return result
 
     def _embed_batch(
@@ -101,6 +123,57 @@ class TextEmbeddingEngine:
                         chunk_id=chunk.chunk_id,
                     )
                 )
+
+    def _embed_query_batch(
+        self,
+        entries: list[tuple[int, str, str]],
+        result: BatchProcessingResult,
+    ) -> None:
+        if not entries:
+            return
+        try:
+            vectors = self.backend.encode(
+                [query for _, query, _ in entries]
+            )
+            if len(vectors) != len(entries):
+                raise ValueError(
+                    "backend output count does not match input count"
+                )
+        except Exception:
+            if len(entries) == 1:
+                result.errors.append(
+                    EmbeddingError("text encoder failed for one query")
+                )
+                return
+            for entry in entries:
+                self._embed_query_batch([entry], result)
+            return
+
+        for (input_index, _, query_id), vector in zip(
+            entries,
+            vectors,
+            strict=True,
+        ):
+            try:
+                normalized = self._normalize(vector)
+                result.items.append(
+                    EmbeddingVector(
+                        source_id=query_id,
+                        file_id=query_id,
+                        model_id=self.backend.model_id,
+                        space_id=self.backend.space_id,
+                        modality="text",
+                        values=normalized,
+                        dimensions=self.backend.dimensions,
+                        normalized=True,
+                        metadata={
+                            "input_index": input_index,
+                            "source_kind": "query",
+                        },
+                    )
+                )
+            except (TypeError, ValueError) as error:
+                result.errors.append(EmbeddingError(str(error)))
 
     def _normalize(self, vector: Sequence[float]) -> list[float]:
         values = list(vector)

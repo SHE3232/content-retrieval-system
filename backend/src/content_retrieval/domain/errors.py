@@ -177,3 +177,25 @@ class EmbeddingError(ProcessingError):
 
     code = "EMBEDDING_ERROR"
     stage = "embedding"
+
+
+class StorageError(ProcessingError):
+    """The local derived index cannot be read or updated safely."""
+
+    code = "STORAGE_ERROR"
+    stage = "storage"
+    retryable = True
+
+
+class IndexingError(ProcessingError):
+    """A parsed file cannot be converted into persistent index records."""
+
+    code = "INDEXING_ERROR"
+    stage = "indexing"
+
+
+class RetrievalError(ProcessingError):
+    """A local search request cannot be completed."""
+
+    code = "RETRIEVAL_ERROR"
+    stage = "retrieval"

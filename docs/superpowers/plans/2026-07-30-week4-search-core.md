@@ -39,7 +39,7 @@
 - Test: `backend/tests/test_retrieval_contracts.py`
 - Test: `backend/tests/test_text_query_embeddings.py`
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 ```python
 def test_index_record_rejects_incompatible_vector() -> None:
@@ -52,7 +52,7 @@ def test_search_filters_validate_time_range() -> None:
         SearchFilters(modified_after=later, modified_before=earlier)
 ```
 
-- [ ] **Step 2: Run contract tests and verify RED**
+- [x] **Step 2: Run contract tests and verify RED**
 
 Run:
 
@@ -62,7 +62,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: collection error because `content_retrieval.domain.retrieval` does not exist.
 
-- [ ] **Step 3: Implement immutable domain contracts**
+- [x] **Step 3: Implement immutable domain contracts**
 
 Define:
 
@@ -121,11 +121,11 @@ class SearchResult:
 
 Add `StorageError`, `IndexingError`, and `RetrievalError` with stable `code`, `stage`, and `retryable` fields.
 
-- [ ] **Step 4: Run contract tests and verify GREEN**
+- [x] **Step 4: Run contract tests and verify GREEN**
 
 Run the Step 2 command. Expected: all tests pass.
 
-- [ ] **Step 5: Write failing text-query tests**
+- [x] **Step 5: Write failing text-query tests**
 
 ```python
 def test_text_queries_use_text_semantic_space() -> None:
@@ -138,7 +138,7 @@ def test_unified_service_exposes_text_queries(service) -> None:
     assert service.embed_text_queries(["notes"]).items[0].space_id == "text-semantic-v1"
 ```
 
-- [ ] **Step 6: Run query tests and verify RED**
+- [x] **Step 6: Run query tests and verify RED**
 
 Run:
 
@@ -148,11 +148,11 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: `AttributeError` for the missing `embed_queries`/`embed_text_queries` methods.
 
-- [ ] **Step 7: Implement query embedding**
+- [x] **Step 7: Implement query embedding**
 
 Normalize query whitespace, reject blank queries as `EmbeddingError`, derive a deterministic SHA-256 query ID from `model_id + "\0" + query`, batch through the same backend, validate dimensions/finite values, and emit normalized `EmbeddingVector` objects with `source_kind="query"`.
 
-- [ ] **Step 8: Run focused and existing embedding tests**
+- [x] **Step 8: Run focused and existing embedding tests**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_text_query_embeddings.py backend/tests/test_text_embeddings.py backend/tests/test_multimodal_embedding_service.py
@@ -160,7 +160,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 
 Expected: all selected tests pass.
 
-- [ ] **Step 9: Commit Task 1**
+- [x] **Step 9: Commit Task 1**
 
 ```powershell
 git add backend/src/content_retrieval/domain/retrieval.py backend/src/content_retrieval/domain/errors.py backend/src/content_retrieval/embeddings/text.py backend/src/content_retrieval/embeddings/service.py backend/tests/test_retrieval_contracts.py backend/tests/test_text_query_embeddings.py
