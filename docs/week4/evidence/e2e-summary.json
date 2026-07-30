@@ -1,0 +1,111 @@
+{
+  "schema_version": "1",
+  "status": "passed",
+  "generated_at": "2026-07-30T03:57:00.092320+00:00",
+  "offline_mode": {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "tika_version": "Apache Tika 3.3.1"
+  },
+  "fixture_count": 5,
+  "formats": [
+    "TXT",
+    "PDF",
+    "DOCX",
+    "JPG",
+    "PNG"
+  ],
+  "fixtures": {
+    "zh_local_search.txt": {
+      "bytes": 264,
+      "sha256": "a4985d59d689345f0ff69f7ce6b8bb76a0d859a62e65e6ab1a7c5c8e9ef91582"
+    },
+    "Software Engineering Project Offline Accessible Multimodal Local Content Retrieval System.pdf": {
+      "bytes": 87447,
+      "sha256": "44159ba676bde0509dcee9a93a93a185fb23e734e59d52c92c9f599fcbca9c54"
+    },
+    "对项目的总理解和每周任务安排.docx": {
+      "bytes": 15565,
+      "sha256": "5cda3ee99f568482318cd7ff5ca98f90a62372b2897a9d05720ace2315d88103"
+    },
+    "jpg_with_exif.jpg": {
+      "bytes": 695,
+      "sha256": "0438ab97f5c17608aa695c6b74ccec3d8f76b079dd40676f9cee1aac50e62784"
+    },
+    "app_icon_512.png": {
+      "bytes": 36406,
+      "sha256": "0a91c6c1bf242e54ee179e34629e9ef3e8a6d286c0fce01e302280a8be9277e6"
+    }
+  },
+  "indexing": {
+    "parsed_files": 5,
+    "indexed_files": 5,
+    "indexed_records": 20,
+    "failed_files": 0,
+    "partial_files": 0,
+    "record_count": 20,
+    "failures": []
+  },
+  "searches": [
+    {
+      "name": "keyword",
+      "query": "没有互联网连接",
+      "channels": [
+        "keyword"
+      ],
+      "top_hit": "zh_local_search.txt",
+      "top_score": 1.0,
+      "match_reasons": [
+        "keyword"
+      ],
+      "elapsed_ms": 0.20909999147988856,
+      "passed": true
+    },
+    {
+      "name": "text_semantic",
+      "query": "offline system for searching private documents",
+      "channels": [
+        "text_semantic"
+      ],
+      "top_hit": "zh_local_search.txt",
+      "top_score": 1.0,
+      "match_reasons": [
+        "text_semantic"
+      ],
+      "elapsed_ms": 32.88710000924766,
+      "passed": true
+    },
+    {
+      "name": "image_semantic",
+      "query": "a blue geometric logo on a white rounded square",
+      "channels": [
+        "image_semantic"
+      ],
+      "top_hit": "app_icon_512.png",
+      "top_score": 1.0,
+      "match_reasons": [
+        "image_semantic"
+      ],
+      "elapsed_ms": 40.40349999559112,
+      "passed": true
+    }
+  ],
+  "persistent_restart": {
+    "record_count": 20,
+    "top_hit": "zh_local_search.txt",
+    "passed": true
+  },
+  "elapsed_seconds": 2.4180973999900743,
+  "models": [
+    {
+      "model_id": "text-multilingual-v1",
+      "space_id": "text-semantic-v1",
+      "sha256": "cb32ef7aa7e749a5e9727968fb86fdcf2a8752e6063276ba4de675ce2696e37c"
+    },
+    {
+      "model_id": "mobileclip-s0-v1",
+      "space_id": "mobileclip-image-text-v1",
+      "sha256": "809b408eff74f8058843e86a1f92967097d42ba782450e85b8f4867b7f0ca0b7"
+    }
+  ]
+}

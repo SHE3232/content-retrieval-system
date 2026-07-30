@@ -67,8 +67,8 @@ class RetrievalService:
         normalized_query = " ".join(query.split())
         if not normalized_query:
             raise RetrievalError("search query is empty")
-        if top_k <= 0:
-            raise ValueError("top_k must be positive")
+        if not 1 <= top_k <= 100:
+            raise ValueError("top_k must be between 1 and 100")
         if not channels or len(set(channels)) != len(channels):
             raise ValueError("search channels must be non-empty and unique")
         if any(channel not in _VALID_CHANNELS for channel in channels):

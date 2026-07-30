@@ -488,35 +488,35 @@ git commit -m "feat: expose indexing and hybrid search APIs"
 - Create: `docs/week4/evidence/retrieval-benchmark-summary.json`
 - Create: `docs/week4/evidence/performance-summary.json`
 
-- [ ] **Step 1: Write failing runtime factory tests**
+- [x] **Step 1: Write failing runtime factory tests**
 
 Prove that the factory requires local model paths, validates the model manifest, creates persistent services under an explicit local data directory, and never downloads models.
 
-- [ ] **Step 2: Run factory tests and verify RED**
+- [x] **Step 2: Run factory tests and verify RED**
 
 Expected: missing runtime factory.
 
-- [ ] **Step 3: Add explicit local ML runtime dependencies**
+- [x] **Step 3: Add explicit local ML runtime dependencies**
 
 Add `sentence-transformers>=5,<6`, `mobileclip`, and the local `tool.uv.sources.mobileclip` path already used by `model-tools`. Update the lock file with `uv lock --project backend`, then synchronize the backend environment.
 
-- [ ] **Step 4: Implement runtime factory**
+- [x] **Step 4: Implement runtime factory**
 
 Load `models/model-manifest.json`, validate hashes through `ModelManifest`, construct `SentenceTransformerBackend`, `LocalMobileClipBackend`, `TextChunker`, `ChromaVectorRepository`, `IndexingService`, and `RetrievalService`. Require all paths through explicit arguments or environment variables; do not use network fallback.
 
-- [ ] **Step 5: Run focused runtime tests and real local smoke**
+- [x] **Step 5: Run focused runtime tests and real local smoke**
 
 Index one TXT, one PDF, one DOCX, one JPG, and one PNG from controlled fixtures. Search one exact keyword, one text-semantic query, and one image-description query. Restart the repository and repeat one search.
 
-- [ ] **Step 6: Implement actual Chroma-backed benchmarks**
+- [x] **Step 6: Implement actual Chroma-backed benchmarks**
 
 Reuse frozen Week 3 NQ and COCO splits, but route corpus vectors through `ChromaVectorRepository` and all queries through the Week 4 retrieval path. Emit Recall@1/5/10, MRR@10, nDCG@10, median rank, query counts, collection sizes, model IDs, space IDs, and source hashes.
 
-- [ ] **Step 7: Record performance**
+- [x] **Step 7: Record performance**
 
 Populate a deterministic 10,000-record synthetic Chroma collection, warm it, execute at least 50 queries, and report P50/P95/maximum latency plus device and dependency versions. Treat the PRD target `P95 <= 2 seconds` as the pass gate.
 
-- [ ] **Step 8: Run full verification**
+- [x] **Step 8: Run full verification**
 
 ```powershell
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q
@@ -525,7 +525,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend -
 
 Expected: all tests pass, one pre-existing skip remains documented, and new Week 4 core coverage is at least 85%.
 
-- [ ] **Step 9: Commit Task 7**
+- [x] **Step 9: Commit Task 7**
 
 Stage only the runtime, benchmark, tests, lock/config changes, and machine-readable evidence. Never stage model weights, databases, dataset binaries, virtual environments, caches, or user documents.
 

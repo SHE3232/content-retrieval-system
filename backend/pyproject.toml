@@ -1,0 +1,27 @@
+[project]
+name = "content-retrieval-backend"
+version = "0.1.0"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "chromadb>=1.0,<2",
+    "fastapi>=0.115,<1",
+    "httpx>=0.28,<1",
+    "mobileclip",
+    "pillow>=11,<13",
+    "pypdfium2>=4.30,<5",
+    "python-multipart>=0.0.20,<1",
+    "sentence-transformers>=5,<6",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-cov>=6,<7",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.uv.sources]
+mobileclip = { path = "../third_party/mobileclip-src/ml-mobileclip-aecfb5453d022e9deff12f81a150ea8f35194baa" }

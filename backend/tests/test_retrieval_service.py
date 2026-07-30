@@ -304,6 +304,7 @@ def test_refresh_rebuilds_keyword_catalog_after_index_changes(
     [
         ({"query": " ", "top_k": 5}, "empty"),
         ({"query": "alpha", "top_k": 0}, "top_k"),
+        ({"query": "alpha", "top_k": 101}, "top_k"),
         (
             {
                 "query": "alpha",

@@ -1,0 +1,87 @@
+{
+  "schema_version": "1",
+  "status": "passed",
+  "generated_at": "2026-07-30T04:06:46.064034+00:00",
+  "storage": "ChromaDB persistent cosine collections",
+  "retrieval_path": "RetrievalService",
+  "total_collection_size": 5486,
+  "nq": {
+    "dataset": "sentence-transformers/NQ-retrieval",
+    "split": "benchmark",
+    "frozen_test_split": true,
+    "query_count": 40,
+    "collection_size": 5446,
+    "ranking_depth": 100,
+    "unretrieved_rank": 101,
+    "model_id": "text-multilingual-v1",
+    "space_id": "text-semantic-v1",
+    "dimensions": 384,
+    "source_hashes": {
+      "corpus.jsonl": {
+        "bytes": 2544466,
+        "sha256": "8292519e69bdbc341e2b5a09e5c56bfb12957b26c0a4e82090649d39326b3d3a"
+      },
+      "queries.jsonl": {
+        "bytes": 6048,
+        "sha256": "a9c2abadbda6f3b7806eaaa264f404dd668888723a7c64fcd29d820ee85b2f17"
+      },
+      "qrels.tsv": {
+        "bytes": 2673,
+        "sha256": "3e6634c31158854248a63a0ff15892733b856547cfff6be51d4869202e573c51"
+      }
+    },
+    "metrics": {
+      "recall@1": 0.125,
+      "recall@5": 0.4125,
+      "recall@10": 0.5958333333333334,
+      "mrr@10": 0.28197420634920634,
+      "ndcg@10": 0.348952179249463,
+      "median_rank": 6.5
+    },
+    "query_latency": {
+      "query_count": 40,
+      "p50_ms": 190.9556999889901,
+      "p95_ms": 239.292845017917,
+      "max_ms": 246.65259997709654
+    },
+    "elapsed_seconds": 117.06565679999767
+  },
+  "coco": {
+    "dataset": "COCO 2017 validation",
+    "split": "benchmark",
+    "frozen_test_split": true,
+    "query_count": 201,
+    "collection_size": 40,
+    "ranking_depth": 40,
+    "unretrieved_rank": 41,
+    "model_id": "mobileclip-s0-v1",
+    "space_id": "mobileclip-image-text-v1",
+    "dimensions": 512,
+    "source_hashes": {
+      "items.jsonl": {
+        "bytes": 32537,
+        "sha256": "194893ff1fd34ae566162e9b911c93dc3104859f56f68b2921ca01361b03c943"
+      },
+      "images": {
+        "count": 40,
+        "total_bytes": 6182773,
+        "manifest_sha256": "ca9152a8bd2e1873619bea6ed6dec80b62a6e2700dde8978c26ab4cb77125610"
+      }
+    },
+    "metrics": {
+      "recall@1": 0.9104477611940298,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "mrr@10": 0.9514925373134329,
+      "ndcg@10": 0.9639984731744965,
+      "median_rank": 1.0
+    },
+    "query_latency": {
+      "query_count": 201,
+      "p50_ms": 37.014200002886355,
+      "p95_ms": 42.90589998709038,
+      "max_ms": 52.845199999865144
+    },
+    "elapsed_seconds": 12.184430799999973
+  }
+}
