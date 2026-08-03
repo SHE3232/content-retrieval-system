@@ -20,7 +20,16 @@ $expected = (Get-Content -LiteralPath $checksumFile -Raw).Trim().ToLowerInvarian
 if ($expected -notmatch '^[0-9a-f]{128}$') {
     throw "Tika checksum file must contain one lowercase SHA-512 digest"
 }
-$actual = (Get-FileHash -LiteralPath $jar -Algorithm SHA512).Hash.ToLowerInvariant()
+$stream = [System.IO.File]::OpenRead($jar)
+$sha512 = [System.Security.Cryptography.SHA512]::Create()
+try {
+    $hash = $sha512.ComputeHash($stream)
+    $actual = [System.BitConverter]::ToString($hash).Replace("-", "").ToLowerInvariant()
+}
+finally {
+    $sha512.Dispose()
+    $stream.Dispose()
+}
 if ($actual -ne $expected) {
     throw "Tika server JAR SHA-512 mismatch: expected $expected, got $actual"
 }
