@@ -19,6 +19,27 @@
 
 检索接口和服务层均限制 `top_k` 为 1–100。ChromaDB 1.5.9 在大型集合上执行 `n_results=collection.count()` 可能少返回条目并使同一客户端后续全量读取失败，因此本周准确率评测使用 Top-100 排名，禁止把 HNSW 查询作为全表扫描器。
 
+## 一键启动 MVP
+
+生产 MVP 通过仓库根目录的 `tools/start-mvp.ps1` 完成本地资源预检、Tika
+启动或复用、严格真实模型运行时注入和 FastAPI 启动。资源准备完成后运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/start-mvp.ps1
+```
+
+完整的一次性资源准备、`-CheckOnly`、API 调用、五格式首次/重启烟测、进程所有权和
+故障排查见 [离线 FastAPI MVP 运行手册](MVP_RUNBOOK.md)。生产入口使用应用生命周期
+持有文本模型、MobileCLIP 和 Chroma；默认 `create_app()` 仍为自动化测试和仅解析场景
+保留，不代表未配置的默认实例具备第四周检索运行时。
+
+本次可运行交付同时关联：
+
+- [端到端功能测试报告](reports/端到端功能测试报告.docx)
+- [检索准确率基准报告](reports/检索准确率基准报告.docx)
+- [MVP HTTP 烟测证据](evidence/mvp-api-smoke-summary.json)：按运行手册完成首次索引和
+  重启持久化烟测后生成；提交级验证前不存在预制证据。
+
 ## 验证命令
 
 从仓库根目录运行：
