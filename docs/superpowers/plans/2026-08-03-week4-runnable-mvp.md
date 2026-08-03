@@ -445,13 +445,13 @@ def ready(request: Request, response: Response) -> dict[str, str]:
 
 > 质量评审修正（2026-08-04）：索引任务内部使用 `asyncio.to_thread`，取消 asyncio task wrapper 不会停止底层线程，会导致 `runtime.close()` 与 Chroma 写入竞态。因此 shutdown 必须 `gather` 排空全部活动后台索引任务后再关闭 runtime。
 
-> 质量复审第二次修正（2026-08-04）：shutdown drain 使用明确的 30 秒 grace；到期只告警并继续以 `shield` 等待真实工作结束，绝不在线程仍运行时强关 Chroma。外部取消先记录，待 drain 完成并关闭 runtime 后重抛；已有主异常时则记录取消并保留主异常。
+> 质量复审第二次修正（2026-08-04）：shutdown drain 使用明确的 30 秒 grace；到期只告警并继续以 `shield` 等待真实工作结束，绝不在线程仍运行时强关 Chroma。支持一次或多次外部取消，但只保留并在 drain、close 完成后恢复首次 `CancelledError`；`gather` 返回的非取消 `BaseException` 必须逐项记录。若没有 `primary_error`，正常 close 错误优先于捕获的取消；已有主异常时则只记录 cancel/close 错误并保留主异常。
 
 在 `backend/src/content_retrieval/mvp.py` 中增加：
 
 ```python
 import asyncio
-from collections.abc import Callable
+import logging
 from contextlib import asynccontextmanager
 from typing import Protocol
 
@@ -459,6 +459,10 @@ from fastapi import FastAPI
 
 from content_retrieval.api.app import create_app
 from content_retrieval.runtime import LocalRuntime, build_local_runtime
+
+
+SHUTDOWN_GRACE_SECONDS = 30.0
+logger = logging.getLogger(__name__)
 
 
 class RuntimeBuilder(Protocol):
@@ -471,38 +475,118 @@ class RuntimeBuilder(Protocol):
     ) -> LocalRuntime: ...
 
 
+async def _drain_background_tasks(
+    background_tasks: tuple[asyncio.Task[object], ...],
+) -> asyncio.CancelledError | None:
+    if not background_tasks:
+        return None
+
+    drain = asyncio.gather(*background_tasks, return_exceptions=True)
+    shutdown_cancellation: asyncio.CancelledError | None = None
+    try:
+        await asyncio.wait_for(
+            asyncio.shield(drain),
+            timeout=SHUTDOWN_GRACE_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "MVP shutdown grace period of %.1f seconds elapsed; "
+            "continuing to drain background indexing work",
+            SHUTDOWN_GRACE_SECONDS,
+        )
+    except asyncio.CancelledError as error:
+        shutdown_cancellation = error
+
+    while not drain.done():
+        try:
+            await asyncio.shield(drain)
+        except asyncio.CancelledError as error:
+            if shutdown_cancellation is None:
+                shutdown_cancellation = error
+
+    for result in drain.result():
+        if isinstance(result, BaseException) and not isinstance(
+            result, asyncio.CancelledError
+        ):
+            logger.error(
+                "MVP background task failed during shutdown: %s",
+                result,
+                exc_info=(type(result), result, result.__traceback__),
+            )
+    return shutdown_cancellation
+
+
 def create_mvp_app(
     settings: MvpSettings | None = None,
     *,
     runtime_builder: RuntimeBuilder = build_local_runtime,
     tika_probe: TikaReadinessProbe | None = None,
 ) -> FastAPI:
-    resolved = settings or MvpSettings.from_environment()
-    probe = tika_probe or TikaReadinessProbe(resolved.tika_url)
+    if settings is None:
+        settings = MvpSettings.from_environment()
+    probe = (
+        tika_probe
+        if tika_probe is not None
+        else TikaReadinessProbe(settings.tika_url)
+    )
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         runtime = runtime_builder(
-            model_root=resolved.model_root,
-            manifest_path=resolved.manifest_path,
-            data_dir=resolved.data_dir,
+            model_root=settings.model_root,
+            manifest_path=settings.manifest_path,
+            data_dir=settings.data_dir,
         )
+        primary_error: BaseException | None = None
         try:
             if not probe.is_ready():
                 raise RuntimeError(
-                    "Apache Tika is not ready at " + resolved.tika_url
+                    f"Tika dependency is not ready at {settings.tika_url}"
                 )
             application.state.runtime = runtime
             application.state.indexing_service = runtime.indexing_service
             application.state.retrieval_service = runtime.retrieval_service
             application.state.ready = True
             yield
+        except BaseException as error:
+            primary_error = error
+            raise
         finally:
             application.state.ready = False
-            tasks = list(application.state.background_tasks)
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
-            runtime.close()
+            background_tasks = tuple(application.state.background_tasks)
+            shutdown_cancellation = await _drain_background_tasks(
+                background_tasks
+            )
+            try:
+                runtime.close()
+            except BaseException:
+                if primary_error is None:
+                    if shutdown_cancellation is not None:
+                        logger.warning(
+                            "MVP shutdown cancellation was superseded by "
+                            "a runtime close failure",
+                            exc_info=(
+                                type(shutdown_cancellation),
+                                shutdown_cancellation,
+                                shutdown_cancellation.__traceback__,
+                            ),
+                        )
+                    raise
+                logger.exception(
+                    "Failed to close the MVP runtime while handling an error"
+                )
+            if shutdown_cancellation is not None:
+                if primary_error is None:
+                    raise shutdown_cancellation
+                logger.warning(
+                    "MVP shutdown cancellation was suppressed to preserve "
+                    "the primary error",
+                    exc_info=(
+                        type(shutdown_cancellation),
+                        shutdown_cancellation,
+                        shutdown_cancellation.__traceback__,
+                    ),
+                )
 
     application = create_app(lifespan=lifespan, ready=False)
 
