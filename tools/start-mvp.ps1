@@ -27,6 +27,48 @@ function Resolve-RepositoryPath {
     return [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $Path))
 }
 
+function ConvertTo-WindowsCommandLineArgument {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$Argument
+    )
+
+    if ($Argument.Length -gt 0 -and $Argument -notmatch '[\s"]') {
+        return $Argument
+    }
+
+    $builder = New-Object System.Text.StringBuilder
+    [void]$builder.Append([char]34)
+    $backslashCount = 0
+    foreach ($character in $Argument.ToCharArray()) {
+        if ($character -eq [char]92) {
+            $backslashCount++
+            continue
+        }
+
+        if ($character -eq [char]34) {
+            [void]$builder.Append(
+                (-join ('\' * (($backslashCount * 2) + 1)))
+            )
+            [void]$builder.Append([char]34)
+        }
+        else {
+            if ($backslashCount -gt 0) {
+                [void]$builder.Append((-join ('\' * $backslashCount)))
+            }
+            [void]$builder.Append($character)
+        }
+        $backslashCount = 0
+    }
+
+    if ($backslashCount -gt 0) {
+        [void]$builder.Append((-join ('\' * ($backslashCount * 2))))
+    }
+    [void]$builder.Append([char]34)
+    return $builder.ToString()
+}
+
 function Test-TcpPort {
     param(
         [Parameter(Mandatory = $true)]
@@ -245,7 +287,9 @@ try {
         $appDir,
         $manifestPathResolved,
         $modelRootPath
-    ) | ForEach-Object { '"' + $_ + '"' }
+    ) | ForEach-Object {
+        ConvertTo-WindowsCommandLineArgument -Argument $_
+    }
     $manifestVerificationProcess.StartInfo.Arguments = $manifestArguments -join " "
     $manifestVerificationProcess.StartInfo.UseShellExecute = $false
     $manifestVerificationProcess.StartInfo.CreateNoWindow = $true

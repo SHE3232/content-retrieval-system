@@ -160,6 +160,7 @@ def _run_launcher(
     *,
     java: str | Path,
     python: str | Path = BACKEND_PYTHON,
+    model_root: str | Path | None = None,
     check_only: bool = True,
     env: dict[str, str] | None = None,
     timeout: float = 30,
@@ -181,7 +182,7 @@ def _run_launcher(
             "-JavaExecutable",
             str(java),
             "-ModelRoot",
-            str(fixture.model_root),
+            str(model_root if model_root is not None else fixture.model_root),
             "-ManifestPath",
             str(fixture.manifest),
             "-DataDir",
@@ -428,6 +429,21 @@ def test_check_only_verifies_real_runtimes_and_manifest(tmp_path: Path) -> None:
     fixture = _build_fixture(tmp_path)
 
     result = _run_launcher(fixture, java=_java())
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "MVP preflight passed" in result.stdout
+    assert not fixture.data_dir.exists()
+
+
+def test_check_only_quotes_trailing_separator_model_root(tmp_path: Path) -> None:
+    fixture = _build_fixture(tmp_path)
+    model_root_with_trailing_separator = str(fixture.model_root) + os.sep
+
+    result = _run_launcher(
+        fixture,
+        java=_java(),
+        model_root=model_root_with_trailing_separator,
+    )
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "MVP preflight passed" in result.stdout

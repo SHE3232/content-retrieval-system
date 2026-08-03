@@ -636,6 +636,7 @@ git commit -m "feat: assemble retrieval runtime in FastAPI lifespan"
 - 模型预检失败只输出 `<ExceptionType>: <message>`，PowerShell 保留并抛出 `Model manifest verification failed: <具体原因>`，不得丢弃原因或输出 traceback。
 - fake Java 严格接受 `-jar`、单个完整 JAR 绝对路径、`-p`、`9998` 四项参数；测试记录参数长度和值，覆盖带空格和 Unicode 的 JAR 路径。
 - 黑盒覆盖已有 Tika 复用、本次 Tika 在 Uvicorn 非零后的定向收尾、Tika 提前退出；生命周期测试用 fake Python 让 Uvicorn 固定立即非零，所有子进程调用必须有明确超时。
+- `ProcessStartInfo.Arguments` 必须使用 Windows CRT 引用规则：引号前的反斜杠按 `2n+1` 转义，闭合引号前的末尾反斜杠加倍；测试覆盖带空格/Unicode 且以目录分隔符结尾的 `ModelRoot`。
 - `-CheckOnly` 对本次新建且仍为空的数据目录负责回收，预先存在的数据目录保持不变。
 
 - [ ] **步骤 1：编写启动器预检失败测试**
@@ -924,6 +925,8 @@ finally {
 - [ ] **步骤 5：运行启动器测试并确认绿灯**
 
 运行步骤 2 的命令。预期：严格预检与三个进程生命周期黑盒全部通过；`-CheckOnly` 只执行 Java/Python 探测，不启动 Tika 或 Uvicorn。生命周期测试使用 fake Python 的固定非零 Uvicorn 路径，fake Java 参数记录必须显示恰好四项且 JAR 路径未被空格或 Unicode 拆分。
+
+验证记录（2026-08-04）：末尾带 `\` 的空格/Unicode `ModelRoot` 在旧引用逻辑下先以 WinError 123 红灯失败；加入 CRT 引用函数后单项转绿，完整 launcher 套件为 12 passed（53.71 秒）。
 
 - [ ] **步骤 6：运行已有 Tika 启动器测试回归**
 
