@@ -90,18 +90,10 @@ function Stop-StartedTika {
 
         if (-not $hasExited) {
             try {
-                Stop-Process -Id $Process.Id -Force -ErrorAction Stop
+                $Process.Kill()
             }
-            catch {
-                try {
-                    $Process.Refresh()
-                    if (-not $Process.HasExited) {
-                        throw
-                    }
-                }
-                catch [System.InvalidOperationException] {
-                    # The process exited between inspection and termination.
-                }
+            catch [System.InvalidOperationException] {
+                # The process exited between inspection and termination.
             }
         }
 
@@ -229,31 +221,60 @@ $manifestVerificationCode = @'
 import sys
 from pathlib import Path
 
-sys.path.insert(0, sys.argv[1])
+try:
+    sys.path.insert(0, sys.argv[1])
 
-from content_retrieval.embeddings.manifest import ModelManifest
-from content_retrieval.runtime import IMAGE_MODEL_ID, TEXT_MODEL_ID
+    from content_retrieval.embeddings.manifest import ModelManifest
+    from content_retrieval.runtime import IMAGE_MODEL_ID, TEXT_MODEL_ID
 
-manifest = ModelManifest.load(Path(sys.argv[2]), model_root=Path(sys.argv[3]))
-text_entry = manifest.require(TEXT_MODEL_ID)
-image_entry = manifest.require(IMAGE_MODEL_ID)
-text_entry.verify()
-image_entry.verify()
+    manifest = ModelManifest.load(Path(sys.argv[2]), model_root=Path(sys.argv[3]))
+    text_entry = manifest.require(TEXT_MODEL_ID)
+    image_entry = manifest.require(IMAGE_MODEL_ID)
+    text_entry.verify()
+    image_entry.verify()
+except Exception as error:
+    print(f'{type(error).__name__}: {error}', file=sys.stderr)
+    raise SystemExit(1)
 '@
+$manifestVerificationProcess = New-Object System.Diagnostics.Process
 try {
-    & $pythonPath `
-        -c $manifestVerificationCode `
-        $appDir `
-        $manifestPathResolved `
-        $modelRootPath `
-        2>&1 | Out-Null
-    $manifestVerificationExitCode = $LASTEXITCODE
+    $manifestVerificationProcess.StartInfo.FileName = $pythonPath
+    $manifestArguments = @(
+        "-c",
+        $manifestVerificationCode,
+        $appDir,
+        $manifestPathResolved,
+        $modelRootPath
+    ) | ForEach-Object { '"' + $_ + '"' }
+    $manifestVerificationProcess.StartInfo.Arguments = $manifestArguments -join " "
+    $manifestVerificationProcess.StartInfo.UseShellExecute = $false
+    $manifestVerificationProcess.StartInfo.CreateNoWindow = $true
+    $manifestVerificationProcess.StartInfo.RedirectStandardOutput = $true
+    $manifestVerificationProcess.StartInfo.RedirectStandardError = $true
+    if (-not $manifestVerificationProcess.Start()) {
+        throw "Python model manifest verifier did not start"
+    }
+    $manifestVerificationStandardOutput = $manifestVerificationProcess.StandardOutput.ReadToEnd()
+    $manifestVerificationStandardError = $manifestVerificationProcess.StandardError.ReadToEnd()
+    $manifestVerificationProcess.WaitForExit()
+    $manifestVerificationExitCode = $manifestVerificationProcess.ExitCode
 }
 catch {
-    throw "Model manifest verification failed"
+    throw "Model manifest verification failed: $($_.Exception.Message)"
+}
+finally {
+    $manifestVerificationProcess.Dispose()
 }
 if ($manifestVerificationExitCode -ne 0) {
-    throw "Model manifest verification failed"
+    $manifestVerificationDetails = $manifestVerificationStandardError.Trim()
+    if ([string]::IsNullOrWhiteSpace($manifestVerificationDetails)) {
+        $manifestVerificationDetails = $manifestVerificationStandardOutput.Trim()
+    }
+    $manifestVerificationDetails = $manifestVerificationDetails.Trim()
+    if ([string]::IsNullOrWhiteSpace($manifestVerificationDetails)) {
+        $manifestVerificationDetails = "unknown verification error"
+    }
+    throw "Model manifest verification failed: $manifestVerificationDetails"
 }
 
 $dataDirCreatedByLauncher = $false

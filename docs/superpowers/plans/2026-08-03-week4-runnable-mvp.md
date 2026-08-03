@@ -633,7 +633,9 @@ git commit -m "feat: assemble retrieval runtime in FastAPI lifespan"
 - 成功路径使用 `backend/.venv/Scripts/python.exe` 与真实 `java.exe`；找不到 Java 时仅跳过依赖 Java 的 Windows 黑盒。
 - 测试清单必须包含固定 ID 的文本模型目录和 MobileCLIP 文件，并用 `sha256_path`/文件 SHA-256 写入可验证摘要，禁止使用空 `models` 数组。
 - `-CheckOnly` 必须验证 Java `-version`、Python 3.10、`uvicorn` 导入，以及两个运行时必需模型条目的存在与摘要，但不得加载模型或启动 Tika/Uvicorn。
-- 黑盒覆盖已有 Tika 复用、本次 Tika 在 Uvicorn 非零后的定向收尾、Tika 提前退出，以及带空格或 Unicode 的路径；所有子进程调用必须有明确超时。
+- 模型预检失败只输出 `<ExceptionType>: <message>`，PowerShell 保留并抛出 `Model manifest verification failed: <具体原因>`，不得丢弃原因或输出 traceback。
+- fake Java 严格接受 `-jar`、单个完整 JAR 绝对路径、`-p`、`9998` 四项参数；测试记录参数长度和值，覆盖带空格和 Unicode 的 JAR 路径。
+- 黑盒覆盖已有 Tika 复用、本次 Tika 在 Uvicorn 非零后的定向收尾、Tika 提前退出；生命周期测试用 fake Python 让 Uvicorn 固定立即非零，所有子进程调用必须有明确超时。
 - `-CheckOnly` 对本次新建且仍为空的数据目录负责回收，预先存在的数据目录保持不变。
 
 - [ ] **步骤 1：编写启动器预检失败测试**
@@ -746,7 +748,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/t
 1. `java -version` 返回 0，否则报 `Java runtime check failed`。
 2. Python 输出的 `major.minor` 必须恰为 `3.10`，否则报 `Python 3.10 is required`。
 3. `import uvicorn` 必须成功，否则报 `Uvicorn import failed`。
-4. 将 `backend/src` 插入 `sys.path`，用 `ModelManifest.load` 加载清单，按 `runtime.TEXT_MODEL_ID`/`IMAGE_MODEL_ID` 取两项并调用 `verify()`；失败统一报 `Model manifest verification failed`，不得实例化模型后端。
+4. 将 `backend/src` 插入 `sys.path`，用 `ModelManifest.load` 加载清单，按 `runtime.TEXT_MODEL_ID`/`IMAGE_MODEL_ID` 取两项并调用 `verify()`；内联 Python 捕获预期异常并只向 stderr 写 `<ExceptionType>: <message>`，PowerShell 保留原因并报 `Model manifest verification failed: <具体原因>`，不得实例化模型后端。
 5. `-CheckOnly` 新建的数据目录在写探针后仅于仍为空时删除；预先存在的目录绝不删除。
 
 创建 `tools/start-mvp.ps1`，参数和预检主体如下：
@@ -875,9 +877,10 @@ if ($CheckOnly) {
 $startedTika = $null
 try {
     if (-not (Test-TikaReady)) {
+        $tikaArguments = "-jar `"$jar`" -p 9998"
         $startedTika = Start-Process `
             -FilePath $java `
-            -ArgumentList @("-jar", "`"$jar`"", "-p", "9998") `
+            -ArgumentList $tikaArguments `
             -PassThru `
             -WindowStyle Hidden
         $deadline = [DateTime]::UtcNow.AddSeconds(30)
@@ -911,8 +914,8 @@ try {
 }
 finally {
     if ($null -ne $startedTika) {
-        # 只使用保存的 Process/PID，容忍检查后退出竞态；
-        # Stop-Process 后有界 WaitForExit，并始终 Dispose Process。
+        # 只使用保存的 Process 对象，Kill() 容忍已退出竞态；
+        # 随后有界 WaitForExit，并始终 Dispose Process。
         Stop-StartedTika $startedTika
     }
 }
@@ -920,7 +923,7 @@ finally {
 
 - [ ] **步骤 5：运行启动器测试并确认绿灯**
 
-运行步骤 2 的命令。预期：严格预检与三个进程生命周期黑盒全部通过；`-CheckOnly` 只执行 Java/Python 探测，不启动 Tika 或 Uvicorn。
+运行步骤 2 的命令。预期：严格预检与三个进程生命周期黑盒全部通过；`-CheckOnly` 只执行 Java/Python 探测，不启动 Tika 或 Uvicorn。生命周期测试使用 fake Python 的固定非零 Uvicorn 路径，fake Java 参数记录必须显示恰好四项且 JAR 路径未被空格或 Unicode 拆分。
 
 - [ ] **步骤 6：运行已有 Tika 启动器测试回归**
 

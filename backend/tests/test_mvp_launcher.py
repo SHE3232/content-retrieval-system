@@ -270,6 +270,35 @@ def fake_java(tmp_path_factory: pytest.TempPathFactory) -> Path:
                     return 0;
                 }
 
+                string argumentsFile = Environment.GetEnvironmentVariable("FAKE_JAVA_ARGUMENTS_FILE");
+                if (!String.IsNullOrEmpty(argumentsFile))
+                {
+                    using (StreamWriter writer = new StreamWriter(
+                        argumentsFile,
+                        false,
+                        new UTF8Encoding(false)
+                    ))
+                    {
+                        writer.WriteLine(args.Length);
+                        foreach (string argument in args)
+                        {
+                            writer.WriteLine(argument.Length + ":" + argument);
+                        }
+                    }
+                }
+
+                string expectedJar = Environment.GetEnvironmentVariable("FAKE_JAVA_EXPECTED_JAR");
+                if (
+                    args.Length != 4 ||
+                    args[0] != "-jar" ||
+                    args[1] != expectedJar ||
+                    args[2] != "-p" ||
+                    args[3] != "9998"
+                )
+                {
+                    return 23;
+                }
+
                 string pidFile = Environment.GetEnvironmentVariable("FAKE_JAVA_PID_FILE");
                 if (!String.IsNullOrEmpty(pidFile))
                 {
@@ -383,6 +412,18 @@ def _wait_for_process_exit(pid: int, timeout: float = 10) -> None:
     raise AssertionError(f"process did not exit: {pid}")
 
 
+def _read_recorded_arguments(path: Path) -> list[str]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    count = int(lines[0])
+    arguments: list[str] = []
+    for line in lines[1:]:
+        length_text, argument = line.split(":", 1)
+        assert int(length_text) == len(argument)
+        arguments.append(argument)
+    assert count == len(arguments)
+    return arguments
+
+
 def test_check_only_verifies_real_runtimes_and_manifest(tmp_path: Path) -> None:
     fixture = _build_fixture(tmp_path)
 
@@ -404,26 +445,43 @@ def test_check_only_rejects_java_that_fails_version_check(tmp_path: Path) -> Non
     assert "Java runtime check failed" in result.stdout + result.stderr
 
 
-@pytest.mark.parametrize(
-    ("include_image", "bad_text_digest"),
-    [(False, False), (True, True)],
-    ids=["missing-required-model", "wrong-model-digest"],
-)
-def test_check_only_rejects_invalid_model_manifest(
-    tmp_path: Path,
-    include_image: bool,
-    bad_text_digest: bool,
-) -> None:
+def test_check_only_reports_missing_required_model_id(tmp_path: Path) -> None:
     fixture = _build_fixture(
         tmp_path,
-        include_image=include_image,
-        bad_text_digest=bad_text_digest,
+        include_image=False,
     )
 
     result = _run_launcher(fixture, java=_java())
 
     assert result.returncode != 0
-    assert "Model manifest verification failed" in result.stdout + result.stderr
+    output = result.stdout + result.stderr
+    assert (
+        "Model manifest verification failed: ModelManifestError: "
+        f"unknown model_id: {IMAGE_MODEL_ID}"
+    ) in output
+    assert "Traceback" not in output
+    assert not fixture.data_dir.exists()
+
+
+def test_check_only_reports_model_digest_mismatch(tmp_path: Path) -> None:
+    fixture = _build_fixture(
+        tmp_path,
+        bad_text_digest=True,
+    )
+    text_path = fixture.model_root / "text" / TEXT_MODEL_ID
+    actual_digest = sha256_path(text_path)
+
+    result = _run_launcher(fixture, java=_java())
+
+    assert result.returncode != 0
+    output = result.stdout + result.stderr
+    expected_diagnostic = (
+        "Model manifest verification failed: ModelManifestError: "
+        f"model SHA-256 mismatch for {TEXT_MODEL_ID}: "
+        f"expected {'0' * 64}, got {actual_digest}"
+    )
+    assert "".join(expected_diagnostic.split()) in "".join(output.split())
+    assert "Traceback" not in output
     assert not fixture.data_dir.exists()
 
 
@@ -478,6 +536,39 @@ def test_check_only_does_not_start_tika_or_uvicorn(
     assert not _port_is_open(fixture.api_port)
 
 
+def test_fake_java_rejects_incorrect_tika_arguments(
+    tmp_path: Path,
+    fake_java: Path,
+) -> None:
+    if _port_is_open(9998):
+        pytest.skip("port 9998 is already occupied")
+    fixture = _build_fixture(tmp_path)
+    arguments_file = fixture.root / "rejected arguments.txt"
+    env = os.environ.copy()
+    env["FAKE_JAVA_ARGUMENTS_FILE"] = str(arguments_file)
+    env["FAKE_JAVA_EXPECTED_JAR"] = str(fixture.tika_jar)
+
+    result = subprocess.run(
+        [str(fake_java), "-jar", str(fixture.tika_jar), "-p", "9999"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=5,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 23
+    assert _read_recorded_arguments(arguments_file) == [
+        "-jar",
+        str(fixture.tika_jar),
+        "-p",
+        "9999",
+    ]
+    assert not _port_is_open(9998)
+
+
 TIKA_SERVER_CODE = r"""
 import http.server
 import os
@@ -514,7 +605,10 @@ def _wait_for_tika(timeout: float = 10) -> None:
     raise AssertionError("Tika fixture did not become ready")
 
 
-def test_existing_tika_is_reused_and_left_running(tmp_path: Path) -> None:
+def test_existing_tika_is_reused_and_left_running(
+    tmp_path: Path,
+    fake_python: Path,
+) -> None:
     if _port_is_open(9998):
         pytest.skip("port 9998 is already occupied")
     fixture = _build_fixture(tmp_path)
@@ -529,8 +623,9 @@ def test_existing_tika_is_reused_and_left_running(tmp_path: Path) -> None:
         result = _run_launcher(
             fixture,
             java=_java(),
+            python=fake_python,
             check_only=False,
-            timeout=90,
+            timeout=30,
         )
 
         assert result.returncode != 0
@@ -548,26 +643,37 @@ def test_existing_tika_is_reused_and_left_running(tmp_path: Path) -> None:
 def test_started_tika_is_stopped_after_uvicorn_failure(
     tmp_path: Path,
     fake_java: Path,
+    fake_python: Path,
 ) -> None:
     if _port_is_open(9998):
         pytest.skip("port 9998 is already occupied")
     fixture = _build_fixture(tmp_path)
     pid_file = fixture.root / "started tika pid.txt"
+    arguments_file = fixture.root / "started tika arguments.txt"
     env = os.environ.copy()
     env["FAKE_JAVA_PID_FILE"] = str(pid_file)
+    env["FAKE_JAVA_ARGUMENTS_FILE"] = str(arguments_file)
+    env["FAKE_JAVA_EXPECTED_JAR"] = str(fixture.tika_jar)
     pid: int | None = None
     try:
         result = _run_launcher(
             fixture,
             java=fake_java,
+            python=fake_python,
             check_only=False,
             env=env,
-            timeout=90,
+            timeout=30,
         )
         pid = _wait_for_pid_file(pid_file)
 
         assert result.returncode != 0
         assert "MVP API exited with code" in result.stdout + result.stderr
+        assert _read_recorded_arguments(arguments_file) == [
+            "-jar",
+            str(fixture.tika_jar),
+            "-p",
+            "9998",
+        ]
         _wait_for_process_exit(pid)
     finally:
         if pid is None and pid_file.is_file():
@@ -579,18 +685,23 @@ def test_started_tika_is_stopped_after_uvicorn_failure(
 def test_tika_early_exit_is_reported_without_process_leak(
     tmp_path: Path,
     fake_java: Path,
+    fake_python: Path,
 ) -> None:
     if _port_is_open(9998):
         pytest.skip("port 9998 is already occupied")
     fixture = _build_fixture(tmp_path)
     pid_file = fixture.root / "early exit tika pid.txt"
+    arguments_file = fixture.root / "early exit tika arguments.txt"
     env = os.environ.copy()
     env["FAKE_JAVA_PID_FILE"] = str(pid_file)
+    env["FAKE_JAVA_ARGUMENTS_FILE"] = str(arguments_file)
+    env["FAKE_JAVA_EXPECTED_JAR"] = str(fixture.tika_jar)
     env["FAKE_JAVA_MODE"] = "exit"
 
     result = _run_launcher(
         fixture,
         java=fake_java,
+        python=fake_python,
         check_only=False,
         env=env,
         timeout=30,
@@ -599,4 +710,10 @@ def test_tika_early_exit_is_reported_without_process_leak(
 
     assert result.returncode != 0
     assert "Tika server exited before becoming ready" in result.stdout + result.stderr
+    assert _read_recorded_arguments(arguments_file) == [
+        "-jar",
+        str(fixture.tika_jar),
+        "-p",
+        "9998",
+    ]
     _wait_for_process_exit(pid)
