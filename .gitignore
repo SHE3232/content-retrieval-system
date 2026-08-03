@@ -21,7 +21,7 @@ datasets/processed/**/qrels.tsv
 
 # Downloaded third-party runtimes
 tools/tika/*.jar
-tools/tika/*.sha512
+!tools/tika/*.sha512
 
 # Locally downloaded source archives
 third_party/mobileclip-src/
