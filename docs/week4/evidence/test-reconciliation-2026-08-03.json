@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "verified_at": "2026-08-03T17:37:36.7418034+08:00",
+  "baseline_commit": "537e06239717494dfca3bedd70cb1e2d16c14dce",
+  "tested_commit": "199ecec74577fc0f6a92e92c104e7d93a5165aa0",
+  "branch": "codex/week4-evidence-reconciliation",
+  "verification_worktree": {
+    "mode": "detached",
+    "path": "F:/contentretrivalsystem/.worktrees/week4-evidence-verify-final",
+    "clean_before_provisioning": true,
+    "clean_after_external_provisioning": true,
+    "clean_after_tests": true
+  },
+  "environment": {
+    "os": "Microsoft Windows NT 10.0.26200.0",
+    "python": "3.10.18",
+    "pytest": "8.4.2",
+    "uv": "0.8.2",
+    "java": "23.0.2",
+    "tika": "3.3.1"
+  },
+  "external_artifacts": {
+    "mobileclip_source_archive": {
+      "file": "third_party/ml-mobileclip-aecfb545.zip",
+      "sha256": "dc4396cada8b3473dff1957541ef6f277521e3757bfcea698da1faeface54b35",
+      "git_revision_from_directory": "aecfb5453d022e9deff12f81a150ea8f35194baa",
+      "committed": false
+    },
+    "tika_server": {
+      "file": "tools/tika/tika-server-standard-3.3.1.jar",
+      "sha512": "2ca66e2445f8463aefad6a6396725cdb64eb23f94d3948a295daf83bba2b5c3bd51b6e29cc52cf6dce8a71948d6a8431dc39efc56500f9bfe30fdbe0a3ee1d48",
+      "listener": "127.0.0.1:9998",
+      "committed": false
+    }
+  },
+  "environment_rebuild": {
+    "command": "uv sync --project backend --frozen",
+    "status": "passed",
+    "installed_packages": 129
+  },
+  "test_collection": {
+    "command": "backend/.venv/Scripts/python.exe -m pytest --collect-only -q",
+    "status": "passed",
+    "collected": 337,
+    "duration_seconds": 27.22
+  },
+  "full_regression": {
+    "command": "backend/.venv/Scripts/python.exe -m pytest -q",
+    "status": "passed",
+    "passed": 337,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 41.21
+  },
+  "core_coverage_gate": {
+    "command": "backend/.venv/Scripts/python.exe -m pytest -q backend --cov=content_retrieval.storage --cov=content_retrieval.retrieval --cov=content_retrieval.services.indexing --cov-report=term-missing --cov-fail-under=85",
+    "status": "passed",
+    "passed": 313,
+    "failed": 0,
+    "skipped": 0,
+    "statements": 612,
+    "covered_statements": 538,
+    "missing_statements": 74,
+    "coverage_percent": 87.91,
+    "required_percent": 85,
+    "duration_seconds": 39.12
+  },
+  "scope_notes": [
+    "The 175 additional tests are committed in twelve backend test files.",
+    "TXT, PDF, DOCX, JPEG, and PNG fixtures used by the added parser tests are generated in pytest temporary directories.",
+    "The full run requires the verified Tika JAR; no model weights are required by this regression suite.",
+    "This evidence upgrades the 337-test result for the tested commit only and does not rewrite the 162-test baseline of the original commit."
+  ]
+}
