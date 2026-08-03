@@ -629,6 +629,13 @@ git commit -m "feat: assemble retrieval runtime in FastAPI lifespan"
 - 新增：`tools/start-mvp.ps1`
 - 新增：`backend/tests/test_mvp_launcher.py`
 
+**质量修正后的验收基线：**
+- 成功路径使用 `backend/.venv/Scripts/python.exe` 与真实 `java.exe`；找不到 Java 时仅跳过依赖 Java 的 Windows 黑盒。
+- 测试清单必须包含固定 ID 的文本模型目录和 MobileCLIP 文件，并用 `sha256_path`/文件 SHA-256 写入可验证摘要，禁止使用空 `models` 数组。
+- `-CheckOnly` 必须验证 Java `-version`、Python 3.10、`uvicorn` 导入，以及两个运行时必需模型条目的存在与摘要，但不得加载模型或启动 Tika/Uvicorn。
+- 黑盒覆盖已有 Tika 复用、本次 Tika 在 Uvicorn 非零后的定向收尾、Tika 提前退出，以及带空格或 Unicode 的路径；所有子进程调用必须有明确超时。
+- `-CheckOnly` 对本次新建且仍为空的数据目录负责回收，预先存在的数据目录保持不变。
+
 - [ ] **步骤 1：编写启动器预检失败测试**
 
 创建 `backend/tests/test_mvp_launcher.py`：
@@ -667,8 +674,9 @@ def _run_preflight(tmp_path: Path, *, checksum: str) -> subprocess.CompletedProc
     repository = Path(__file__).resolve().parents[2]
     model_root = tmp_path / "models"
     model_root.mkdir()
-    manifest = model_root / "model-manifest.json"
-    manifest.write_text('{"schema_version":"1","models":[]}', encoding="utf-8")
+    # 创建 text-multilingual-v1 目录与 mobileclip-s0-v1 文件；
+    # 使用 sha256_path/文件 SHA-256 写入两个真实可验证条目。
+    manifest = _write_verified_manifest(model_root)
     jar = tmp_path / "tika.jar"
     jar.write_bytes(b"tika-fixture")
     checksum_file = tmp_path / "tika.jar.sha512"
@@ -683,9 +691,9 @@ def _run_preflight(tmp_path: Path, *, checksum: str) -> subprocess.CompletedProc
             str(repository / "tools/start-mvp.ps1"),
             "-CheckOnly",
             "-PythonExecutable",
-            sys.executable,
+            str(repository / "backend/.venv/Scripts/python.exe"),
             "-JavaExecutable",
-            sys.executable,
+            _java_or_skip(),
             "-ModelRoot",
             str(model_root),
             "-ManifestPath",
@@ -729,9 +737,17 @@ def test_launcher_rejects_tika_checksum_mismatch(tmp_path: Path) -> None:
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_mvp_launcher.py
 ```
 
-预期：两项测试失败，因为 `tools/start-mvp.ps1` 尚不存在。
+预期：严格预检和进程生命周期用例先因旧脚本行为不足而失败。
 
 - [ ] **步骤 3：实现启动参数与严格预检**
+
+路径、端口、JAR 与摘要校验之后，还必须执行以下轻量预检：
+
+1. `java -version` 返回 0，否则报 `Java runtime check failed`。
+2. Python 输出的 `major.minor` 必须恰为 `3.10`，否则报 `Python 3.10 is required`。
+3. `import uvicorn` 必须成功，否则报 `Uvicorn import failed`。
+4. 将 `backend/src` 插入 `sys.path`，用 `ModelManifest.load` 加载清单，按 `runtime.TEXT_MODEL_ID`/`IMAGE_MODEL_ID` 取两项并调用 `verify()`；失败统一报 `Model manifest verification failed`，不得实例化模型后端。
+5. `-CheckOnly` 新建的数据目录在写探针后仅于仍为空时删除；预先存在的目录绝不删除。
 
 创建 `tools/start-mvp.ps1`，参数和预检主体如下：
 
@@ -827,8 +843,9 @@ finally {
     $sha512.Dispose()
     $stream.Dispose()
 }
-if ($actual -ne $expected) { throw "Tika server JAR SHA-512 mismatch: expected $expected, got $actual" }
+if ($actual -ne $expected) { throw "Tika server JAR SHA-512 mismatch" }
 
+$dataCreatedByLauncher = -not [System.IO.Directory]::Exists($data)
 [System.IO.Directory]::CreateDirectory($data) | Out-Null
 $writeProbe = Join-Path $data ".mvp-write-probe"
 try {
@@ -836,6 +853,12 @@ try {
 }
 finally {
     if ([System.IO.File]::Exists($writeProbe)) { [System.IO.File]::Delete($writeProbe) }
+    if (
+        $CheckOnly -and $dataCreatedByLauncher -and
+        [System.IO.Directory]::GetFileSystemEntries($data).Length -eq 0
+    ) {
+        [System.IO.Directory]::Delete($data, $false)
+    }
 }
 
 if ($CheckOnly) {
@@ -887,16 +910,17 @@ try {
     }
 }
 finally {
-    if ($null -ne $startedTika -and -not $startedTika.HasExited) {
-        Stop-Process -Id $startedTika.Id -Force
-        $startedTika.WaitForExit(5000)
+    if ($null -ne $startedTika) {
+        # 只使用保存的 Process/PID，容忍检查后退出竞态；
+        # Stop-Process 后有界 WaitForExit，并始终 Dispose Process。
+        Stop-StartedTika $startedTika
     }
 }
 ```
 
 - [ ] **步骤 5：运行启动器测试并确认绿灯**
 
-运行步骤 2 的命令。预期：2 项测试全部通过；测试进程不启动 Java 或 Uvicorn。
+运行步骤 2 的命令。预期：严格预检与三个进程生命周期黑盒全部通过；`-CheckOnly` 只执行 Java/Python 探测，不启动 Tika 或 Uvicorn。
 
 - [ ] **步骤 6：运行已有 Tika 启动器测试回归**
 
@@ -911,8 +935,8 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q `
 - [ ] **步骤 7：提交任务 3**
 
 ```powershell
-git add tools/start-mvp.ps1 backend/tests/test_mvp_launcher.py
-git commit -m "feat: add one-command offline MVP launcher"
+git add tools/start-mvp.ps1 backend/tests/test_mvp_launcher.py docs/superpowers/plans/2026-08-03-week4-runnable-mvp.md
+git commit -m "fix: verify runnable MVP launcher prerequisites"
 ```
 
 ### 任务 4：实现可重复的 HTTP 五格式烟测工具
