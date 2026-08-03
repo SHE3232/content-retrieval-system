@@ -1,0 +1,63 @@
+{
+  "schema_version": "1",
+  "week": 4,
+  "verification_date": "2026-08-03",
+  "base_commit": "d2bcddcd20b41e12c5c02dca142e80a0be256d25",
+  "tested_commit": "c920a30a1da6931bb61c070e9d4cf26d0755377f",
+  "worktree": "F:/contentretrivalsystem/.worktrees/week4-reintegrate-verify",
+  "test_command": "F:/contentretrivalsystem/backend/.venv/Scripts/python.exe -m pytest -q",
+  "test_result": {
+    "collected": 337,
+    "passed": 337,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 34.20,
+    "tika_version": "3.3.1",
+    "tika_port_after_run_listeners": 0
+  },
+  "document_qa": {
+    "renderer": "Microsoft Word read-only PDF export",
+    "libreoffice_available": false,
+    "documents": {
+      "向量存储与检索模块API文档.docx": {
+        "pages": 6,
+        "accessibility_findings": 0
+      },
+      "检索准确率基准报告.docx": {
+        "pages": 4,
+        "accessibility_findings": 0
+      },
+      "端到端功能测试报告.docx": {
+        "pages": 5,
+        "accessibility_findings": 0
+      },
+      "第四周工作周报.docx": {
+        "pages": 4,
+        "accessibility_findings": 0
+      }
+    }
+  },
+  "test_count_policy": {
+    "original_commit": "537e06239717494dfca3bedd70cb1e2d16c14dce",
+    "original_commit_passed": 162,
+    "reconciled_commit": "199ecec74577fc0f6a92e92c104e7d93a5165aa0",
+    "reconciled_commit_passed": 337
+  },
+  "known_transient": {
+    "message": "Error creating hnsw segment reader: Nothing found on disk",
+    "initial_full_suite_failed": 1,
+    "single_test_repeat_passes": 12,
+    "module_repeat_runs": 8,
+    "module_repeat_total_passes": 96,
+    "subsequent_full_suite_passes": 3,
+    "code_change_applied": false
+  },
+  "excluded_from_integration": [
+    "legacy local-fixture test copies",
+    "legacy Tika launcher",
+    "unrelated dependency and lockfile changes",
+    "frontend and week 5 planning files",
+    "model weights and real model-manifest.json",
+    "datasets, caches, virtual environments, and Chroma data"
+  ]
+}
