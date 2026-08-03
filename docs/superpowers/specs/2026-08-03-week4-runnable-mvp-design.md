@@ -1,274 +1,230 @@
-# Week 4 Runnable Offline Retrieval MVP Design
+# 第四周可运行离线检索 MVP 设计
 
-## Goal
+## 目标
 
-Deliver a one-command, offline FastAPI backend MVP for the Week 4 scope. The
-MVP accepts local TXT, PDF, DOCX, JPG, and PNG files or directories and runs the
-complete pipeline:
-
-```text
-ingestion -> parsing -> text/image embedding -> Chroma persistence
-          -> hybrid retrieval -> ranking/filtering -> JSON response
-```
-
-The submission also retains the end-to-end functional test report and
-retrieval accuracy benchmark report. Flutter UI and accessibility work remain
-in the Week 5 scope.
-
-## Scope
-
-### Included
-
-- One-command startup after local runtime artifacts have been provisioned.
-- Strict use of verified local text and MobileCLIP model artifacts.
-- Local Apache Tika integration for DOCX parsing.
-- Recursive batch indexing of TXT, PDF, DOCX, JPG, and PNG inputs.
-- Persistent Chroma storage and incremental re-indexing.
-- Keyword, text-semantic, image-semantic, and hybrid retrieval.
-- MIME type, modality, path-prefix, and modification-time filters.
-- FastAPI JSON endpoints, interactive OpenAPI documentation, and health checks.
-- Automated regression tests, a real-runtime smoke procedure, and submission
-  documentation.
-
-### Excluded
-
-- Flutter UI, keyboard navigation, screen-reader behavior, high-contrast mode,
-  dynamic font scaling, WAVE, and Accessibility Scanner validation.
-- Bundling model weights, the Tika JAR, Chroma databases, user documents,
-  virtual environments, caches, or downloaded datasets in Git.
-- Cloud services, runtime downloads, authentication, multi-user isolation, and
-  durable indexing-job history.
-- Replacing the existing Sentence Transformers and PyTorch MobileCLIP runtime
-  adapters with TensorFlow Lite. The repository's converted artifacts remain
-  validation outputs; this is a known full-PRD technology-stack gap rather than
-  part of the Week 4 startup integration.
-
-## Chosen Approach
-
-Use a strict real-model offline runtime. A PowerShell launcher verifies all
-local prerequisites, starts or reuses Tika, and launches a FastAPI application
-factory that owns the model and Chroma runtime.
-
-Two alternatives were rejected:
-
-- A fallback demo mode with deterministic fake embeddings would start without
-  model artifacts but would not prove real semantic retrieval.
-- Bundling models and the complete runtime would simplify setup but would
-  create a large submission and conflict with model-license and repository
-  boundaries.
-
-## Architecture
-
-### Startup launcher
-
-Add `tools/start-mvp.ps1` as the supported entry point. It will:
-
-1. Resolve repository-relative paths without depending on the caller's current
-   directory.
-2. Validate the backend Python interpreter, Java, model manifest, text model,
-   MobileCLIP weights, Tika JAR, and checksum file.
-3. Reuse a healthy Tika service on `127.0.0.1:9998`, or start the verified
-   local JAR in a hidden child process and wait for readiness.
-4. Set explicit model, manifest, and data-directory configuration for the
-   FastAPI factory.
-5. Launch Uvicorn on `127.0.0.1` by default.
-6. On exit, stop only the Tika process created by this launcher. A pre-existing
-   Tika service is never terminated.
-
-The default persistent data directory is `data/mvp/`, which is already outside
-the Git submission boundary.
-
-### FastAPI application factory
-
-Add a production MVP factory under the `content_retrieval` package. It will:
-
-- Read explicit local paths from a small validated settings object.
-- Call the existing `build_local_runtime` factory.
-- Inject `IndexingService` and `RetrievalService` into the existing FastAPI
-  application.
-- Attach the runtime to application state for health inspection and lifecycle
-  ownership.
-- Close the Chroma repository during application shutdown, including failed or
-  interrupted server sessions.
-
-The existing default `create_app()` behavior remains available for isolated
-tests and parse-only use. The runnable MVP uses the new production factory.
-
-### Component boundaries
-
-The existing dependency direction remains unchanged:
+交付一个可一键启动、完全离线运行的第四周 FastAPI 后端 MVP。MVP 接收本地
+TXT、PDF、DOCX、JPG 和 PNG 文件或目录，并贯通以下完整流程：
 
 ```text
-PowerShell launcher
-  -> FastAPI MVP factory
-      -> API routes
-          -> indexing/retrieval services
-              -> parsers + embedding engines + Chroma repository
+文件导入 -> 解析 -> 文本/图片嵌入 -> Chroma 持久化
+         -> 混合检索 -> 排序/过滤 -> JSON 结果
 ```
 
-The work will not duplicate parsing, embedding, storage, BM25, RRF, or retrieval
-logic that is already implemented and tested.
+提交内容同时保留端到端功能测试报告和检索准确率基准报告。Flutter UI 与无障碍
+功能属于第五周范围，本次不纳入。
 
-## Core Data Flow
+## 范围
 
-### Indexing
+### 纳入范围
 
-1. The client submits files or directories plus explicit authorized roots.
-2. Paths are normalized, checked against authorized roots, expanded according
-   to the recursive option, and filtered to supported formats.
-3. TXT and documents produce text records; PDFs preserve page information;
-   DOCX content is extracted through local Tika; JPG and PNG inputs produce
-   image records.
-4. Text is chunked and embedded in the text semantic space. Images are embedded
-   in the MobileCLIP image-text space.
-5. Chroma stores records in isolated collections by embedding space.
-6. Re-indexing unchanged files is idempotent. Changed files replace stale
-   records for the same normalized source path.
-7. After a successful batch, the in-memory keyword index is refreshed from
-   persistent records.
+- 本地运行资源准备完成后，可通过一条命令启动。
+- 严格使用经过校验的本地文本模型和 MobileCLIP 模型。
+- 使用本地 Apache Tika 完成 DOCX 解析。
+- 递归批量索引 TXT、PDF、DOCX、JPG 和 PNG。
+- Chroma 持久化存储与增量重新索引。
+- 关键词、文本语义、图片语义和混合检索。
+- MIME 类型、模态、路径前缀和修改时间过滤。
+- FastAPI JSON 接口、交互式 OpenAPI 文档和健康检查。
+- 自动化回归测试、真实运行时烟测流程和提交说明。
 
-### Retrieval
+### 不纳入范围
 
-1. The request selects one or more of `keyword`, `text_semantic`, and
-   `image_semantic`.
-2. Filters are applied for MIME type, modality, path prefix, and modification
-   time.
-3. BM25 ranks filename, path, and body matches. Text and image queries execute
-   in their separate compatible vector spaces.
-4. Each channel first keeps the best matching record per file.
-5. Weighted reciprocal-rank fusion combines channel ranks without directly
-   adding incomparable raw similarity scores.
-6. The service applies deterministic ordering, limits the result to
-   `top_k` in the range 1-100, and returns file-level JSON hits.
+- Flutter UI、键盘导航、屏幕阅读器、高对比度、动态字体缩放、WAVE 和
+  Accessibility Scanner 验证。
+- 将模型权重、Tika JAR、Chroma 数据库、用户文档、虚拟环境、缓存或已下载
+  数据集纳入 Git。
+- 云服务、运行时下载、身份认证、多用户隔离和持久化索引任务历史。
+- 将现有 Sentence Transformers 和 PyTorch MobileCLIP 运行时适配器替换为
+  TensorFlow Lite。仓库中的转换产物仍用于一致性验证；这是完整 PRD 技术栈的
+  已知差距，不属于本次第四周启动整合范围。
 
-## API Contract
+## 选定方案
 
-- `POST /v1/indexing/jobs`: submit files or directories for asynchronous batch
-  indexing.
-- `GET /v1/indexing/jobs/{job_id}`: return job state, counters, and per-file
-  failures.
-- `POST /v1/search`: run selected retrieval channels with optional weights and
-  filters.
-- `GET /v1/index/stats`: return file, text-record, and image-record counts.
-- `GET /health/live`: confirm that the API process is alive.
-- `GET /health/ready`: confirm that the real retrieval runtime, Chroma, and the
-  DOCX dependency are ready.
-- `GET /docs`: expose FastAPI's local interactive OpenAPI documentation.
+采用严格的真实模型离线运行时。PowerShell 启动器负责校验全部本地依赖、启动
+或复用 Tika，并启动一个持有模型与 Chroma 运行时的 FastAPI 应用工厂。
 
-Search hits continue to include the path, name, MIME type, modality, fused
-score, match reasons, best text snippet, page number, and paragraph number when
-available.
+未选择以下两个备选方案：
 
-Index data is durable, but job status is intentionally in memory for this MVP.
-After restart, previous job IDs are unavailable while indexed files remain
-searchable.
+- 在缺少模型时回退到确定性伪嵌入。该方案虽然能够启动，但无法证明真实语义
+  检索能力。
+- 将模型与完整运行环境一并打包。该方案虽然简化安装，但会显著增大提交体积，
+  并与模型许可及仓库边界冲突。
 
-## Error Handling
+## 架构
 
-### Startup failures
+### 启动器
 
-The launcher exits with a non-zero status and a specific remediation message
-when Python, Java, the manifest, model artifacts, Tika, checksum files, the
-configured port, or a writable data directory is unavailable. Hash mismatches
-are fatal. Startup never downloads missing resources or substitutes fake
-embeddings.
+新增 `tools/start-mvp.ps1`，作为受支持的统一启动入口。其职责如下：
 
-### Per-file isolation
+1. 基于仓库位置解析路径，不依赖调用者当前工作目录。
+2. 校验后端 Python 解释器、Java、模型清单、文本模型、MobileCLIP 权重、
+   Tika JAR 和摘要文件。
+3. 如果 `127.0.0.1:9998` 已存在健康的 Tika 服务，则直接复用；否则在隐藏的
+   子进程中启动经过校验的本地 JAR，并等待服务就绪。
+4. 为 FastAPI 工厂设置明确的模型目录、清单路径和数据目录配置。
+5. 默认在 `127.0.0.1` 上启动 Uvicorn。
+6. 退出时只停止本次启动器创建的 Tika 进程，不终止用户原有的 Tika 服务。
 
-A parse, embedding, or persistence failure for one file does not abort other
-files in the same indexing batch. The job reports `completed`,
-`completed_with_errors`, or `failed`, with stable error code, processing stage,
-and retryability information.
+默认持久化数据目录为 `data/mvp/`。该目录已经位于 Git 提交边界之外。
 
-### HTTP responses
+### FastAPI 应用工厂
 
-- `422` for invalid request shapes and schema constraints.
-- `400` for validly shaped but invalid search operations.
-- `404` for unknown job identifiers.
-- `503` for unavailable runtime or storage dependencies.
+在 `content_retrieval` 包内新增生产用 MVP 工厂。其职责如下：
 
-Logs may contain processing stage and local path for diagnosis. They must not
-contain document bodies, embedding vectors, or model weights.
+- 通过小型、强校验的配置对象读取明确的本地路径。
+- 调用现有 `build_local_runtime` 工厂。
+- 将 `IndexingService` 和 `RetrievalService` 注入现有 FastAPI 应用。
+- 将运行时保存到应用状态，供健康检查和生命周期管理使用。
+- 应用关闭时释放 Chroma 仓库，包括服务启动失败或被中断的情况。
 
-## Offline and Local Security Boundaries
+现有默认 `create_app()` 行为继续保留，用于隔离测试和仅解析场景。可运行 MVP
+使用新的生产工厂。
 
-- The server binds to `127.0.0.1` unless the user explicitly overrides it.
-- Indexing requires both `paths` and `authorized_roots`.
-- Canonicalized paths must remain within an authorized root.
-- No endpoint returns arbitrary local file bytes.
-- Runtime HTTP clients ignore proxy environment variables where applicable.
-- Runtime startup performs no network access.
-- Shutdown releases only resources owned by the current process and never
-  clears an existing index.
+### 组件边界
 
-## Testing Strategy
+保持现有依赖方向不变：
 
-Implementation follows red-green-refactor. New tests will cover:
+```text
+PowerShell 启动器
+  -> FastAPI MVP 工厂
+      -> API 路由
+          -> 索引/检索服务
+              -> 解析器 + 嵌入引擎 + Chroma 仓库
+```
 
-- Settings defaults, explicit path resolution, missing resources, and clear
-  configuration failures.
-- Construction of the real-runtime FastAPI factory with injected test doubles.
-- Runtime readiness and repository shutdown behavior.
-- Indexing, search, filters, index statistics, and structured error responses.
-- Persistent search behavior after repository and application restart.
-- Launcher preflight logic that can be tested without downloading models.
-- Real DOCX parsing when the verified local Tika server is available.
+本次工作不复制或重写已经实现并验证的解析、嵌入、存储、BM25、RRF 和检索
+逻辑。
 
-Verification has three layers:
+## 核心数据流
 
-1. Run the complete repository test suite.
-2. Run the Week 4 coverage command with the existing 85% core-module gate.
-3. Run a real HTTP smoke procedure with verified local models and Tika:
-   index one TXT, PDF, DOCX, JPG, and PNG; perform keyword, text-semantic,
-   image-semantic, and hybrid searches; restart; then repeat a persistent
-   search.
+### 索引流程
 
-The real smoke procedure records its commands, supported-format counts,
-failure count, search checks, and persistence result in machine-readable
-evidence. It does not replace the frozen NQ and COCO accuracy benchmarks.
+1. 客户端提交文件或目录，并同时提交明确的授权根目录。
+2. 系统规范化路径、检查授权边界、按递归选项展开目录，并过滤受支持的格式。
+3. TXT 和文档生成文本记录；PDF 保留页码信息；DOCX 通过本地 Tika 提取；
+   JPG 和 PNG 生成图片记录。
+4. 文本经过分块后进入文本语义空间；图片进入 MobileCLIP 图文共享空间。
+5. Chroma 按嵌入空间使用相互隔离的集合保存记录。
+6. 重复索引未变化文件时保持幂等；同一路径内容发生变化时替换旧记录。
+7. 批处理成功后，从持久化记录刷新内存中的关键词索引。
 
-## Documentation and Submission
+### 检索流程
 
-- Add a concise MVP setup, startup, API, demonstration, and troubleshooting
-  guide.
-- Update `docs/week4/README.md` with the one-command entry point and links to the
-  guide and reports.
-- Retain the existing end-to-end functional test report and retrieval accuracy
-  benchmark report.
-- If fresh real-runtime metrics change, update the relevant report and evidence
-  together. Otherwise, add a new integration record without rewriting the
-  historical benchmark results.
-- Audit the final Git diff to exclude model weights, the Tika JAR, databases,
-  user documents, virtual environments, caches, and rendered intermediates.
+1. 请求选择 `keyword`、`text_semantic` 和 `image_semantic` 中的一个或多个
+   通道。
+2. 应用 MIME 类型、模态、路径前缀和修改时间过滤条件。
+3. BM25 对文件名、路径和正文进行排序；文本和图片查询分别进入兼容的向量
+   空间。
+4. 每个通道先为每个文件保留最佳匹配记录。
+5. 使用加权倒数排名融合各通道名次，不直接相加不可比较的原始相似度分数。
+6. 采用确定性排序，将结果限制在 1 至 100 的 `top_k` 范围内，并返回文件级
+   JSON 命中结果。
 
-## Acceptance Criteria
+## API 契约
 
-The MVP is accepted when all of the following are true:
+- `POST /v1/indexing/jobs`：提交文件或目录，异步执行批量索引。
+- `GET /v1/indexing/jobs/{job_id}`：返回任务状态、统计计数和逐文件失败信息。
+- `POST /v1/search`：使用可选权重和过滤条件执行指定检索通道。
+- `GET /v1/index/stats`：返回文件数、文本记录数和图片记录数。
+- `GET /health/live`：确认 API 进程存活。
+- `GET /health/ready`：确认真实检索运行时、Chroma 和 DOCX 依赖均已就绪。
+- `GET /docs`：提供 FastAPI 本地交互式 OpenAPI 文档。
 
-1. After the documented one-time local artifact preparation, one command starts
-   the API and any required local DOCX dependency.
-2. The ready endpoint reports success only when the real retrieval runtime is
-   usable.
-3. TXT, PDF, DOCX, JPG, and PNG inputs all reach the indexing pipeline.
-4. Keyword, text-semantic, image-semantic, and hybrid retrieval return JSON
-   results, and ranking filters are demonstrably applied.
-5. Chroma records remain searchable after a service restart.
-6. The full automated suite and Week 4 coverage gate pass.
-7. Fresh smoke evidence and runnable instructions are included alongside the
-   existing end-to-end and accuracy reports.
-8. No prohibited binary, private, generated, or local runtime artifact is
-   included in the Git submission.
+搜索结果继续包含路径、名称、MIME 类型、模态、融合分数、匹配原因、最佳文本
+片段，以及可用时的页码和段落号。
 
-## Design Self-Review
+索引数据持久化保存，但任务状态在本 MVP 中仅保存在内存。服务重启后旧任务 ID
+不可查询，已经索引的文件仍可检索。
 
-- There are no placeholders or deferred decisions in the MVP scope.
-- The strict real-model approach is consistent with offline operation and the
-  repository's existing model-manifest boundary.
-- The launcher owns orchestration; the Python factory owns application runtime
-  lifecycle; existing services retain their current responsibilities.
-- Five-format support depends on local Tika for DOCX, and the strict startup
-  preflight makes that dependency explicit.
-- The implementation uses the existing real Python inference adapters and does
-  not claim to close the separate TensorFlow Lite runtime gap.
-- The design does not claim that the Week 4 backend satisfies Week 5 Flutter or
-  accessibility deliverables, or the final cross-platform release scope.
+## 错误处理
+
+### 启动失败
+
+当 Python、Java、模型清单、模型文件、Tika、摘要文件、配置端口或可写数据目录
+不可用时，启动器以非零状态退出，并给出具体修复方法。摘要不匹配属于致命
+错误。启动过程不下载缺失资源，也不替换为伪嵌入。
+
+### 逐文件失败隔离
+
+单个文件解析、嵌入或持久化失败时，不中断同一批次中的其他文件。任务返回
+`completed`、`completed_with_errors` 或 `failed`，并包含稳定的错误代码、
+处理阶段和可重试信息。
+
+### HTTP 响应
+
+- 请求结构或字段约束无效时返回 `422`。
+- 请求结构有效但检索操作无效时返回 `400`。
+- 任务 ID 不存在时返回 `404`。
+- 运行时或存储依赖不可用时返回 `503`。
+
+日志可以记录处理阶段和本地路径用于诊断，但不得记录文档正文、嵌入向量或模型
+权重。
+
+## 离线与本地安全边界
+
+- 除非用户显式覆盖，否则服务只监听 `127.0.0.1`。
+- 索引请求必须同时提供 `paths` 和 `authorized_roots`。
+- 路径规范化后必须仍位于某个授权根目录内。
+- 不提供返回任意本地文件字节的接口。
+- 适用的运行时 HTTP 客户端忽略代理环境变量。
+- 运行时启动过程不访问网络。
+- 关闭时只释放当前进程持有的资源，不清空已有索引。
+
+## 测试策略
+
+实现采用红灯、绿灯、重构的测试驱动流程。新增测试覆盖：
+
+- 配置默认值、明确路径解析、缺失资源和清晰的配置错误。
+- 使用测试替身构造真实运行时 FastAPI 工厂。
+- 运行时就绪状态和仓库关闭行为。
+- 索引、检索、过滤、索引统计和结构化错误响应。
+- 仓库与应用重启后的持久化检索。
+- 无需下载模型即可测试的启动器预检逻辑。
+- 本地 Tika 已就绪时的真实 DOCX 解析。
+
+验证分为三层：
+
+1. 运行完整仓库测试套件。
+2. 使用现有第四周核心模块 85% 覆盖率门运行覆盖率测试。
+3. 使用经过校验的本地真实模型和 Tika 执行 HTTP 烟测：索引一个 TXT、PDF、
+   DOCX、JPG 和 PNG；执行关键词、文本语义、图片语义和混合检索；重启服务；
+   再次执行持久化检索。
+
+真实烟测将命令、各格式数量、失败数量、检索检查和持久化结果记录为机器可读
+证据。该证据不替代冻结 NQ 和 COCO 数据集上的准确率基准。
+
+## 文档与提交
+
+- 新增简洁的 MVP 安装、启动、API、演示和故障排查手册。
+- 更新 `docs/week4/README.md`，加入一键启动入口及手册、报告链接。
+- 保留现有端到端功能测试报告和检索准确率基准报告。
+- 如果新的真实运行时指标发生变化，则同步更新对应报告和证据；否则只新增本次
+  集成记录，不改写历史基准结果。
+- 审计最终 Git 差异，排除模型权重、Tika JAR、数据库、用户文档、虚拟环境、
+  缓存和渲染中间文件。
+
+## 验收标准
+
+满足以下全部条件时，MVP 验收通过：
+
+1. 按说明完成一次性本地资源准备后，一条命令即可启动 API 和所需 DOCX 依赖。
+2. 只有真实检索运行时可用时，就绪接口才返回成功。
+3. TXT、PDF、DOCX、JPG 和 PNG 均能够进入索引流程。
+4. 关键词、文本语义、图片语义和混合检索均能返回 JSON 结果，并可证明排序
+   过滤条件已生效。
+5. 服务重启后，Chroma 记录仍然可以检索。
+6. 完整自动化测试和第四周覆盖率门通过。
+7. 新的烟测证据与可运行说明和既有端到端、准确率报告一同提交。
+8. Git 提交中不包含禁止提交的二进制、私有文件、生成文件或本地运行时产物。
+
+## 设计自审
+
+- MVP 范围内不存在占位符或尚未决定的事项。
+- 严格真实模型方案与离线运行要求、现有模型清单边界一致。
+- 启动器负责进程编排；Python 工厂负责应用运行时生命周期；现有服务继续承担
+  原有职责。
+- 五格式支持依赖本地 Tika 完成 DOCX 解析，严格启动预检明确暴露该依赖。
+- 实现使用现有真实 Python 推理适配器，不宣称已经解决单独的 TensorFlow Lite
+  运行时差距。
+- 本设计不宣称第四周后端已经满足第五周 Flutter、无障碍交付或最终跨平台发布
+  范围。
