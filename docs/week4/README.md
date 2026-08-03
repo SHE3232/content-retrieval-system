@@ -59,6 +59,11 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe `
 - COCO 冻结集：40 图片、201 captions，Recall@1 91.04%，Recall@5/10 100%。
 - 10,000 条 CPU 性能：50 次计时查询，P50 40.85 ms、P95 62.76 ms、最大 116.29 ms；通过 P95 不高于 2 秒门槛。
 
+审核记录：
+
+- [第四周原始审核](AUDIT_2026-08-02.md)
+- [337 项测试证据整改](TEST_RECONCILIATION_2026-08-03.md)
+
 ## 正式报告
 
 - [向量存储与检索模块 API 文档](reports/向量存储与检索模块API文档.docx)
