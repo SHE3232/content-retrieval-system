@@ -74,6 +74,6 @@ class TikaReadinessProbe:
                 trust_env=False,
             ) as client:
                 response = client.get("/version")
-        except httpx.HTTPError:
+        except (httpx.HTTPError, httpx.InvalidURL):
             return False
         return response.status_code == 200 and "Apache Tika" in response.text
