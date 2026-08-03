@@ -48,19 +48,26 @@ def _index_result(
     }
 
 
-def _search_payload(*, modality: str = "image") -> dict[str, object]:
+def _search_payload(
+    *,
+    modality: str = "image",
+    match_reasons: list[str] | None = None,
+    channels: list[str] | None = None,
+) -> dict[str, object]:
+    reasons = match_reasons or ["image_semantic"]
+    active_channels = channels or reasons
     return {
         "query": "fixture",
         "hits": [
             {
                 "name": "e.png" if modality == "image" else "a.txt",
                 "modality": modality,
-                "match_reasons": ["image_semantic"],
+                "match_reasons": reasons,
             }
         ],
         "total_candidates": 1,
         "elapsed_ms": 1.0,
-        "weights": {"image_semantic": 1.0},
+        "weights": {channel: 1.0 for channel in active_channels},
     }
 
 
@@ -73,6 +80,12 @@ def test_run_smoke_exercises_exact_five_format_http_protocol(
     requests: list[tuple[str, str, object | None]] = []
     poll_count = 0
     stats_count = 0
+    restart_result = _index_result()
+    restart_result.update(
+        indexed_files=0,
+        indexed_records=0,
+        unchanged_files=5,
+    )
 
     def respond(request: httpx.Request) -> httpx.Response:
         nonlocal poll_count, stats_count
@@ -89,13 +102,25 @@ def test_run_smoke_exercises_exact_five_format_http_protocol(
             poll_count += 1
             payload: dict[str, object] = {"job_id": "job-1", "status": status}
             if status == "completed":
-                payload["result"] = _index_result()
+                payload["result"] = restart_result
             return httpx.Response(200, json=payload)
         if request.method == "POST" and request.url.path == "/v1/search":
             assert isinstance(body, dict)
             filters = body.get("filters")
-            modality = "image" if filters or body["channels"] == ["image_semantic"] else "text"
-            return httpx.Response(200, json=_search_payload(modality=modality))
+            modality = (
+                "image"
+                if filters or body["channels"] == ["image_semantic"]
+                else "text"
+            )
+            channels = body["channels"]
+            return httpx.Response(
+                200,
+                json=_search_payload(
+                    modality=modality,
+                    match_reasons=[channels[0]],
+                    channels=channels,
+                ),
+            )
         raise AssertionError(f"unexpected request: {request.method} {request.url}")
 
     with httpx.Client(
@@ -159,6 +184,7 @@ def test_run_smoke_exercises_exact_five_format_http_protocol(
     ]
     assert result["status"] == "passed"
     assert result["formats"] == ["DOCX", "JPG", "PDF", "PNG", "TXT"]
+    assert result["expected_input_file_count"] == 5
     assert result["pre_index_record_count"] == 7
     assert result["stats"] == _stats(12)
     assert [item["name"] for item in result["searches"]] == [
@@ -225,12 +251,15 @@ def test_run_smoke_times_out_nonterminal_indexing_job(tmp_path: Path) -> None:
     from tools.smoke_mvp import SmokeQueries, run_smoke
 
     _write_inputs(tmp_path)
+    poll_requests = 0
 
     def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal poll_requests
         if request.url.path == "/v1/index/stats":
             return httpx.Response(200, json=_stats(0))
         if request.method == "POST":
             return httpx.Response(202, json={"job_id": "job-slow", "status": "queued"})
+        poll_requests += 1
         return httpx.Response(200, json={"job_id": "job-slow", "status": "running"})
 
     with httpx.Client(
@@ -245,6 +274,55 @@ def test_run_smoke_times_out_nonterminal_indexing_job(tmp_path: Path) -> None:
                 timeout_seconds=0,
                 poll_interval_seconds=0,
             )
+
+    assert poll_requests == 0
+
+
+def test_run_smoke_caps_poll_sleep_and_request_at_remaining_deadline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tools import smoke_mvp
+
+    _write_inputs(tmp_path)
+    poll_requests: list[dict[str, float]] = []
+    sleeps: list[float] = []
+    now = 0.0
+
+    def monotonic() -> float:
+        return now
+
+    def sleep(seconds: float) -> None:
+        nonlocal now
+        sleeps.append(seconds)
+        now += seconds
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/index/stats":
+            return httpx.Response(200, json=_stats(0))
+        if request.method == "POST":
+            return httpx.Response(202, json={"job_id": "job-slow", "status": "queued"})
+        poll_requests.append(request.extensions["timeout"])
+        return httpx.Response(200, json={"job_id": "job-slow", "status": "running"})
+
+    monkeypatch.setattr(smoke_mvp.time, "monotonic", monotonic)
+    monkeypatch.setattr(smoke_mvp.time, "sleep", sleep)
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(TimeoutError, match="job-slow did not finish"):
+            smoke_mvp.run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=smoke_mvp.SmokeQueries("exact", "semantic", "image"),
+                timeout_seconds=2,
+                poll_interval_seconds=5,
+            )
+
+    assert sleeps == [2]
+    assert len(poll_requests) == 1
+    assert set(poll_requests[0].values()) == {2}
 
 
 @pytest.mark.parametrize(
@@ -308,6 +386,268 @@ def test_run_smoke_rejects_malformed_json(tmp_path: Path) -> None:
             )
 
 
+@pytest.mark.parametrize(
+    ("target_channels", "wrong_reason"),
+    [
+        (["keyword"], "image_semantic"),
+        (["text_semantic"], "keyword"),
+    ],
+)
+def test_run_smoke_rejects_out_of_channel_match_reasons(
+    tmp_path: Path,
+    target_channels: list[str],
+    wrong_reason: str,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    stats_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal stats_count
+        if request.url.path == "/v1/index/stats":
+            stats_count += 1
+            return httpx.Response(200, json=_stats(0 if stats_count == 1 else 12))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={
+                    "job_id": "job-1",
+                    "status": "completed",
+                    "result": _index_result(),
+                },
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        reasons = [wrong_reason] if channels == target_channels else [channels[0]]
+        return httpx.Response(
+            200,
+            json=_search_payload(
+                match_reasons=reasons,
+                channels=channels,
+                modality="image" if body.get("filters") else "text",
+            ),
+        )
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(RuntimeError, match="outside requested channels"):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                poll_interval_seconds=0,
+            )
+
+
+def test_run_smoke_rejects_weights_outside_requested_channels(
+    tmp_path: Path,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    stats_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal stats_count
+        if request.url.path == "/v1/index/stats":
+            stats_count += 1
+            return httpx.Response(200, json=_stats(0 if stats_count == 1 else 12))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={
+                    "job_id": "job-1",
+                    "status": "completed",
+                    "result": _index_result(),
+                },
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        payload = _search_payload(match_reasons=[channels[0]], channels=channels)
+        payload["weights"] = {
+            "keyword": 0.35,
+            "text_semantic": 1.0,
+            "image_semantic": 0.85,
+        }
+        return httpx.Response(200, json=payload)
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(
+            RuntimeError,
+            match="weights do not match requested channels",
+        ):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                poll_interval_seconds=0,
+            )
+
+
+def test_run_smoke_rejects_partially_processed_duplicate_inputs(
+    tmp_path: Path,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    partial_result = _index_result()
+    partial_result.update(
+        parsed_files=1,
+        indexed_files=1,
+        indexed_records=1,
+        skipped_files=4,
+    )
+    stats_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal stats_count
+        if request.url.path == "/v1/index/stats":
+            stats_count += 1
+            return httpx.Response(200, json=_stats(0 if stats_count == 1 else 12))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={
+                    "job_id": "job-1",
+                    "status": "completed",
+                    "result": partial_result,
+                },
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        return httpx.Response(
+            200,
+            json=_search_payload(match_reasons=[channels[0]], channels=channels),
+        )
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(RuntimeError, match="skipped files"):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                poll_interval_seconds=0,
+            )
+
+
+def test_run_smoke_rejects_records_without_newly_indexed_files(
+    tmp_path: Path,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    result = _index_result()
+    result.update(indexed_files=0, indexed_records=12, unchanged_files=5)
+    stats_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal stats_count
+        if request.url.path == "/v1/index/stats":
+            stats_count += 1
+            return httpx.Response(200, json=_stats(0 if stats_count == 1 else 12))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={"job_id": "job-1", "status": "completed", "result": result},
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        return httpx.Response(
+            200,
+            json=_search_payload(match_reasons=[channels[0]], channels=channels),
+        )
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(
+            RuntimeError,
+            match="indexed_records do not match indexed_files",
+        ):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                poll_interval_seconds=0,
+            )
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "parsed_files",
+        "indexed_files",
+        "indexed_records",
+        "skipped_files",
+        "failed_files",
+        "partial_files",
+        "unchanged_files",
+        "removed_stale_records",
+    ],
+)
+@pytest.mark.parametrize("invalid_value", [True, -1])
+def test_run_smoke_rejects_invalid_indexing_counters(
+    tmp_path: Path,
+    field: str,
+    invalid_value: object,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    result = _index_result()
+    result[field] = invalid_value
+    stats_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal stats_count
+        if request.url.path == "/v1/index/stats":
+            stats_count += 1
+            return httpx.Response(200, json=_stats(0 if stats_count == 1 else 12))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={"job_id": "job-1", "status": "completed", "result": result},
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        return httpx.Response(
+            200,
+            json=_search_payload(match_reasons=[channels[0]], channels=channels),
+        )
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(RuntimeError, match=f"invalid {field}"):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                poll_interval_seconds=0,
+            )
+
+
 def test_run_smoke_rejects_any_filtered_non_image_hit(tmp_path: Path) -> None:
     from tools.smoke_mvp import SmokeQueries, run_smoke
 
@@ -324,10 +664,23 @@ def test_run_smoke_rejects_any_filtered_non_image_hit(tmp_path: Path) -> None:
         if request.url.path == "/v1/indexing/jobs/job-1":
             return httpx.Response(
                 200,
-                json={"job_id": "job-1", "status": "completed", "result": _index_result()},
+                json={
+                    "job_id": "job-1",
+                    "status": "completed",
+                    "result": _index_result(),
+                },
             )
         body = json.loads(request.content)
-        payload = _search_payload()
+        channels = body["channels"]
+        payload = _search_payload(
+            modality=(
+                "image"
+                if body.get("filters") or channels == ["image_semantic"]
+                else "text"
+            ),
+            match_reasons=[channels[0]],
+            channels=channels,
+        )
         if body.get("filters"):
             payload["hits"].append(
                 {"name": "a.txt", "modality": "text", "match_reasons": ["keyword"]}

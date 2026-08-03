@@ -4,8 +4,10 @@ import argparse
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
+import stat
 import tempfile
 import time
 from typing import Any
@@ -15,6 +17,23 @@ import httpx
 
 REQUIRED_SUFFIXES = {".txt", ".pdf", ".docx", ".jpg", ".png"}
 PENDING_JOB_STATUSES = {"queued", "running"}
+INDEXING_COUNTER_FIELDS = (
+    "parsed_files",
+    "indexed_files",
+    "indexed_records",
+    "skipped_files",
+    "failed_files",
+    "partial_files",
+    "unchanged_files",
+    "removed_stale_records",
+)
+SearchCheck = tuple[
+    str,
+    str,
+    list[str],
+    dict[str, object] | None,
+    str | None,
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,16 +43,34 @@ class SmokeQueries:
     image_semantic: str
 
 
-def _require_formats(input_root: Path) -> list[str]:
-    suffixes = {
-        path.suffix.lower()
-        for path in input_root.rglob("*")
-        if path.is_file()
-    }
+def _is_link_or_reparse(path: Path) -> bool:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    file_attributes = getattr(metadata, "st_file_attributes", 0)
+    return path.is_symlink() or bool(file_attributes & reparse_flag)
+
+
+def _inspect_inputs(input_root: Path) -> tuple[list[str], int]:
+    suffixes: set[str] = set()
+    expected_files = 0
+    for path in input_root.rglob("*"):
+        if _is_link_or_reparse(path):
+            raise ValueError(
+                f"input root contains a symbolic link or reparse point: {path}"
+            )
+        if path.is_file() and path.suffix.lower() in REQUIRED_SUFFIXES:
+            suffixes.add(path.suffix.lower())
+            expected_files += 1
     missing = sorted(REQUIRED_SUFFIXES - suffixes)
     if missing:
         raise ValueError("input root is missing formats: " + ", ".join(missing))
-    return sorted(suffix[1:].upper() for suffix in REQUIRED_SUFFIXES)
+    return (
+        sorted(suffix[1:].upper() for suffix in REQUIRED_SUFFIXES),
+        expected_files,
+    )
 
 
 def _request_json(response: httpx.Response) -> dict[str, Any]:
@@ -64,20 +101,46 @@ def _record_count(payload: dict[str, Any], context: str) -> int:
     return count
 
 
-def _require_job_result(job: dict[str, Any]) -> dict[str, Any]:
+def _require_job_result(
+    job: dict[str, Any],
+    *,
+    expected_files: int,
+) -> dict[str, Any]:
     result = job.get("result")
     if not isinstance(result, dict):
         raise RuntimeError("indexing job returned no result object")
-    failed_files = _integer_field(result, "failed_files", "indexing result")
-    partial_files = _integer_field(result, "partial_files", "indexing result")
-    if failed_files:
+    counters = {
+        field: _integer_field(result, field, "indexing result")
+        for field in INDEXING_COUNTER_FIELDS
+    }
+    for field, value in counters.items():
+        if value < 0:
+            raise RuntimeError(f"indexing result has invalid {field}")
+
+    failures = result.get("failures")
+    if not isinstance(failures, list):
+        raise RuntimeError("indexing result has invalid failures")
+    if counters["failed_files"] or failures:
         raise RuntimeError("indexing smoke contains failed files")
-    if partial_files:
+    if counters["partial_files"]:
         raise RuntimeError("indexing smoke contains partial files")
+    if counters["skipped_files"]:
+        raise RuntimeError("indexing smoke contains skipped files")
+    if counters["parsed_files"] != expected_files:
+        raise RuntimeError(
+            "indexing parsed_files does not match expected input count"
+        )
+    processed_files = counters["indexed_files"] + counters["unchanged_files"]
+    if processed_files != expected_files:
+        raise RuntimeError(
+            "indexed_files plus unchanged_files does not match expected input count"
+        )
+    if bool(counters["indexed_files"]) != bool(counters["indexed_records"]):
+        raise RuntimeError("indexed_records do not match indexed_files")
     return result
 
 
-def _search_checks(queries: SmokeQueries) -> list[tuple[str, str, list[str], dict[str, object] | None, str | None]]:
+def _search_checks(queries: SmokeQueries) -> list[SearchCheck]:
     return [
         ("keyword", queries.keyword, ["keyword"], None, None),
         (
@@ -115,6 +178,7 @@ def _validate_hits(
     payload: dict[str, Any],
     *,
     check_name: str,
+    expected_channels: list[str],
     expected_modality: str | None,
 ) -> list[dict[str, Any]]:
     hits = payload.get("hits")
@@ -127,12 +191,38 @@ def _validate_hits(
         hit.get("modality") != expected_modality for hit in typed_hits
     ):
         raise RuntimeError(f"{check_name} search violated its modality filter")
-    first = typed_hits[0]
-    if not isinstance(first.get("name"), str) or not first["name"].strip():
-        raise RuntimeError(f"{check_name} search returned a malformed top hit")
-    reasons = first.get("match_reasons")
-    if not isinstance(reasons, list) or not reasons:
-        raise RuntimeError(f"{check_name} search returned malformed match reasons")
+    expected_channel_set = set(expected_channels)
+    for hit in typed_hits:
+        if not isinstance(hit.get("name"), str) or not hit["name"].strip():
+            raise RuntimeError(f"{check_name} search returned a malformed hit")
+        reasons = hit.get("match_reasons")
+        if (
+            not isinstance(reasons, list)
+            or not reasons
+            or any(not isinstance(reason, str) for reason in reasons)
+            or len(set(reasons)) != len(reasons)
+        ):
+            raise RuntimeError(
+                f"{check_name} search returned malformed match reasons"
+            )
+        if not set(reasons).issubset(expected_channel_set):
+            raise RuntimeError(
+                f"{check_name} search returned reasons outside requested channels"
+            )
+
+    weights = payload.get("weights")
+    if not isinstance(weights, dict) or set(weights) != expected_channel_set:
+        raise RuntimeError(
+            f"{check_name} search weights do not match requested channels"
+        )
+    if any(
+        isinstance(weight, bool)
+        or not isinstance(weight, (int, float))
+        or not math.isfinite(weight)
+        or weight <= 0
+        for weight in weights.values()
+    ):
+        raise RuntimeError(f"{check_name} search returned invalid weights")
     elapsed_ms = payload.get("elapsed_ms")
     if isinstance(elapsed_ms, bool) or not isinstance(elapsed_ms, (int, float)):
         raise RuntimeError(f"{check_name} search returned invalid elapsed_ms")
@@ -153,10 +243,13 @@ def run_smoke(
     if poll_interval_seconds < 0:
         raise ValueError("poll_interval_seconds must be non-negative")
 
-    root = input_root.expanduser().resolve(strict=True)
+    expanded_root = input_root.expanduser()
+    if _is_link_or_reparse(expanded_root):
+        raise ValueError("input root must not be a symbolic link or reparse point")
+    root = expanded_root.resolve(strict=True)
     if not root.is_dir():
         raise ValueError("input root must be a directory")
-    formats = _require_formats(root)
+    formats, expected_files = _inspect_inputs(root)
 
     before = _request_json(client.get("/v1/index/stats"))
     pre_index_records = _record_count(before, "pre-index stats")
@@ -179,21 +272,30 @@ def run_smoke(
 
     deadline = time.monotonic() + timeout_seconds
     while True:
-        job = _request_json(client.get(f"/v1/indexing/jobs/{job_id}"))
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f"indexing job {job_id} did not finish")
+        job = _request_json(
+            client.get(
+                f"/v1/indexing/jobs/{job_id}",
+                timeout=remaining,
+            )
+        )
         job_status = job.get("status")
         if not isinstance(job_status, str):
             raise RuntimeError("indexing job returned an invalid status")
         if job_status not in PENDING_JOB_STATUSES:
             break
-        if time.monotonic() >= deadline:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
             raise TimeoutError(f"indexing job {job_id} did not finish")
-        time.sleep(poll_interval_seconds)
+        time.sleep(min(poll_interval_seconds, remaining))
 
     if job_status == "failed":
         raise RuntimeError(f"indexing job ended as {job_status}")
     if job_status not in {"completed", "completed_with_errors"}:
         raise RuntimeError(f"indexing job ended as {job_status}")
-    result = _require_job_result(job)
+    result = _require_job_result(job, expected_files=expected_files)
     if job_status != "completed":
         raise RuntimeError(f"indexing job ended as {job_status}")
 
@@ -210,6 +312,7 @@ def run_smoke(
         hits = _validate_hits(
             payload,
             check_name=name,
+            expected_channels=channels,
             expected_modality=expected_modality,
         )
         searches.append(
@@ -232,6 +335,7 @@ def run_smoke(
         "status": "passed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "formats": formats,
+        "expected_input_file_count": expected_files,
         "pre_index_record_count": pre_index_records,
         "indexing": result,
         "stats": after,
