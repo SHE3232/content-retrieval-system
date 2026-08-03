@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 import sys
 from typing import Any
@@ -276,6 +277,45 @@ def test_run_smoke_times_out_nonterminal_indexing_job(tmp_path: Path) -> None:
             )
 
     assert poll_requests == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("timeout_seconds", math.nan),
+        ("timeout_seconds", math.inf),
+        ("poll_interval_seconds", math.nan),
+        ("poll_interval_seconds", math.inf),
+    ],
+)
+def test_run_smoke_rejects_non_finite_timing_values_before_http(
+    tmp_path: Path,
+    field: str,
+    invalid_value: float,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+
+    def unexpected(request: httpx.Request) -> httpx.Response:
+        raise AssertionError(f"unexpected request: {request.url}")
+
+    timing = {"timeout_seconds": 1.0, "poll_interval_seconds": 0.0}
+    timing[field] = invalid_value
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(unexpected),
+    ) as client:
+        with pytest.raises(
+            ValueError,
+            match=f"{field} must be finite and non-negative",
+        ):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                **timing,
+            )
 
 
 def test_run_smoke_caps_poll_sleep_and_request_at_remaining_deadline(

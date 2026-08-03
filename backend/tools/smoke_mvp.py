@@ -238,10 +238,12 @@ def run_smoke(
     timeout_seconds: float = 180.0,
     poll_interval_seconds: float = 0.25,
 ) -> dict[str, object]:
-    if timeout_seconds < 0:
-        raise ValueError("timeout_seconds must be non-negative")
-    if poll_interval_seconds < 0:
-        raise ValueError("poll_interval_seconds must be non-negative")
+    if not math.isfinite(timeout_seconds) or timeout_seconds < 0:
+        raise ValueError("timeout_seconds must be finite and non-negative")
+    if not math.isfinite(poll_interval_seconds) or poll_interval_seconds < 0:
+        raise ValueError(
+            "poll_interval_seconds must be finite and non-negative"
+        )
 
     expanded_root = input_root.expanduser()
     if _is_link_or_reparse(expanded_root):
