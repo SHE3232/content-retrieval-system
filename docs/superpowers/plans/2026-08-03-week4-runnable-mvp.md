@@ -443,6 +443,8 @@ def ready(request: Request, response: Response) -> dict[str, str]:
 
 - [ ] **步骤 5：实现 MVP 应用工厂**
 
+> 质量评审修正（2026-08-04）：索引任务内部使用 `asyncio.to_thread`，取消 asyncio task wrapper 不会停止底层线程，会导致 `runtime.close()` 与 Chroma 写入竞态。因此 shutdown 必须 `gather` 排空全部活动后台索引任务后再关闭 runtime。
+
 在 `backend/src/content_retrieval/mvp.py` 中增加：
 
 ```python
@@ -496,8 +498,6 @@ def create_mvp_app(
         finally:
             application.state.ready = False
             tasks = list(application.state.background_tasks)
-            for task in tasks:
-                task.cancel()
             if tasks:
                 await asyncio.gather(*tasks, return_exceptions=True)
             runtime.close()

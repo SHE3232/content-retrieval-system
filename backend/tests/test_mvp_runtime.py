@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,14 +25,17 @@ class FakeRepository:
 
 
 class FakeRuntime:
-    def __init__(self) -> None:
+    def __init__(self, close_error: BaseException | None = None) -> None:
         self.repository = FakeRepository()
         self.indexing_service = object()
         self.retrieval_service = SimpleNamespace(repository=self.repository)
+        self.close_error = close_error
         self.close_calls = 0
 
     def close(self) -> None:
         self.close_calls += 1
+        if self.close_error is not None:
+            raise self.close_error
 
 
 def test_settings_defaults_are_resolved_from_repository_root(tmp_path: Path) -> None:
@@ -233,3 +238,116 @@ async def test_mvp_app_closes_runtime_when_initial_tika_probe_fails(
 
     assert app.state.ready is False
     assert runtime.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_mvp_app_drains_threaded_background_work_before_closing(
+    tmp_path: Path,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime()
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(True),
+    )
+    worker_started = threading.Event()
+    release_worker = threading.Event()
+
+    def blocking_work() -> None:
+        worker_started.set()
+        release_worker.wait()
+
+    lifespan = app.router.lifespan_context(app)
+    await lifespan.__aenter__()
+    background_task = asyncio.create_task(asyncio.to_thread(blocking_work))
+    app.state.background_tasks.add(background_task)
+    assert await asyncio.to_thread(worker_started.wait, 1.0)
+
+    shutdown_task = asyncio.create_task(lifespan.__aexit__(None, None, None))
+    try:
+        await asyncio.sleep(0.05)
+        assert runtime.close_calls == 0
+        assert shutdown_task.done() is False
+    finally:
+        release_worker.set()
+        await shutdown_task
+
+    assert runtime.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_mvp_app_preserves_initial_tika_error_when_close_fails(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime(RuntimeError("close boom"))
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(False),
+    )
+
+    with pytest.raises(RuntimeError, match="Tika dependency is not ready"):
+        async with app.router.lifespan_context(app):
+            pass
+
+    assert "close boom" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_mvp_app_preserves_body_error_when_close_fails(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime(RuntimeError("close boom"))
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(True),
+    )
+
+    with pytest.raises(ValueError, match="body boom"):
+        async with app.router.lifespan_context(app):
+            raise ValueError("body boom")
+
+    assert "close boom" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_mvp_app_propagates_close_error_after_normal_exit(
+    tmp_path: Path,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime(RuntimeError("close boom"))
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(True),
+    )
+
+    with pytest.raises(RuntimeError, match="close boom"):
+        async with app.router.lifespan_context(app):
+            pass

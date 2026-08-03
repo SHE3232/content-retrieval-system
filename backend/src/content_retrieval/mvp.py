@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ DATA_DIR_ENV = "CONTENT_RETRIEVAL_DATA_DIR"
 TIKA_URL_ENV = "CONTENT_RETRIEVAL_TIKA_URL"
 
 DEFAULT_TIKA_URL = "http://127.0.0.1:9998"
+
+logger = logging.getLogger(__name__)
 
 
 def _repository_root() -> Path:
@@ -116,6 +119,7 @@ def create_mvp_app(
             manifest_path=settings.manifest_path,
             data_dir=settings.data_dir,
         )
+        primary_error: BaseException | None = None
         try:
             if not probe.is_ready():
                 raise RuntimeError(
@@ -126,16 +130,22 @@ def create_mvp_app(
             application.state.retrieval_service = runtime.retrieval_service
             application.state.ready = True
             yield
+        except BaseException as error:
+            primary_error = error
+            raise
         finally:
             application.state.ready = False
+            background_tasks = tuple(application.state.background_tasks)
+            if background_tasks:
+                await asyncio.gather(*background_tasks, return_exceptions=True)
             try:
-                background_tasks = tuple(application.state.background_tasks)
-                for task in background_tasks:
-                    task.cancel()
-                if background_tasks:
-                    await asyncio.gather(*background_tasks, return_exceptions=True)
-            finally:
                 runtime.close()
+            except BaseException:
+                if primary_error is None:
+                    raise
+                logger.exception(
+                    "Failed to close the MVP runtime while handling an error"
+                )
 
     application = create_app(lifespan=lifespan, ready=False)
 
