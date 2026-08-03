@@ -224,3 +224,12 @@ def test_runtime_factory_builds_persistent_local_services(
     assert bundle.text_engine.batch_size == 4
     assert bundle.image_engine.batch_size == 3
     assert bundle.repository.count() == 0
+
+    from chromadb.api.shared_system_client import SharedSystemClient
+
+    identifier = str(bundle.repository.database_path)
+    assert identifier in SharedSystemClient._identifier_to_system
+
+    bundle.close()
+
+    assert identifier not in SharedSystemClient._identifier_to_system

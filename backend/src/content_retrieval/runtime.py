@@ -43,6 +43,10 @@ class LocalRuntime:
     indexing_service: IndexingService
     retrieval_service: RetrievalService
 
+    def close(self) -> None:
+        """Release persistent local resources owned by this runtime."""
+        self.repository.close()
+
 
 def build_local_runtime(
     *,

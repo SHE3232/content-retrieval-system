@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import gc
 import hashlib
 from pathlib import Path
 
@@ -108,6 +109,42 @@ def test_upsert_survives_restart_and_roundtrips_record(tmp_path: Path) -> None:
     second = ChromaVectorRepository(database_path)
     assert second.get(record.record_id) == record
     assert second.list_records() == [record]
+
+
+def test_close_releases_persistent_chroma_system(tmp_path: Path) -> None:
+    from chromadb.api.shared_system_client import SharedSystemClient
+
+    repository = ChromaVectorRepository(tmp_path / "index")
+    identifier = str(repository.database_path)
+
+    assert identifier in SharedSystemClient._identifier_to_system
+
+    repository.close()
+    repository.close()
+
+    assert identifier not in SharedSystemClient._identifier_to_system
+
+
+def test_context_manager_closes_repository(tmp_path: Path) -> None:
+    from chromadb.api.shared_system_client import SharedSystemClient
+
+    with ChromaVectorRepository(tmp_path / "index") as repository:
+        identifier = str(repository.database_path)
+        assert identifier in SharedSystemClient._identifier_to_system
+
+    assert identifier not in SharedSystemClient._identifier_to_system
+
+
+def test_unreferenced_repository_releases_chroma_system(tmp_path: Path) -> None:
+    from chromadb.api.shared_system_client import SharedSystemClient
+
+    repository = ChromaVectorRepository(tmp_path / "index")
+    identifier = str(repository.database_path)
+
+    del repository
+    gc.collect()
+
+    assert identifier not in SharedSystemClient._identifier_to_system
 
 
 def test_upsert_is_idempotent_and_updates_document(tmp_path: Path) -> None:

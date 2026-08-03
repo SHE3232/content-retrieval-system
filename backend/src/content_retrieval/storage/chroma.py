@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+import weakref
 
 import chromadb
 from chromadb.api.models.Collection import Collection
@@ -31,6 +32,23 @@ class ChromaVectorRepository:
         self.database_path = Path(database_path).expanduser().resolve()
         self.database_path.mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(path=str(self.database_path))
+        self._close_client = weakref.finalize(self, self._client.close)
+
+    def close(self) -> None:
+        """Release the persistent Chroma client and its local resources."""
+        self._close_client()
+
+    def __enter__(self) -> ChromaVectorRepository:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: object,
+        exc_value: object,
+        traceback: object,
+    ) -> None:
+        del exc_type, exc_value, traceback
+        self.close()
 
     def upsert(self, records: Iterable[IndexRecord]) -> int:
         grouped: dict[str, list[IndexRecord]] = defaultdict(list)
