@@ -3,15 +3,15 @@
   "week": 4,
   "verification_date": "2026-08-03",
   "base_commit": "d2bcddcd20b41e12c5c02dca142e80a0be256d25",
-  "tested_commit": "c920a30a1da6931bb61c070e9d4cf26d0755377f",
+  "tested_commit": "833e83ee402de8894ff7ae7a37d8699ca9fc0f73",
   "worktree": "F:/contentretrivalsystem/.worktrees/week4-reintegrate-verify",
   "test_command": "F:/contentretrivalsystem/backend/.venv/Scripts/python.exe -m pytest -q",
   "test_result": {
-    "collected": 337,
-    "passed": 337,
+    "collected": 340,
+    "passed": 340,
     "failed": 0,
     "skipped": 0,
-    "duration_seconds": 34.20,
+    "duration_seconds": 32.54,
     "tika_version": "3.3.1",
     "tika_port_after_run_listeners": 0
   },
@@ -37,20 +37,32 @@
       }
     }
   },
+  "coverage_result": {
+    "passed": 316,
+    "coverage_percent": 88.08,
+    "required_percent": 85.0
+  },
   "test_count_policy": {
     "original_commit": "537e06239717494dfca3bedd70cb1e2d16c14dce",
     "original_commit_passed": 162,
     "reconciled_commit": "199ecec74577fc0f6a92e92c104e7d93a5165aa0",
-    "reconciled_commit_passed": 337
+    "reconciled_commit_passed": 337,
+    "reintegrated_commit": "833e83ee402de8894ff7ae7a37d8699ca9fc0f73",
+    "reintegrated_commit_passed": 340
   },
   "known_transient": {
     "message": "Error creating hnsw segment reader: Nothing found on disk",
-    "initial_full_suite_failed": 1,
+    "full_suite_failures_observed": 2,
     "single_test_repeat_passes": 12,
     "module_repeat_runs": 8,
     "module_repeat_total_passes": 96,
-    "subsequent_full_suite_passes": 3,
-    "code_change_applied": false
+    "stress_failure_zero_based_iteration": 63,
+    "stress_passes_after_fix": 200,
+    "active_chroma_systems_after_each_50": 0,
+    "root_cause": "Persistent Chroma clients were not closed and accumulated shared Systems until HNSW resources were exhausted",
+    "fix_commit": "833e83ee402de8894ff7ae7a37d8699ca9fc0f73",
+    "query_retry_added": false,
+    "code_change_applied": true
   },
   "excluded_from_integration": [
     "legacy local-fixture test copies",

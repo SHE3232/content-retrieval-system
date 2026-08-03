@@ -47,13 +47,16 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe `
 
 ## 已验证基线
 
+- 重新整合后的提交级全量回归：精确提交
+  `833e83ee402de8894ff7ae7a37d8699ca9fc0f73` 在干净 detached worktree
+  中为 340 passed、0 skipped；第四周核心覆盖率为 88.08%，通过 85% 门槛。
 - 提交级全量自动化回归：精确提交
   `199ecec74577fc0f6a92e92c104e7d93a5165aa0` 在干净 detached worktree
   中为 337 passed、0 skipped；机器证据见
   `evidence/test-reconciliation-2026-08-03.json`。
 - 原始提交 `537e06239717494dfca3bedd70cb1e2d16c14dce` 的可复现基线为
   162 passed；337 项结果属于后续测试证据整改提交，不追溯改写原提交。
-- 第四周核心覆盖率：87.91%，门槛 85%。
+- 测试证据整改时的第四周核心覆盖率为 87.91%；重新整合后为 88.08%。
 - 五格式真实 E2E：TXT/PDF/DOCX/JPG/PNG 共 5 文件、20 条记录、0 失败；持久化重启复查通过。
 - NQ 冻结集：5,446 段、40 查询，Recall@10 59.58%，MRR@10 0.2820，nDCG@10 0.3490，中位排名 6.5。
 - COCO 冻结集：40 图片、201 captions，Recall@1 91.04%，Recall@5/10 100%。

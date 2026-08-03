@@ -2,7 +2,7 @@
 
 - 整合日期：2026-08-03
 - 整合基线：`d2bcddcd20b41e12c5c02dca142e80a0be256d25`
-- 受测提交：`c920a30a1da6931bb61c070e9d4cf26d0755377f`
+- 受测提交：`833e83ee402de8894ff7ae7a37d8699ca9fc0f73`
 - 整合原则：只纳入可归属、可复现、可审计的第四周交付内容，不整包恢复旧工作区。
 
 ## 1. 已纳入内容
@@ -11,8 +11,10 @@
 2. 恢复 stash 中四份第四周 DOCX 的发布修订：删除正文末尾的证据文件引用，
    将“证据”类栏目名称改为普通内容名称，不改动接口、指标或实现结论。
 3. 在 API 文档、端到端测试报告和第四周周报中统一测试口径：
-   “原始提交 162 passed；整改提交 337 passed”。
+   “原始提交 162 passed；整改提交 337 passed；重新整合提交 340 passed”。
 4. 在第四周 README 中建立原始审核、测试证据整改和本次重新整合记录的入口。
+5. 为 `ChromaVectorRepository` 增加显式关闭、上下文管理和自动资源释放，为
+   `LocalRuntime` 增加关闭入口，并补充 3 项生命周期回归测试。
 
 ## 2. 明确排除内容
 
@@ -49,14 +51,19 @@
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q
 ```
 
-结果：`337 passed in 34.20s`，0 failed，0 skipped。测试结束后已确认 Tika
+结果：`340 passed in 32.54s`，0 failed，0 skipped。第四周核心覆盖率门为
+`316 passed`、总覆盖率 `88.08%`，达到 85% 门槛。测试结束后已确认 Tika
 相关 Java 进程为 0，端口 9998 无监听。
 
-整合基线首次全量运行曾出现一次 Chroma HNSW 临时目录错误：
-`Error creating hnsw segment reader: Nothing found on disk`。对应单项连续 12 次、
-所在模块连续 8 次（共 96 项执行）均未复现；随后基线全量、提交前全量和受测提交
-全量均为 337 passed。本次没有用重试逻辑或业务代码改动掩盖该现象，后续继续按
-Chroma 版本升级风险跟踪。
+整合期间两次全量运行命中同一 Chroma HNSW 错误：
+`Error creating hnsw segment reader: Nothing found on disk`。单项或单模块重复运行无法
+复现，但在同一 Python 进程连续创建本地仓库时，第 64 次左右可稳定触发。根因是
+`ChromaVectorRepository` 没有调用 Chroma 1.5.9 提供的引用计数式 `Client.close()`，
+导致多个 PersistentClient/System 在测试进程中持续保留并最终耗尽 HNSW 资源。
+
+修复后，同一进程连续完成 200 次“建库→写入→过滤查询→关闭”，全部通过；每 50 次
+检查的活跃 Chroma System 数均为 0。修复采用显式生命周期和自动兜底释放，没有在
+查询层增加重试。
 
 机器可读结果见 `evidence/reintegration-2026-08-03.json`。
 
