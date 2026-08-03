@@ -445,6 +445,8 @@ def ready(request: Request, response: Response) -> dict[str, str]:
 
 > 质量评审修正（2026-08-04）：索引任务内部使用 `asyncio.to_thread`，取消 asyncio task wrapper 不会停止底层线程，会导致 `runtime.close()` 与 Chroma 写入竞态。因此 shutdown 必须 `gather` 排空全部活动后台索引任务后再关闭 runtime。
 
+> 质量复审第二次修正（2026-08-04）：shutdown drain 使用明确的 30 秒 grace；到期只告警并继续以 `shield` 等待真实工作结束，绝不在线程仍运行时强关 Chroma。外部取消先记录，待 drain 完成并关闭 runtime 后重抛；已有主异常时则记录取消并保留主异常。
+
 在 `backend/src/content_retrieval/mvp.py` 中增加：
 
 ```python

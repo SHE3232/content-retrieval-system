@@ -22,6 +22,7 @@ DATA_DIR_ENV = "CONTENT_RETRIEVAL_DATA_DIR"
 TIKA_URL_ENV = "CONTENT_RETRIEVAL_TIKA_URL"
 
 DEFAULT_TIKA_URL = "http://127.0.0.1:9998"
+SHUTDOWN_GRACE_SECONDS = 30.0
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,47 @@ class RuntimeBuilder(Protocol):
     ) -> LocalRuntime: ...
 
 
+async def _drain_background_tasks(
+    background_tasks: tuple[asyncio.Task[object], ...],
+) -> asyncio.CancelledError | None:
+    if not background_tasks:
+        return None
+
+    drain = asyncio.gather(*background_tasks, return_exceptions=True)
+    shutdown_cancellation: asyncio.CancelledError | None = None
+    try:
+        await asyncio.wait_for(
+            asyncio.shield(drain),
+            timeout=SHUTDOWN_GRACE_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "MVP shutdown grace period of %.1f seconds elapsed; "
+            "continuing to drain background indexing work",
+            SHUTDOWN_GRACE_SECONDS,
+        )
+    except asyncio.CancelledError as error:
+        shutdown_cancellation = error
+
+    while not drain.done():
+        try:
+            await asyncio.shield(drain)
+        except asyncio.CancelledError as error:
+            if shutdown_cancellation is None:
+                shutdown_cancellation = error
+
+    for result in drain.result():
+        if isinstance(result, BaseException) and not isinstance(
+            result, asyncio.CancelledError
+        ):
+            logger.error(
+                "MVP background task failed during shutdown: %s",
+                result,
+                exc_info=(type(result), result, result.__traceback__),
+            )
+    return shutdown_cancellation
+
+
 def create_mvp_app(
     settings: MvpSettings | None = None,
     *,
@@ -136,15 +178,38 @@ def create_mvp_app(
         finally:
             application.state.ready = False
             background_tasks = tuple(application.state.background_tasks)
-            if background_tasks:
-                await asyncio.gather(*background_tasks, return_exceptions=True)
+            shutdown_cancellation = await _drain_background_tasks(
+                background_tasks
+            )
             try:
                 runtime.close()
             except BaseException:
                 if primary_error is None:
+                    if shutdown_cancellation is not None:
+                        logger.warning(
+                            "MVP shutdown cancellation was superseded by "
+                            "a runtime close failure",
+                            exc_info=(
+                                type(shutdown_cancellation),
+                                shutdown_cancellation,
+                                shutdown_cancellation.__traceback__,
+                            ),
+                        )
                     raise
                 logger.exception(
                     "Failed to close the MVP runtime while handling an error"
+                )
+            if shutdown_cancellation is not None:
+                if primary_error is None:
+                    raise shutdown_cancellation
+                logger.warning(
+                    "MVP shutdown cancellation was suppressed to preserve "
+                    "the primary error",
+                    exc_info=(
+                        type(shutdown_cancellation),
+                        shutdown_cancellation,
+                        shutdown_cancellation.__traceback__,
+                    ),
                 )
 
     application = create_app(lifespan=lifespan, ready=False)

@@ -351,3 +351,124 @@ async def test_mvp_app_propagates_close_error_after_normal_exit(
     with pytest.raises(RuntimeError, match="close boom"):
         async with app.router.lifespan_context(app):
             pass
+
+
+@pytest.mark.anyio
+async def test_mvp_app_finishes_drain_before_propagating_shutdown_cancellation(
+    tmp_path: Path,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime()
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(True),
+    )
+    worker_started = threading.Event()
+    release_worker = threading.Event()
+
+    def blocking_work() -> None:
+        worker_started.set()
+        release_worker.wait()
+
+    lifespan = app.router.lifespan_context(app)
+    await lifespan.__aenter__()
+    background_task = asyncio.create_task(asyncio.to_thread(blocking_work))
+    app.state.background_tasks.add(background_task)
+    assert await asyncio.to_thread(worker_started.wait, 1.0)
+
+    shutdown_task = asyncio.create_task(lifespan.__aexit__(None, None, None))
+    await asyncio.sleep(0)
+    shutdown_task.cancel()
+    await asyncio.sleep(0)
+    shutdown_task.cancel()
+    try:
+        await asyncio.sleep(0.05)
+        assert runtime.close_calls == 0
+    finally:
+        release_worker.set()
+
+    with pytest.raises(asyncio.CancelledError):
+        await shutdown_task
+    assert runtime.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_mvp_app_warns_after_shutdown_grace_and_keeps_draining(
+    tmp_path: Path,
+    monkeypatch,
+    caplog,
+) -> None:
+    monkeypatch.setattr(mvp, "SHUTDOWN_GRACE_SECONDS", 0.01)
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime()
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(True),
+    )
+    worker_started = threading.Event()
+    release_worker = threading.Event()
+
+    def blocking_work() -> None:
+        worker_started.set()
+        release_worker.wait()
+
+    lifespan = app.router.lifespan_context(app)
+    await lifespan.__aenter__()
+    background_task = asyncio.create_task(asyncio.to_thread(blocking_work))
+    app.state.background_tasks.add(background_task)
+    assert await asyncio.to_thread(worker_started.wait, 1.0)
+
+    shutdown_task = asyncio.create_task(lifespan.__aexit__(None, None, None))
+    try:
+        await asyncio.sleep(0.05)
+        assert runtime.close_calls == 0
+        assert shutdown_task.done() is False
+        assert "shutdown grace period" in caplog.text.lower()
+    finally:
+        release_worker.set()
+        await shutdown_task
+
+    assert runtime.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_mvp_app_logs_background_failure_without_obscuring_primary_error(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime()
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(True),
+    )
+
+    async def fail_in_background() -> None:
+        raise RuntimeError("background boom")
+
+    with pytest.raises(ValueError, match="body boom"):
+        async with app.router.lifespan_context(app):
+            background_task = asyncio.create_task(fail_in_background())
+            app.state.background_tasks.add(background_task)
+            raise ValueError("body boom")
+
+    assert "background boom" in caplog.text
+    assert runtime.close_calls == 1
