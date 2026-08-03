@@ -1,9 +1,36 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import content_retrieval.mvp as mvp
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from content_retrieval.mvp import MvpSettings, TikaReadinessProbe
+
+
+class FakeProbe:
+    def __init__(self, ready: bool) -> None:
+        self.ready = ready
+
+    def is_ready(self) -> bool:
+        return self.ready
+
+
+class FakeRepository:
+    def count(self) -> int:
+        return 0
+
+
+class FakeRuntime:
+    def __init__(self) -> None:
+        self.repository = FakeRepository()
+        self.indexing_service = object()
+        self.retrieval_service = SimpleNamespace(repository=self.repository)
+        self.close_calls = 0
+
+    def close(self) -> None:
+        self.close_calls += 1
 
 
 def test_settings_defaults_are_resolved_from_repository_root(tmp_path: Path) -> None:
@@ -99,3 +126,110 @@ def test_tika_readiness_disables_environment_proxy_configuration(monkeypatch) ->
 
     assert TikaReadinessProbe(transport=transport).is_ready() is True
     assert captured["trust_env"] is False
+
+
+@pytest.mark.anyio
+async def test_mvp_app_builds_runtime_during_lifespan_and_closes_it(
+    tmp_path: Path,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime()
+    builder_calls: list[dict[str, Path]] = []
+
+    def build_runtime(**kwargs: Path) -> FakeRuntime:
+        builder_calls.append(kwargs)
+        return runtime
+
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=build_runtime,
+        tika_probe=FakeProbe(True),
+    )
+
+    assert app.state.ready is False
+    assert builder_calls == []
+
+    async with app.router.lifespan_context(app):
+        assert builder_calls == [
+            {
+                "model_root": settings.model_root,
+                "manifest_path": settings.manifest_path,
+                "data_dir": settings.data_dir,
+            }
+        ]
+        assert app.state.runtime is runtime
+        assert app.state.indexing_service is runtime.indexing_service
+        assert app.state.retrieval_service is runtime.retrieval_service
+        assert app.state.ready is True
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client:
+            response = await client.get("/health/ready")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ready"}
+
+    assert app.state.ready is False
+    assert runtime.close_calls == 1
+
+
+@pytest.mark.anyio
+async def test_mvp_app_readiness_reflects_tika_becoming_unavailable(
+    tmp_path: Path,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    probe = FakeProbe(True)
+    runtime = FakeRuntime()
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=probe,
+    )
+
+    async with app.router.lifespan_context(app):
+        probe.ready = False
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client:
+            response = await client.get("/health/ready")
+
+        assert response.status_code == 503
+        assert response.json() == {"status": "not_ready"}
+
+
+@pytest.mark.anyio
+async def test_mvp_app_closes_runtime_when_initial_tika_probe_fails(
+    tmp_path: Path,
+) -> None:
+    settings = MvpSettings(
+        model_root=tmp_path / "models",
+        manifest_path=tmp_path / "manifest.json",
+        data_dir=tmp_path / "data",
+        tika_url="http://tika.test",
+    )
+    runtime = FakeRuntime()
+    app = mvp.create_mvp_app(
+        settings,
+        runtime_builder=lambda **kwargs: runtime,
+        tika_probe=FakeProbe(False),
+    )
+
+    with pytest.raises(RuntimeError, match="Tika.*not ready"):
+        async with app.router.lifespan_context(app):
+            pass
+
+    assert app.state.ready is False
+    assert runtime.close_calls == 1

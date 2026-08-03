@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager
+
 from fastapi import FastAPI
 
 from content_retrieval.api.routes import health, indexing, ingestion, search
@@ -8,6 +11,7 @@ from content_retrieval.services.ingestion_jobs import InMemoryIngestionJobStore
 
 
 DEFAULT_MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
+AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
 
 def create_app(
@@ -15,8 +19,11 @@ def create_app(
     *,
     indexing_service=None,
     retrieval_service=None,
+    lifespan: AppLifespan | None = None,
+    ready: bool = True,
+    readiness_check: Callable[[], bool] | None = None,
 ) -> FastAPI:
-    application = FastAPI(title="Content Retrieval API")
+    application = FastAPI(title="Content Retrieval API", lifespan=lifespan)
     application.state.ingestion_service = (
         ingestion_service
         or BatchIngestionService(
@@ -29,7 +36,8 @@ def create_app(
     application.state.indexing_service = indexing_service
     application.state.retrieval_service = retrieval_service
     application.state.background_tasks = set()
-    application.state.ready = True
+    application.state.ready = ready
+    application.state.readiness_check = readiness_check
     application.include_router(health.router)
     application.include_router(ingestion.router)
     application.include_router(indexing.router)
