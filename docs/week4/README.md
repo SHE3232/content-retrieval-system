@@ -15,7 +15,7 @@
 
 ## 运行约束
 
-运行时不自动联网，也不自动下载模型。必须提供 `models/model-manifest.json`，并确保文本模型目录与 MobileCLIP 权重的 SHA-256、模型 ID、空间 ID 和维度与清单一致。生产数据目录必须显式传入；启动过程不会清空现有索引。
+运行时不自动联网，也不自动下载模型。必须提供 `models/model-manifest.json`，并确保文本模型目录与 MobileCLIP 权重的 SHA-256、模型 ID、空间 ID 和维度与清单一致。启动器默认使用 `data/mvp`，也可通过 `-DataDir` 显式指定其他生产数据目录；启动过程不会清空现有索引。
 
 检索接口和服务层均限制 `top_k` 为 1–100。ChromaDB 1.5.9 在大型集合上执行 `n_results=collection.count()` 可能少返回条目并使同一客户端后续全量读取失败，因此本周准确率评测使用 Top-100 排名，禁止把 HNSW 查询作为全表扫描器。
 
@@ -45,9 +45,9 @@ powershell -ExecutionPolicy Bypass -File tools/start-mvp.ps1
 从仓库根目录运行：
 
 ```powershell
-F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q
+& '.\backend\.venv\Scripts\python.exe' -m pytest -q
 
-F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend `
+& '.\backend\.venv\Scripts\python.exe' -m pytest -q backend `
   --cov=content_retrieval.storage `
   --cov=content_retrieval.retrieval `
   --cov=content_retrieval.services.indexing `
@@ -55,7 +55,7 @@ F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend `
   --cov-report=json:docs/week4/evidence/week4-coverage.json `
   --cov-fail-under=85
 
-F:\contentretrivalsystem\backend\.venv\Scripts\python.exe `
+& '.\backend\.venv\Scripts\python.exe' `
   model-tools/benchmark_week4_pipeline.py `
   --mode all `
   --model-root models `

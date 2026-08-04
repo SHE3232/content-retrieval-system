@@ -608,6 +608,13 @@ powershell -ExecutionPolicy Bypass `
 `$controlledInputCount`。服务重启就绪后运行：
 
 ```powershell
+$restartEvidence = [System.IO.Path]::GetFullPath(
+  'data/mvp-http-smoke-evidence/restart-pass-summary.json'
+)
+if (Test-Path -LiteralPath $restartEvidence) {
+  throw "重启烟测证据已经存在，拒绝覆盖：$restartEvidence"
+}
+
 & '.\backend\.venv\Scripts\python.exe' `
   'backend/tools/smoke_mvp.py' `
   --input-root mvp-input `
@@ -615,13 +622,12 @@ powershell -ExecutionPolicy Bypass `
   --text-query 'offline system for searching private documents' `
   --image-query 'a blue geometric logo on a white rounded square' `
   --require-existing-index `
-  --output docs/week4/evidence/mvp-api-smoke-summary.json
+  --output $restartEvidence
 if ($LASTEXITCODE -ne 0) {
   throw '重启后的 MVP HTTP 烟测失败'
 }
 
-$second = Get-Content -Raw -LiteralPath `
-  'docs/week4/evidence/mvp-api-smoke-summary.json' | ConvertFrom-Json
+$second = Get-Content -Raw -LiteralPath $restartEvidence | ConvertFrom-Json
 if ($second.status -ne 'passed') { throw '重启烟测状态不是 passed' }
 if ($second.pre_index_record_count -ne $firstRecordCount) {
   throw '重启前记录数与首次烟测完成后的记录数不一致'
@@ -641,12 +647,50 @@ if (-not $second.persistent_restart.required) {
 if (-not $second.persistent_restart.passed) {
   throw '重启持久化检查未通过'
 }
+
+$finalEvidence = [System.IO.Path]::GetFullPath(
+  'docs/week4/evidence/mvp-api-smoke-summary.json'
+)
+$finalEvidenceDirectory = Split-Path -Parent $finalEvidence
+New-Item -ItemType Directory -Force -Path $finalEvidenceDirectory | Out-Null
+$finalEvidenceTemporary = Join-Path $finalEvidenceDirectory (
+  '.mvp-api-smoke-summary.' + [guid]::NewGuid().ToString('N') + '.tmp'
+)
+$finalEvidenceBackup = Join-Path $finalEvidenceDirectory (
+  '.mvp-api-smoke-summary.' + [guid]::NewGuid().ToString('N') + '.bak'
+)
+$utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+try {
+  $finalJson = $second | ConvertTo-Json -Depth 20
+  [System.IO.File]::WriteAllText(
+    $finalEvidenceTemporary,
+    $finalJson + "`n",
+    $utf8WithoutBom
+  )
+  if ([System.IO.File]::Exists($finalEvidence)) {
+    [System.IO.File]::Replace(
+      $finalEvidenceTemporary,
+      $finalEvidence,
+      $finalEvidenceBackup
+    )
+  } else {
+    [System.IO.File]::Move($finalEvidenceTemporary, $finalEvidence)
+  }
+} finally {
+  if ([System.IO.File]::Exists($finalEvidenceTemporary)) {
+    [System.IO.File]::Delete($finalEvidenceTemporary)
+  }
+  if ([System.IO.File]::Exists($finalEvidenceBackup)) {
+    [System.IO.File]::Delete($finalEvidenceBackup)
+  }
+}
 ```
 
 第二轮会再次提交相同目录，但增量索引应报告 `indexed_files=0`、
 `unchanged_files=5`。最终证据同时证明重启前已有记录、记录数与首轮完成值一致，以及
-持久化检查通过。烟测失败时，脚本不会覆盖先前的最终通过证据；首轮上下文始终保留在
-单独的本地 JSON 中。
+持久化检查通过。重启烟测先写入被 Git 忽略的本地 JSON；只有所有跨轮断言通过后，才在
+同一目录内原子生成或替换正式证据。失败不会留下本轮的伪通过证据，首轮与重启上下文也
+始终保留在两个单独的本地 JSON 中。
 
 `docs/week4/evidence/mvp-api-smoke-summary.json` 由上述两轮真实烟测生成，本任务不提供
 预制结果。最终证据将在第四周提交级验证阶段产生。
