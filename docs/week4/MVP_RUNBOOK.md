@@ -276,7 +276,15 @@ for name in ("blue-logo.jpg", "blue-logo.png"):
 print(f"created five controlled files in {root}")
 '@
 
-& '.\backend\.venv\Scripts\python.exe' -c $sampleGenerator $sampleRoot
+$sampleGeneratorBase64 = [System.Convert]::ToBase64String(
+  [System.Text.Encoding]::UTF8.GetBytes($sampleGenerator)
+)
+$pythonBootstrap = `
+  "import base64,sys;source=sys.argv.pop(1);exec(compile(base64.b64decode(source),'<mvp-fixture-generator>','exec'))"
+& '.\backend\.venv\Scripts\python.exe' `
+  -c $pythonBootstrap `
+  $sampleGeneratorBase64 `
+  $sampleRoot
 if ($LASTEXITCODE -ne 0) {
   throw '五格式受控样本生成失败'
 }
@@ -284,7 +292,8 @@ if ($LASTEXITCODE -ne 0) {
 
 生成结果固定为 `offline-notes.txt`、`private-search.pdf`、`local-guide.docx`、
 `blue-logo.jpg` 和 `blue-logo.png`。PDF 是含可提取英文文本的有效 PDF 1.4；DOCX 是
-包含内容类型、包关系和主文档的最小 Open XML 包。
+包含内容类型、包关系和主文档的最小 Open XML 包。Base64 只负责把 UTF-8 Python 源码
+安全穿过 Windows PowerShell 5.1 的原生命令参数边界，不写入临时 `.py` 文件。
 
 ## 2. 一键启动
 
