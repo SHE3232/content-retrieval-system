@@ -1,0 +1,105 @@
+{
+  "schema_version": "1",
+  "status": "passed",
+  "generated_at": "2026-08-05T04:45:23.130486+00:00",
+  "formats": [
+    "DOCX",
+    "JPG",
+    "PDF",
+    "PNG",
+    "TXT"
+  ],
+  "expected_input_file_count": 5,
+  "pre_index_record_count": 5,
+  "indexing": {
+    "parsed_files": 5,
+    "indexed_files": 0,
+    "indexed_records": 0,
+    "skipped_files": 0,
+    "failed_files": 0,
+    "partial_files": 0,
+    "unchanged_files": 5,
+    "removed_stale_records": 0,
+    "failures": []
+  },
+  "stats": {
+    "record_count": 5,
+    "file_count": 5,
+    "text_record_count": 3,
+    "image_record_count": 2
+  },
+  "searches": [
+    {
+      "name": "keyword",
+      "query": "没有互联网连接",
+      "channels": [
+        "keyword"
+      ],
+      "top_hit": "local-guide.docx",
+      "match_reasons": [
+        "keyword"
+      ],
+      "elapsed_ms": 0.28010003734380007,
+      "passed": true
+    },
+    {
+      "name": "text_semantic",
+      "query": "offline system for searching private documents",
+      "channels": [
+        "text_semantic"
+      ],
+      "top_hit": "private-search.pdf",
+      "match_reasons": [
+        "text_semantic"
+      ],
+      "elapsed_ms": 144.25039995694533,
+      "passed": true
+    },
+    {
+      "name": "image_semantic",
+      "query": "a blue geometric logo on a white rounded square",
+      "channels": [
+        "image_semantic"
+      ],
+      "top_hit": "blue-logo.jpg",
+      "match_reasons": [
+        "image_semantic"
+      ],
+      "elapsed_ms": 75.04379999591038,
+      "passed": true
+    },
+    {
+      "name": "hybrid",
+      "query": "offline system for searching private documents",
+      "channels": [
+        "keyword",
+        "text_semantic",
+        "image_semantic"
+      ],
+      "top_hit": "private-search.pdf",
+      "match_reasons": [
+        "keyword",
+        "text_semantic"
+      ],
+      "elapsed_ms": 101.77519998978823,
+      "passed": true
+    },
+    {
+      "name": "filtered_image",
+      "query": "a blue geometric logo on a white rounded square",
+      "channels": [
+        "image_semantic"
+      ],
+      "top_hit": "blue-logo.jpg",
+      "match_reasons": [
+        "image_semantic"
+      ],
+      "elapsed_ms": 48.93460002494976,
+      "passed": true
+    }
+  ],
+  "persistent_restart": {
+    "required": true,
+    "passed": true
+  }
+}
