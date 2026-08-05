@@ -1,7 +1,7 @@
 {
-  "schema_version": "1",
+  "schema_version": "2",
   "status": "passed",
-  "generated_at": "2026-08-05T04:45:23.130486+00:00",
+  "generated_at": "2026-08-05T14:59:28.362873+00:00",
   "formats": [
     "DOCX",
     "JPG",
@@ -28,78 +28,169 @@
     "text_record_count": 3,
     "image_record_count": 2
   },
-  "searches": [
+  "pre_index_searches": [
     {
       "name": "keyword",
+      "phase": "pre_index",
       "query": "没有互联网连接",
       "channels": [
         "keyword"
       ],
+      "expected_top_hit": "local-guide.docx",
       "top_hit": "local-guide.docx",
       "match_reasons": [
         "keyword"
       ],
-      "elapsed_ms": 0.28010003734380007,
+      "elapsed_ms": 0.2525000018067658,
       "passed": true
     },
     {
       "name": "text_semantic",
+      "phase": "pre_index",
       "query": "offline system for searching private documents",
       "channels": [
         "text_semantic"
       ],
+      "expected_top_hit": "private-search.pdf",
       "top_hit": "private-search.pdf",
       "match_reasons": [
         "text_semantic"
       ],
-      "elapsed_ms": 144.25039995694533,
+      "elapsed_ms": 110.71179999271408,
       "passed": true
     },
     {
       "name": "image_semantic",
+      "phase": "pre_index",
       "query": "a blue geometric logo on a white rounded square",
       "channels": [
         "image_semantic"
       ],
+      "expected_top_hit": "blue-logo.jpg",
       "top_hit": "blue-logo.jpg",
       "match_reasons": [
         "image_semantic"
       ],
-      "elapsed_ms": 75.04379999591038,
+      "elapsed_ms": 26.87309996690601,
       "passed": true
     },
     {
       "name": "hybrid",
+      "phase": "pre_index",
       "query": "offline system for searching private documents",
       "channels": [
         "keyword",
         "text_semantic",
         "image_semantic"
       ],
+      "expected_top_hit": "private-search.pdf",
       "top_hit": "private-search.pdf",
       "match_reasons": [
         "keyword",
         "text_semantic"
       ],
-      "elapsed_ms": 101.77519998978823,
+      "elapsed_ms": 46.33890005061403,
       "passed": true
     },
     {
       "name": "filtered_image",
+      "phase": "pre_index",
       "query": "a blue geometric logo on a white rounded square",
       "channels": [
         "image_semantic"
       ],
+      "expected_top_hit": "blue-logo.jpg",
       "top_hit": "blue-logo.jpg",
       "match_reasons": [
         "image_semantic"
       ],
-      "elapsed_ms": 48.93460002494976,
+      "elapsed_ms": 22.86389999790117,
+      "passed": true
+    }
+  ],
+  "searches": [
+    {
+      "name": "keyword",
+      "phase": "post_index",
+      "query": "没有互联网连接",
+      "channels": [
+        "keyword"
+      ],
+      "expected_top_hit": "local-guide.docx",
+      "top_hit": "local-guide.docx",
+      "match_reasons": [
+        "keyword"
+      ],
+      "elapsed_ms": 0.2853999612852931,
+      "passed": true
+    },
+    {
+      "name": "text_semantic",
+      "phase": "post_index",
+      "query": "offline system for searching private documents",
+      "channels": [
+        "text_semantic"
+      ],
+      "expected_top_hit": "private-search.pdf",
+      "top_hit": "private-search.pdf",
+      "match_reasons": [
+        "text_semantic"
+      ],
+      "elapsed_ms": 30.93730000546202,
+      "passed": true
+    },
+    {
+      "name": "image_semantic",
+      "phase": "post_index",
+      "query": "a blue geometric logo on a white rounded square",
+      "channels": [
+        "image_semantic"
+      ],
+      "expected_top_hit": "blue-logo.jpg",
+      "top_hit": "blue-logo.jpg",
+      "match_reasons": [
+        "image_semantic"
+      ],
+      "elapsed_ms": 30.67339997505769,
+      "passed": true
+    },
+    {
+      "name": "hybrid",
+      "phase": "post_index",
+      "query": "offline system for searching private documents",
+      "channels": [
+        "keyword",
+        "text_semantic",
+        "image_semantic"
+      ],
+      "expected_top_hit": "private-search.pdf",
+      "top_hit": "private-search.pdf",
+      "match_reasons": [
+        "keyword",
+        "text_semantic"
+      ],
+      "elapsed_ms": 55.960999976377934,
+      "passed": true
+    },
+    {
+      "name": "filtered_image",
+      "phase": "post_index",
+      "query": "a blue geometric logo on a white rounded square",
+      "channels": [
+        "image_semantic"
+      ],
+      "expected_top_hit": "blue-logo.jpg",
+      "top_hit": "blue-logo.jpg",
+      "match_reasons": [
+        "image_semantic"
+      ],
+      "elapsed_ms": 24.57819995470345,
       "passed": true
     }
   ],
   "persistent_restart": {
     "required": true,
-    "passed": true
+    "passed": true,
+    "pre_index_search_count": 5
   }
 }
