@@ -5,6 +5,10 @@
 *.py[cod]
 .pytest_cache/
 
+# Documented MVP workflow artifacts
+/.coverage
+/mvp-input/
+
 # Local databases and downloaded models
 data/*
 !data/.gitkeep
