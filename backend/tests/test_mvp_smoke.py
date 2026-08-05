@@ -15,6 +15,13 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 REQUIRED_FILES = ("a.txt", "b.pdf", "c.docx", "d.jpg", "e.png")
+EXPECTED_TOP_HITS = {
+    "keyword": "local-guide.docx",
+    "text_semantic": "private-search.pdf",
+    "image_semantic": "blue-logo.jpg",
+    "hybrid": "private-search.pdf",
+    "filtered_image": "blue-logo.jpg",
+}
 
 
 def _write_inputs(root: Path, *, names: tuple[str, ...] = REQUIRED_FILES) -> None:
@@ -54,14 +61,24 @@ def _search_payload(
     modality: str = "image",
     match_reasons: list[str] | None = None,
     channels: list[str] | None = None,
+    name: str | None = None,
 ) -> dict[str, object]:
     reasons = match_reasons or ["image_semantic"]
     active_channels = channels or reasons
+    if name is None:
+        if active_channels == ["keyword"]:
+            name = EXPECTED_TOP_HITS["keyword"]
+        elif active_channels == ["text_semantic"]:
+            name = EXPECTED_TOP_HITS["text_semantic"]
+        elif active_channels == ["image_semantic"]:
+            name = EXPECTED_TOP_HITS["image_semantic"]
+        else:
+            name = EXPECTED_TOP_HITS["hybrid"]
     return {
         "query": "fixture",
         "hits": [
             {
-                "name": "e.png" if modality == "image" else "a.txt",
+                "name": name,
                 "modality": modality,
                 "match_reasons": reasons,
             }
@@ -141,6 +158,40 @@ def test_run_smoke_exercises_exact_five_format_http_protocol(
         ("GET", "/v1/index/stats", None),
         (
             "POST",
+            "/v1/search",
+            {"query": "exact", "top_k": 5, "channels": ["keyword"]},
+        ),
+        (
+            "POST",
+            "/v1/search",
+            {"query": "semantic", "top_k": 5, "channels": ["text_semantic"]},
+        ),
+        (
+            "POST",
+            "/v1/search",
+            {"query": "image", "top_k": 5, "channels": ["image_semantic"]},
+        ),
+        (
+            "POST",
+            "/v1/search",
+            {
+                "query": "semantic",
+                "top_k": 5,
+                "channels": ["keyword", "text_semantic", "image_semantic"],
+            },
+        ),
+        (
+            "POST",
+            "/v1/search",
+            {
+                "query": "image",
+                "top_k": 5,
+                "channels": ["image_semantic"],
+                "filters": {"modalities": ["image"]},
+            },
+        ),
+        (
+            "POST",
             "/v1/indexing/jobs",
             {"paths": [root], "authorized_roots": [root], "recursive": True},
         ),
@@ -183,6 +234,7 @@ def test_run_smoke_exercises_exact_five_format_http_protocol(
         ),
         ("GET", "/v1/index/stats", None),
     ]
+    assert result["schema_version"] == "2"
     assert result["status"] == "passed"
     assert result["formats"] == ["DOCX", "JPG", "PDF", "PNG", "TXT"]
     assert result["expected_input_file_count"] == 5
@@ -195,7 +247,186 @@ def test_run_smoke_exercises_exact_five_format_http_protocol(
         "hybrid",
         "filtered_image",
     ]
-    assert result["persistent_restart"] == {"required": True, "passed": True}
+    assert [item["name"] for item in result["pre_index_searches"]] == [
+        "keyword",
+        "text_semantic",
+        "image_semantic",
+        "hybrid",
+        "filtered_image",
+    ]
+    for search in result["pre_index_searches"] + result["searches"]:
+        assert search["top_hit"] == EXPECTED_TOP_HITS[search["name"]]
+        assert search["expected_top_hit"] == EXPECTED_TOP_HITS[search["name"]]
+    assert result["persistent_restart"] == {
+        "required": True,
+        "passed": True,
+        "pre_index_search_count": 5,
+    }
+
+
+def test_persistence_search_failure_happens_before_reindex(tmp_path: Path) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    requests: list[tuple[str, str]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append((request.method, request.url.path))
+        if request.url.path == "/v1/index/stats":
+            return httpx.Response(200, json=_stats(7))
+        if request.url.path == "/v1/search":
+            body = json.loads(request.content)
+            channels = body["channels"]
+            return httpx.Response(
+                200,
+                json=_search_payload(
+                    modality="text",
+                    match_reasons=[channels[0]],
+                    channels=channels,
+                    name="wrong-document.txt",
+                ),
+            )
+        raise AssertionError("reindex must not start after a pre-index search failure")
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(
+            RuntimeError,
+            match="pre-index keyword search top hit.*local-guide\\.docx",
+        ):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                require_existing_index=True,
+            )
+
+    assert requests == [
+        ("GET", "/v1/index/stats"),
+        ("POST", "/v1/search"),
+    ]
+
+
+@pytest.mark.parametrize("wrong_check", list(EXPECTED_TOP_HITS))
+def test_run_smoke_rejects_wrong_top_hit_for_each_controlled_search(
+    tmp_path: Path,
+    wrong_check: str,
+) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+    stats_count = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal stats_count
+        if request.url.path == "/v1/index/stats":
+            stats_count += 1
+            return httpx.Response(200, json=_stats(0 if stats_count == 1 else 12))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={
+                    "job_id": "job-1",
+                    "status": "completed",
+                    "result": _index_result(),
+                },
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        check_name = (
+            "filtered_image"
+            if body.get("filters")
+            else "hybrid"
+            if len(channels) > 1
+            else channels[0]
+        )
+        return httpx.Response(
+            200,
+            json=_search_payload(
+                modality=(
+                    "image"
+                    if body.get("filters") or channels == ["image_semantic"]
+                    else "text"
+                ),
+                match_reasons=[channels[0]],
+                channels=channels,
+                name=(
+                    "wrong-document.txt"
+                    if check_name == wrong_check
+                    else EXPECTED_TOP_HITS[check_name]
+                ),
+            ),
+        )
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(
+            RuntimeError,
+            match=rf"{wrong_check} search top hit.*{EXPECTED_TOP_HITS[wrong_check]}",
+        ):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                poll_interval_seconds=0,
+            )
+
+
+def test_persistence_check_requires_idempotent_reindex(tmp_path: Path) -> None:
+    from tools.smoke_mvp import SmokeQueries, run_smoke
+
+    _write_inputs(tmp_path)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/index/stats":
+            return httpx.Response(200, json=_stats(7))
+        if request.url.path == "/v1/indexing/jobs":
+            return httpx.Response(202, json={"job_id": "job-1", "status": "queued"})
+        if request.url.path == "/v1/indexing/jobs/job-1":
+            return httpx.Response(
+                200,
+                json={
+                    "job_id": "job-1",
+                    "status": "completed",
+                    "result": _index_result(),
+                },
+            )
+        body = json.loads(request.content)
+        channels = body["channels"]
+        return httpx.Response(
+            200,
+            json=_search_payload(
+                modality=(
+                    "image"
+                    if body.get("filters") or channels == ["image_semantic"]
+                    else "text"
+                ),
+                match_reasons=[channels[0]],
+                channels=channels,
+            ),
+        )
+
+    with httpx.Client(
+        base_url="http://testserver",
+        transport=httpx.MockTransport(respond),
+    ) as client:
+        with pytest.raises(
+            RuntimeError,
+            match="restart indexing was not idempotent.*indexed_files=0.*unchanged_files=5",
+        ):
+            run_smoke(
+                client,
+                input_root=tmp_path,
+                queries=SmokeQueries("exact", "semantic", "image"),
+                require_existing_index=True,
+                poll_interval_seconds=0,
+            )
 
 
 def test_persistence_check_requires_records_before_reindex(tmp_path: Path) -> None:

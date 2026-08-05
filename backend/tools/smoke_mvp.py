@@ -33,6 +33,7 @@ SearchCheck = tuple[
     list[str],
     dict[str, object] | None,
     str | None,
+    str,
 ]
 
 
@@ -142,13 +143,21 @@ def _require_job_result(
 
 def _search_checks(queries: SmokeQueries) -> list[SearchCheck]:
     return [
-        ("keyword", queries.keyword, ["keyword"], None, None),
+        (
+            "keyword",
+            queries.keyword,
+            ["keyword"],
+            None,
+            None,
+            "local-guide.docx",
+        ),
         (
             "text_semantic",
             queries.text_semantic,
             ["text_semantic"],
             None,
             None,
+            "private-search.pdf",
         ),
         (
             "image_semantic",
@@ -156,6 +165,7 @@ def _search_checks(queries: SmokeQueries) -> list[SearchCheck]:
             ["image_semantic"],
             None,
             None,
+            "blue-logo.jpg",
         ),
         (
             "hybrid",
@@ -163,6 +173,7 @@ def _search_checks(queries: SmokeQueries) -> list[SearchCheck]:
             ["keyword", "text_semantic", "image_semantic"],
             None,
             None,
+            "private-search.pdf",
         ),
         (
             "filtered_image",
@@ -170,6 +181,7 @@ def _search_checks(queries: SmokeQueries) -> list[SearchCheck]:
             ["image_semantic"],
             {"modalities": ["image"]},
             "image",
+            "blue-logo.jpg",
         ),
     ]
 
@@ -180,6 +192,7 @@ def _validate_hits(
     check_name: str,
     expected_channels: list[str],
     expected_modality: str | None,
+    expected_top_hit: str,
 ) -> list[dict[str, Any]]:
     hits = payload.get("hits")
     if not isinstance(hits, list) or not hits:
@@ -209,6 +222,11 @@ def _validate_hits(
             raise RuntimeError(
                 f"{check_name} search returned reasons outside requested channels"
             )
+    if typed_hits[0]["name"] != expected_top_hit:
+        raise RuntimeError(
+            f"{check_name} search top hit {typed_hits[0]['name']!r} "
+            f"did not match expected {expected_top_hit!r}"
+        )
 
     weights = payload.get("weights")
     if not isinstance(weights, dict) or set(weights) != expected_channel_set:
@@ -227,6 +245,53 @@ def _validate_hits(
     if isinstance(elapsed_ms, bool) or not isinstance(elapsed_ms, (int, float)):
         raise RuntimeError(f"{check_name} search returned invalid elapsed_ms")
     return typed_hits
+
+
+def _run_search_checks(
+    client: httpx.Client,
+    queries: SmokeQueries,
+    *,
+    phase: str,
+) -> list[dict[str, object]]:
+    searches: list[dict[str, object]] = []
+    check_prefix = "pre-index " if phase == "pre_index" else ""
+    for (
+        name,
+        query,
+        channels,
+        filters,
+        expected_modality,
+        expected_top_hit,
+    ) in _search_checks(queries):
+        request_payload: dict[str, object] = {
+            "query": query,
+            "top_k": 5,
+            "channels": channels,
+        }
+        if filters is not None:
+            request_payload["filters"] = filters
+        payload = _request_json(client.post("/v1/search", json=request_payload))
+        hits = _validate_hits(
+            payload,
+            check_name=f"{check_prefix}{name}",
+            expected_channels=channels,
+            expected_modality=expected_modality,
+            expected_top_hit=expected_top_hit,
+        )
+        searches.append(
+            {
+                "name": name,
+                "phase": phase,
+                "query": query,
+                "channels": channels,
+                "expected_top_hit": expected_top_hit,
+                "top_hit": hits[0]["name"],
+                "match_reasons": hits[0]["match_reasons"],
+                "elapsed_ms": payload["elapsed_ms"],
+                "passed": True,
+            }
+        )
+    return searches
 
 
 def run_smoke(
@@ -257,6 +322,11 @@ def run_smoke(
     pre_index_records = _record_count(before, "pre-index stats")
     if require_existing_index and pre_index_records <= 0:
         raise RuntimeError("no records existed before indexing after restart")
+    pre_index_searches = (
+        _run_search_checks(client, queries, phase="pre_index")
+        if require_existing_index
+        else []
+    )
 
     created = _request_json(
         client.post(
@@ -300,40 +370,26 @@ def run_smoke(
     result = _require_job_result(job, expected_files=expected_files)
     if job_status != "completed":
         raise RuntimeError(f"indexing job ended as {job_status}")
+    if require_existing_index and (
+        result["indexed_files"] != 0
+        or result["indexed_records"] != 0
+        or result["unchanged_files"] != expected_files
+    ):
+        raise RuntimeError(
+            "restart indexing was not idempotent: expected indexed_files=0, "
+            f"indexed_records=0, unchanged_files={expected_files}; got "
+            f"indexed_files={result['indexed_files']}, "
+            f"indexed_records={result['indexed_records']}, "
+            f"unchanged_files={result['unchanged_files']}"
+        )
 
-    searches: list[dict[str, object]] = []
-    for name, query, channels, filters, expected_modality in _search_checks(queries):
-        request_payload: dict[str, object] = {
-            "query": query,
-            "top_k": 5,
-            "channels": channels,
-        }
-        if filters is not None:
-            request_payload["filters"] = filters
-        payload = _request_json(client.post("/v1/search", json=request_payload))
-        hits = _validate_hits(
-            payload,
-            check_name=name,
-            expected_channels=channels,
-            expected_modality=expected_modality,
-        )
-        searches.append(
-            {
-                "name": name,
-                "query": query,
-                "channels": channels,
-                "top_hit": hits[0]["name"],
-                "match_reasons": hits[0]["match_reasons"],
-                "elapsed_ms": payload["elapsed_ms"],
-                "passed": True,
-            }
-        )
+    searches = _run_search_checks(client, queries, phase="post_index")
 
     after = _request_json(client.get("/v1/index/stats"))
     if _record_count(after, "post-index stats") <= 0:
         raise RuntimeError("post-index stats contained no records")
     return {
-        "schema_version": "1",
+        "schema_version": "2",
         "status": "passed",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "formats": formats,
@@ -341,10 +397,16 @@ def run_smoke(
         "pre_index_record_count": pre_index_records,
         "indexing": result,
         "stats": after,
+        "pre_index_searches": pre_index_searches,
         "searches": searches,
         "persistent_restart": {
             "required": require_existing_index,
-            "passed": require_existing_index and pre_index_records > 0,
+            "passed": (
+                require_existing_index
+                and pre_index_records > 0
+                and len(pre_index_searches) == len(_search_checks(queries))
+            ),
+            "pre_index_search_count": len(pre_index_searches),
         },
     }
 
