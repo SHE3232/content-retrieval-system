@@ -255,9 +255,34 @@ def fake_java(tmp_path_factory: pytest.TempPathFactory) -> Path:
         using System.Net;
         using System.Net.Sockets;
         using System.Text;
+        using System.Threading;
 
         public static class Program
         {
+            private static int Serve(string pidFile)
+            {
+                if (!String.IsNullOrEmpty(pidFile))
+                {
+                    File.WriteAllText(pidFile, Process.GetCurrentProcess().Id.ToString());
+                }
+
+                TcpListener listener = new TcpListener(IPAddress.Loopback, 9998);
+                listener.Start();
+                byte[] response = Encoding.ASCII.GetBytes(
+                    "HTTP/1.1 200 OK\r\nContent-Length: 16\r\nConnection: close\r\n\r\nApache Tika fake"
+                );
+                while (true)
+                {
+                    using (TcpClient client = listener.AcceptTcpClient())
+                    using (NetworkStream stream = client.GetStream())
+                    {
+                        byte[] request = new byte[4096];
+                        stream.Read(request, 0, request.Length);
+                        stream.Write(response, 0, response.Length);
+                    }
+                }
+            }
+
             public static int Main(string[] args)
             {
                 string invocationLog = Environment.GetEnvironmentVariable("FAKE_JAVA_LOG");
@@ -269,6 +294,16 @@ def fake_java(tmp_path_factory: pytest.TempPathFactory) -> Path:
                 {
                     Console.Error.WriteLine("fake java version 1");
                     return 0;
+                }
+
+                string pidFile = Environment.GetEnvironmentVariable("FAKE_JAVA_PID_FILE");
+                if (
+                    args.Length == 3 &&
+                    args[0] == "-cp" &&
+                    args[2] == "--child"
+                )
+                {
+                    return Serve(pidFile);
                 }
 
                 string argumentsFile = Environment.GetEnvironmentVariable("FAKE_JAVA_ARGUMENTS_FILE");
@@ -300,7 +335,6 @@ def fake_java(tmp_path_factory: pytest.TempPathFactory) -> Path:
                     return 23;
                 }
 
-                string pidFile = Environment.GetEnvironmentVariable("FAKE_JAVA_PID_FILE");
                 if (!String.IsNullOrEmpty(pidFile))
                 {
                     File.WriteAllText(pidFile, Process.GetCurrentProcess().Id.ToString());
@@ -310,21 +344,20 @@ def fake_java(tmp_path_factory: pytest.TempPathFactory) -> Path:
                     return 17;
                 }
 
-                TcpListener listener = new TcpListener(IPAddress.Loopback, 9998);
-                listener.Start();
-                byte[] response = Encoding.ASCII.GetBytes(
-                    "HTTP/1.1 200 OK\r\nContent-Length: 16\r\nConnection: close\r\n\r\nApache Tika fake"
-                );
-                while (true)
+                if (Environment.GetEnvironmentVariable("FAKE_JAVA_MODE") == "wrapper")
                 {
-                    using (TcpClient client = listener.AcceptTcpClient())
-                    using (NetworkStream stream = client.GetStream())
-                    {
-                        byte[] request = new byte[4096];
-                        stream.Read(request, 0, request.Length);
-                        stream.Write(response, 0, response.Length);
-                    }
+                    ProcessStartInfo startInfo = new ProcessStartInfo();
+                    startInfo.FileName = Process.GetCurrentProcess().MainModule.FileName;
+                    startInfo.Arguments = "-cp \"" + expectedJar.Replace("\"", "\\\"") + "\" --child";
+                    startInfo.UseShellExecute = false;
+                    startInfo.CreateNoWindow = true;
+                    startInfo.EnvironmentVariables["FAKE_JAVA_MODE"] = "child";
+                    Process.Start(startInfo);
+                    Thread.Sleep(750);
+                    return 0;
                 }
+
+                return Serve(pidFile);
             }
         }
         """,
@@ -696,6 +729,51 @@ def test_started_tika_is_stopped_after_uvicorn_failure(
             pid = int(pid_file.read_text(encoding="utf-8"))
         if pid is not None and _process_is_alive(pid):
             _terminate_pid(pid)
+
+
+def test_started_tika_wrapper_descendant_is_stopped_after_wrapper_exits(
+    tmp_path: Path,
+    fake_java: Path,
+    fake_python: Path,
+) -> None:
+    if _port_is_open(9998):
+        pytest.skip("port 9998 is already occupied")
+    fixture = _build_fixture(tmp_path)
+    pid_file = fixture.root / "wrapper descendant tika pid.txt"
+    arguments_file = fixture.root / "wrapper descendant arguments.txt"
+    env = os.environ.copy()
+    env["FAKE_JAVA_PID_FILE"] = str(pid_file)
+    env["FAKE_JAVA_ARGUMENTS_FILE"] = str(arguments_file)
+    env["FAKE_JAVA_EXPECTED_JAR"] = str(fixture.tika_jar)
+    env["FAKE_JAVA_MODE"] = "wrapper"
+    descendant_pid: int | None = None
+    try:
+        result = _run_launcher(
+            fixture,
+            java=fake_java,
+            python=fake_python,
+            check_only=False,
+            env=env,
+            timeout=30,
+        )
+        descendant_pid = _wait_for_pid_file(pid_file)
+
+        assert result.returncode != 0
+        assert "MVP API exited with code" in result.stdout + result.stderr
+        assert "Tika server exited before becoming ready" not in result.stdout + result.stderr
+        assert _read_recorded_arguments(arguments_file) == [
+            "-jar",
+            str(fixture.tika_jar),
+            "-p",
+            "9998",
+        ]
+        _wait_for_process_exit(descendant_pid)
+        assert not _port_is_open(9998)
+    finally:
+        if descendant_pid is None and pid_file.is_file():
+            descendant_pid = int(pid_file.read_text(encoding="utf-8"))
+        if descendant_pid is not None and _process_is_alive(descendant_pid):
+            _terminate_pid(descendant_pid)
 
 
 def test_tika_early_exit_is_reported_without_process_leak(

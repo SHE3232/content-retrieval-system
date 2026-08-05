@@ -114,13 +114,202 @@ function Test-TikaReady {
     }
 }
 
+function Get-TikaProcessTable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$JavaProcessName,
+        [Parameter(Mandatory = $true)]
+        [string]$TikaJarPath
+    )
+
+    $escapedJarPath = [System.Text.RegularExpressions.Regex]::Escape($TikaJarPath)
+    $jarArgumentPattern = '(?:^|\s)(?:"' + $escapedJarPath + '"|' + $escapedJarPath + ')(?=\s|$)'
+    return @(
+        Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object {
+                $_.Name -eq $JavaProcessName -and
+                -not [string]::IsNullOrEmpty($_.CommandLine) -and
+                [System.Text.RegularExpressions.Regex]::IsMatch(
+                    $_.CommandLine,
+                    $jarArgumentPattern,
+                    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+                )
+            }
+    )
+}
+
+function Get-TikaProcessIdentity {
+    param(
+        [Parameter(Mandatory = $true)]
+        $ProcessEntry
+    )
+
+    $createdAt = ([System.DateTime]$ProcessEntry.CreationDate).ToUniversalTime().Ticks
+    return "{0}|{1}" -f ([int]$ProcessEntry.ProcessId), $createdAt
+}
+
+function Get-OwnedTikaProcesses {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$RootProcessId,
+        [Parameter(Mandatory = $true)]
+        [string]$JavaProcessName,
+        [Parameter(Mandatory = $true)]
+        [string]$TikaJarPath,
+        [string[]]$BaselineProcessIdentities = @(),
+        [string[]]$KnownOwnedProcessIdentities = @(),
+        [switch]$AllowRootParentFallback,
+        [switch]$AllowKnownParentFallback
+    )
+
+    $baseline = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($identity in $BaselineProcessIdentities) {
+        [void]$baseline.Add([string]$identity)
+    }
+    $knownOwned = New-Object 'System.Collections.Generic.HashSet[string]'
+    $knownOwnedProcessIds = New-Object 'System.Collections.Generic.HashSet[int]'
+    foreach ($identity in $KnownOwnedProcessIdentities) {
+        [void]$knownOwned.Add([string]$identity)
+        [void]$knownOwnedProcessIds.Add([int](([string]$identity).Split('|')[0]))
+    }
+
+    $candidates = @(Get-TikaProcessTable $JavaProcessName $TikaJarPath)
+    $identityByProcessId = @{}
+    $ownedProcessIds = New-Object 'System.Collections.Generic.HashSet[int]'
+    foreach ($candidate in $candidates) {
+        $processId = [int]$candidate.ProcessId
+        $identity = Get-TikaProcessIdentity $candidate
+        $identityByProcessId[$processId] = $identity
+        if (
+            -not $baseline.Contains($identity) -and
+            (
+                $knownOwned.Contains($identity) -or
+                ($AllowRootParentFallback -and $processId -eq $RootProcessId)
+            )
+        ) {
+            [void]$ownedProcessIds.Add($processId)
+        }
+    }
+
+    $changed = $true
+    while ($changed) {
+        $changed = $false
+        foreach ($candidate in $candidates) {
+            $processId = [int]$candidate.ProcessId
+            $parentProcessId = [int]$candidate.ParentProcessId
+            $identity = [string]$identityByProcessId[$processId]
+            if (
+                -not $baseline.Contains($identity) -and
+                -not $ownedProcessIds.Contains($processId) -and
+                (
+                    $ownedProcessIds.Contains($parentProcessId) -or
+                    ($AllowRootParentFallback -and $parentProcessId -eq $RootProcessId) -or
+                    ($AllowKnownParentFallback -and $knownOwnedProcessIds.Contains($parentProcessId))
+                )
+            ) {
+                [void]$ownedProcessIds.Add($processId)
+                $changed = $true
+            }
+        }
+    }
+
+    return @(
+        $candidates | Where-Object {
+            $identity = Get-TikaProcessIdentity $_
+            $ownedProcessIds.Contains([int]$_.ProcessId) -and
+            -not $baseline.Contains($identity)
+        }
+    )
+}
+
 function Stop-StartedTika {
     param(
         [Parameter(Mandatory = $true)]
-        [System.Diagnostics.Process]$Process
+        [System.Diagnostics.Process]$Process,
+        [Parameter(Mandatory = $true)]
+        [int]$RootProcessId,
+        [Parameter(Mandatory = $true)]
+        [string]$JavaProcessName,
+        [Parameter(Mandatory = $true)]
+        [string]$TikaJarPath,
+        [string[]]$BaselineProcessIdentities = @(),
+        [string[]]$KnownOwnedProcessIdentities = @()
     )
 
     try {
+        $knownOwned = New-Object 'System.Collections.Generic.HashSet[string]'
+        foreach ($identity in $KnownOwnedProcessIdentities) {
+            [void]$knownOwned.Add([string]$identity)
+        }
+
+        $cleanupDeadline = [System.Diagnostics.Stopwatch]::StartNew()
+        while ($cleanupDeadline.Elapsed -lt [System.TimeSpan]::FromSeconds(5)) {
+            $ownedProcesses = @(
+                Get-OwnedTikaProcesses `
+                    -RootProcessId $RootProcessId `
+                    -JavaProcessName $JavaProcessName `
+                    -TikaJarPath $TikaJarPath `
+                    -BaselineProcessIdentities $BaselineProcessIdentities `
+                    -KnownOwnedProcessIdentities @($knownOwned | ForEach-Object { [string]$_ }) `
+                    -AllowKnownParentFallback
+            )
+            if ($ownedProcesses.Count -eq 0) {
+                break
+            }
+            foreach ($ownedProcess in $ownedProcesses) {
+                [void]$knownOwned.Add((Get-TikaProcessIdentity $ownedProcess))
+            }
+
+            $parentByProcessId = @{}
+            foreach ($ownedProcess in $ownedProcesses) {
+                $parentByProcessId[[int]$ownedProcess.ProcessId] = [int]$ownedProcess.ParentProcessId
+            }
+            $orderedProcesses = @(
+                $ownedProcesses | Sort-Object -Property @{
+                    Expression = {
+                        $depth = 0
+                        $parentProcessId = [int]$_.ParentProcessId
+                        $visited = New-Object 'System.Collections.Generic.HashSet[int]'
+                        while (
+                            $parentByProcessId.ContainsKey($parentProcessId) -and
+                            $visited.Add($parentProcessId)
+                        ) {
+                            $depth++
+                            $parentProcessId = [int]$parentByProcessId[$parentProcessId]
+                        }
+                        return $depth
+                    }
+                    Descending = $true
+                }
+            )
+            foreach ($ownedProcess in $orderedProcesses) {
+                try {
+                    Invoke-CimMethod `
+                        -InputObject $ownedProcess `
+                        -MethodName Terminate `
+                        -ErrorAction Stop | Out-Null
+                }
+                catch [Microsoft.Management.Infrastructure.CimException] {
+                    # The owned process may exit between the snapshot and termination.
+                }
+            }
+            Start-Sleep -Milliseconds 100
+        }
+
+        $remainingOwned = @(
+            Get-OwnedTikaProcesses `
+                -RootProcessId $RootProcessId `
+                -JavaProcessName $JavaProcessName `
+                -TikaJarPath $TikaJarPath `
+                -BaselineProcessIdentities $BaselineProcessIdentities `
+                -KnownOwnedProcessIdentities @($knownOwned | ForEach-Object { [string]$_ }) `
+                -AllowKnownParentFallback
+        )
+        if ($remainingOwned.Count -ne 0) {
+            $remainingIds = ($remainingOwned | ForEach-Object { $_.ProcessId }) -join ", "
+            throw "Owned Tika processes did not exit within 5 seconds: $remainingIds"
+        }
+
         $hasExited = $true
         try {
             $Process.Refresh()
@@ -129,23 +318,21 @@ function Stop-StartedTika {
         catch [System.InvalidOperationException] {
             $hasExited = $true
         }
-
         if (-not $hasExited) {
             try {
                 $Process.Kill()
             }
             catch [System.InvalidOperationException] {
-                # The process exited between inspection and termination.
+                # The root wrapper exited between inspection and termination.
             }
         }
-
         try {
             if (-not $Process.WaitForExit(5000)) {
-                throw "Tika server process did not exit within 5 seconds"
+                throw "Tika server root process did not exit within 5 seconds"
             }
         }
         catch [System.InvalidOperationException] {
-            # No associated live process remains to wait for.
+            # No associated live root process remains to wait for.
         }
     }
     finally {
@@ -354,24 +541,58 @@ if ($CheckOnly) {
 }
 
 $startedTika = $null
+$tikaRootProcessId = 0
+$tikaBaselineProcessIdentities = @()
+$ownedTikaProcessIdentities = @()
+$primaryFailure = $null
 try {
     if (-not (Test-TikaReady)) {
+        $javaProcessName = [System.IO.Path]::GetFileName($javaPath)
+        $tikaBaselineProcessIdentities = @(
+            Get-TikaProcessTable $javaProcessName $tikaJarPath |
+                ForEach-Object { Get-TikaProcessIdentity $_ }
+        )
         $tikaArguments = "-jar `"$tikaJarPath`" -p 9998"
         $startedTika = Start-Process `
             -FilePath $javaPath `
             -ArgumentList $tikaArguments `
             -PassThru `
             -WindowStyle Hidden
+        $tikaRootProcessId = $startedTika.Id
 
         $readyDeadline = [System.Diagnostics.Stopwatch]::StartNew()
         $tikaReady = $false
         while ($readyDeadline.Elapsed -lt [System.TimeSpan]::FromSeconds(30)) {
             if (Test-TikaReady) {
+                $ownedTikaProcesses = @(
+                    Get-OwnedTikaProcesses `
+                        -RootProcessId $tikaRootProcessId `
+                        -JavaProcessName $javaProcessName `
+                        -TikaJarPath $tikaJarPath `
+                        -BaselineProcessIdentities $tikaBaselineProcessIdentities `
+                        -KnownOwnedProcessIdentities $ownedTikaProcessIdentities `
+                        -AllowRootParentFallback
+                )
+                $ownedTikaProcessIdentities = @(
+                    $ownedTikaProcesses | ForEach-Object { Get-TikaProcessIdentity $_ }
+                )
                 $tikaReady = $true
                 break
             }
+            $ownedTikaProcesses = @(
+                Get-OwnedTikaProcesses `
+                    -RootProcessId $tikaRootProcessId `
+                    -JavaProcessName $javaProcessName `
+                    -TikaJarPath $tikaJarPath `
+                    -BaselineProcessIdentities $tikaBaselineProcessIdentities `
+                    -KnownOwnedProcessIdentities $ownedTikaProcessIdentities `
+                    -AllowRootParentFallback
+            )
+            $ownedTikaProcessIdentities = @(
+                $ownedTikaProcesses | ForEach-Object { Get-TikaProcessIdentity $_ }
+            )
             $startedTika.Refresh()
-            if ($startedTika.HasExited) {
+            if ($startedTika.HasExited -and $ownedTikaProcessIdentities.Count -eq 0) {
                 throw "Tika server exited before becoming ready"
             }
             Start-Sleep -Milliseconds 250
@@ -400,8 +621,28 @@ try {
         throw "MVP API exited with code $uvicornExitCode"
     }
 }
+catch {
+    $primaryFailure = $_
+    throw
+}
 finally {
     if ($null -ne $startedTika) {
-        Stop-StartedTika $startedTika
+        try {
+            Stop-StartedTika `
+                $startedTika `
+                $tikaRootProcessId `
+                $javaProcessName `
+                $tikaJarPath `
+                $tikaBaselineProcessIdentities `
+                $ownedTikaProcessIdentities
+        }
+        catch {
+            if ($null -ne $primaryFailure) {
+                Write-Warning "Tika cleanup failed while handling the primary error: $($_.Exception.Message)"
+            }
+            else {
+                throw
+            }
+        }
     }
 }
