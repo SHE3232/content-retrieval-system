@@ -230,6 +230,45 @@ void main() {
     );
   });
 
+  test('normalizes malformed rejection detail fields', () async {
+    final transport = FakeJsonTransport()
+      ..postResponses.addAll(const <JsonResponse>[
+        JsonResponse(
+          statusCode: 422,
+          body: {
+            'detail': {'code': 17, 'message': 42},
+          },
+        ),
+        JsonResponse(
+          statusCode: 503,
+          body: {
+            'detail': {
+              'code': <Object?>['not', 'a', 'string'],
+              'message': <Object?>['temporarily', 'unavailable'],
+            },
+          },
+        ),
+      ]);
+    final client = SearchApiClient(transport);
+
+    for (final statusCode in <int>[422, 503]) {
+      await expectLater(
+        client.search(_criteria),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', ApiErrorKind.rejected)
+              .having((error) => error.statusCode, 'statusCode', statusCode)
+              .having(
+                (error) => error.message,
+                'message',
+                'Search request failed',
+              )
+              .having((error) => error.code, 'code', isNull),
+        ),
+      );
+    }
+  });
+
   test('normalizes an unknown match reason to invalidResponse', () async {
     final transport = FakeJsonTransport()
       ..postResponses.add(

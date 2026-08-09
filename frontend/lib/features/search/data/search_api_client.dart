@@ -123,10 +123,12 @@ final class SearchApiClient implements SearchService {
     final root = response.body;
     final detail = root is Map<String, Object?> ? root['detail'] : null;
     final values = detail is Map<String, Object?> ? detail : const {};
+    final message = values['message'];
+    final code = values['code'];
     return ApiException(
       ApiErrorKind.rejected,
-      values['message'] as String? ?? 'Search request failed',
-      code: values['code'] as String?,
+      message is String ? message : 'Search request failed',
+      code: code is String ? code : null,
       statusCode: response.statusCode,
     );
   }
