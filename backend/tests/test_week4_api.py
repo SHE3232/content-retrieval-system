@@ -6,12 +6,61 @@ from types import SimpleNamespace
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from content_retrieval.domain.errors import StorageError
 from content_retrieval.domain.retrieval import (
     IndexingResult,
     SearchFilters,
     SearchHit,
     SearchResult,
 )
+from content_retrieval.services.indexing_jobs import (
+    IndexingJobError,
+    InMemoryIndexingJobStore,
+)
+
+
+def test_indexing_job_error_preserves_controlled_diagnostics() -> None:
+    error = IndexingJobError.from_exception(
+        StorageError("local index is locked")
+    )
+
+    assert error == IndexingJobError(
+        code="STORAGE_ERROR",
+        message="local index is locked",
+        retryable=True,
+    )
+
+
+def test_indexing_job_error_sanitizes_unexpected_task_failure() -> None:
+    error = IndexingJobError.from_exception(
+        RuntimeError("secret implementation detail")
+    )
+
+    assert error == IndexingJobError(
+        code="INDEXING_JOB_FAILED",
+        message="Indexing job failed unexpectedly",
+        retryable=True,
+    )
+    assert "secret" not in error.message
+
+
+def test_indexing_job_store_retains_task_failure_detail() -> None:
+    store = InMemoryIndexingJobStore()
+    job = store.create()
+    error = IndexingJobError(
+        code="STORAGE_ERROR",
+        message="local index is locked",
+        retryable=True,
+    )
+
+    store.mark_running(job.job_id)
+    store.fail(job.job_id, error)
+
+    failed = store.get(job.job_id)
+    assert failed is not None
+    assert failed.status == "failed"
+    assert failed.result is None
+    assert failed.error == error
 
 
 class FakeIndexingService:

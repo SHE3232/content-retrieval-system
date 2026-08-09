@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, replace
 from threading import Lock
 from typing import Literal
 from uuid import uuid4
 
+from content_retrieval.domain.errors import ProcessingError
 from content_retrieval.domain.retrieval import IndexingResult
 
 
@@ -16,10 +19,32 @@ IndexingJobStatus = Literal[
 
 
 @dataclass(frozen=True, slots=True)
+class IndexingJobError:
+    code: str
+    message: str
+    retryable: bool
+
+    @classmethod
+    def from_exception(cls, error: Exception) -> IndexingJobError:
+        if isinstance(error, ProcessingError):
+            return cls(
+                code=error.code,
+                message=str(error),
+                retryable=error.retryable,
+            )
+        return cls(
+            code="INDEXING_JOB_FAILED",
+            message="Indexing job failed unexpectedly",
+            retryable=True,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class IndexingJob:
     job_id: str
     status: IndexingJobStatus
     result: IndexingResult | None = None
+    error: IndexingJobError | None = None
 
 
 class InMemoryIndexingJobStore:
@@ -48,8 +73,21 @@ class InMemoryIndexingJobStore:
         )
         self._replace(job_id, status=status, result=result)
 
-    def fail(self, job_id: str) -> None:
-        self._replace(job_id, status="failed")
+    def fail(
+        self,
+        job_id: str,
+        error: IndexingJobError | None = None,
+    ) -> None:
+        self._replace(
+            job_id,
+            status="failed",
+            error=error
+            or IndexingJobError(
+                code="INDEXING_JOB_FAILED",
+                message="Indexing job failed unexpectedly",
+                retryable=True,
+            ),
+        )
 
     def _replace(
         self,
@@ -57,6 +95,7 @@ class InMemoryIndexingJobStore:
         *,
         status: IndexingJobStatus,
         result: IndexingResult | None = None,
+        error: IndexingJobError | None = None,
     ) -> None:
         with self._lock:
             current = self._jobs[job_id]
@@ -64,4 +103,5 @@ class InMemoryIndexingJobStore:
                 current,
                 status=status,
                 result=result,
+                error=error,
             )
