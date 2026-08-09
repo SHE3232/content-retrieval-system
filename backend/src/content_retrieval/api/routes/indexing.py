@@ -25,6 +25,7 @@ from content_retrieval.api.schemas import (
 from content_retrieval.domain.errors import RetrievalError, StorageError
 from content_retrieval.retrieval.service import RetrievalService
 from content_retrieval.services.index_catalog import (
+    GLOBAL_INDEX_MUTATION_KEY,
     IndexCatalogService,
     IndexMutationCoordinator,
 )
@@ -75,7 +76,7 @@ async def delete_indexed_file(
     coordinator: IndexMutationCoordinator = (
         request.app.state.index_mutation_coordinator
     )
-    if not coordinator.claim(source_key):
+    if not coordinator.claim(GLOBAL_INDEX_MUTATION_KEY):
         raise _mutation_conflict()
     try:
         try:
@@ -111,7 +112,7 @@ async def delete_indexed_file(
             deleted_records=deleted,
         )
     finally:
-        coordinator.release(source_key)
+        coordinator.release(GLOBAL_INDEX_MUTATION_KEY)
 
 
 @index_router.post(
@@ -129,7 +130,7 @@ async def reindex_file(
     coordinator: IndexMutationCoordinator = (
         request.app.state.index_mutation_coordinator
     )
-    if not coordinator.claim(source_key):
+    if not coordinator.claim(GLOBAL_INDEX_MUTATION_KEY):
         raise _mutation_conflict()
     task_scheduled = False
     try:
@@ -170,7 +171,7 @@ async def reindex_file(
                 job.job_id,
                 payload,
                 force=True,
-                mutation_source_key=source_key,
+                mutation_claim_key=GLOBAL_INDEX_MUTATION_KEY,
             )
         )
         task_scheduled = True
@@ -185,7 +186,7 @@ async def reindex_file(
         )
     finally:
         if not task_scheduled:
-            coordinator.release(source_key)
+            coordinator.release(GLOBAL_INDEX_MUTATION_KEY)
 
 
 @router.post(
@@ -198,15 +199,36 @@ async def create_job(
     request: Request,
 ) -> IndexingJobCreatedResponse:
     _require_indexing_service(request.app)
-    store: InMemoryIndexingJobStore = request.app.state.indexing_job_store
-    job = store.create()
-    task = asyncio.create_task(_run_job(request.app, job.job_id, payload))
-    background_tasks: set[asyncio.Task[None]] = (
-        request.app.state.background_tasks
+    coordinator: IndexMutationCoordinator = (
+        request.app.state.index_mutation_coordinator
     )
-    background_tasks.add(task)
-    task.add_done_callback(background_tasks.discard)
-    return IndexingJobCreatedResponse(job_id=job.job_id, status=job.status)
+    if not coordinator.claim(GLOBAL_INDEX_MUTATION_KEY):
+        raise _mutation_conflict()
+    task_scheduled = False
+    try:
+        store: InMemoryIndexingJobStore = request.app.state.indexing_job_store
+        job = store.create()
+        task = asyncio.create_task(
+            _run_job(
+                request.app,
+                job.job_id,
+                payload,
+                mutation_claim_key=GLOBAL_INDEX_MUTATION_KEY,
+            )
+        )
+        task_scheduled = True
+        background_tasks: set[asyncio.Task[None]] = (
+            request.app.state.background_tasks
+        )
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
+        return IndexingJobCreatedResponse(
+            job_id=job.job_id,
+            status=job.status,
+        )
+    finally:
+        if not task_scheduled:
+            coordinator.release(GLOBAL_INDEX_MUTATION_KEY)
 
 
 @router.get("/jobs/{job_id}", response_model=IndexingJobResponse)
@@ -267,7 +289,7 @@ async def _run_job(
     payload: CreateIndexingJobRequest,
     *,
     force: bool = False,
-    mutation_source_key: str | None = None,
+    mutation_claim_key: str | None = None,
 ) -> None:
     store: InMemoryIndexingJobStore = app.state.indexing_job_store
     service: IndexingService = app.state.indexing_service
@@ -289,19 +311,34 @@ async def _run_job(
                     recursive=payload.recursive,
                     authorized_roots=payload.authorized_roots,
                 )
-            retrieval_service = app.state.retrieval_service
-            if retrieval_service is not None:
-                await asyncio.to_thread(retrieval_service.refresh)
         except Exception as error:
             store.fail(job_id, IndexingJobError.from_exception(error))
         else:
-            store.complete(job_id, result)
+            retrieval_service = app.state.retrieval_service
+            if retrieval_service is None:
+                store.complete(job_id, result)
+            else:
+                try:
+                    await asyncio.to_thread(retrieval_service.refresh)
+                except RetrievalError as error:
+                    await asyncio.to_thread(retrieval_service.invalidate)
+                    store.fail(
+                        job_id,
+                        IndexingJobError.from_exception(error),
+                    )
+                except Exception as error:
+                    store.fail(
+                        job_id,
+                        IndexingJobError.from_exception(error),
+                    )
+                else:
+                    store.complete(job_id, result)
     finally:
-        if mutation_source_key is not None:
+        if mutation_claim_key is not None:
             coordinator: IndexMutationCoordinator = (
                 app.state.index_mutation_coordinator
             )
-            coordinator.release(mutation_source_key)
+            coordinator.release(mutation_claim_key)
 
 
 def _job_response(job: IndexingJob) -> IndexingJobResponse:

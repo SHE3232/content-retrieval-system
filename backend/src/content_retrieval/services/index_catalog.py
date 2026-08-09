@@ -14,6 +14,9 @@ from content_retrieval.domain.retrieval import (
 from content_retrieval.storage.chroma import ChromaVectorRepository
 
 
+GLOBAL_INDEX_MUTATION_KEY = "__global_index_mutation__"
+
+
 @dataclass(frozen=True, slots=True)
 class IndexedFile:
     source_key: str

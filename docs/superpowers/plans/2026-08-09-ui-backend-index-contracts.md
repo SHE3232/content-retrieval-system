@@ -548,12 +548,12 @@ Add a regression test that starts with two valid records, forces a reindex with
 one successful and one failed chunk, and expects all old records plus the new
 successful record. Skip stale deletion whenever per-item failures exist.
 
-- [ ] **Step 2: Reject overlapping single-file mutations**
+- [ ] **Step 2: Reject overlapping index mutations**
 
-Add a lock-protected process-local coordinator with atomic `claim(source_key)`
-and `release(source_key)`. Hold the claim through persistent mutation and search
-refresh; return `409 INDEX_MUTATION_CONFLICT` when another delete or reindex owns
-the same key.
+Add a lock-protected process-local coordinator with one global mutation key.
+Require the claim for ordinary indexing jobs, delete, and forced reindex, and hold
+it through persistent mutation and search refresh. Return
+`409 INDEX_MUTATION_CONFLICT` when another index mutation owns the claim.
 
 - [ ] **Step 3: Make retrieval refresh failure explicit and safe**
 
@@ -581,7 +581,8 @@ MVP lifespan coverage.
 
 - Review findings are mapped to Task 6 with concrete regression tests and stable
   HTTP behavior.
-- Mutation claims are process-local by design and cover the two new single-file
-  mutation endpoints without adding a persistent job database.
+- The mutation claim is process-local and global by design; serial execution is
+  acceptable for the local MVP and prevents stale global keyword snapshots
+  without adding a persistent job database.
 - The refresh-failure response distinguishes committed deletion from a fully
   rejected request, while invalidation prevents stale keyword results.

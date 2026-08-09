@@ -46,7 +46,8 @@ FastAPI indexing router
 ```
 
 - `services/index_catalog.py`：定义文件级只读模型、分页结果、文件查找和精确删除。
-- `IndexMutationCoordinator`：进程内按 `source_key` 拒绝重叠的删除或重建操作。
+- `IndexMutationCoordinator`：使用进程内全局 claim 串行化批量索引、删除、重建及
+  随后的检索刷新，防止不同任务用旧快照覆盖新关键词状态。
 - `services/indexing.py`：为 `index_paths` 增加默认关闭的 `force` 参数。
 - `services/indexing_jobs.py`：保存安全的任务级错误对象。
 - `api/routes/indexing.py`：暴露列表、删除、重建和失败详情端点。
@@ -108,8 +109,8 @@ FastAPI indexing router
 ```
 
 删除前先确认该文件存在于索引，再调用仓库的 `delete_source`。操作只删除派生索引
-记录；磁盘原文件保持不变。删除要求检索运行时可用，并在持有该 `source_key`
-变更 claim 时完成删除和刷新。刷新失败时清空易失关键词索引，避免继续返回已删除
+记录；磁盘原文件保持不变。删除要求检索运行时可用，并在持有全局索引变更
+claim 时完成删除和刷新。刷新失败时清空易失关键词索引，避免继续返回已删除
 文件，同时返回结构化 `503 RETRIEVAL_UNAVAILABLE`，明确持久化删除已经发生。
 
 ### 单文件重建索引
@@ -126,7 +127,7 @@ FastAPI indexing router
 ```
 
 路由先从目录服务读取已索引路径并确认它仍为普通文件，然后创建标准索引任务。
-创建任务前先取得该 `source_key` 的变更 claim；已有删除或重建占用时返回 409。
+创建任务前先取得全局索引变更 claim；已有批量索引、删除或重建占用时返回 409。
 claim 保持到后台索引和检索刷新都结束，任务的成功、失败和取消路径都会释放它。
 任务使用 `recursive=false`、授权根目录为文件父目录，并向
 `IndexingService.index_paths` 传入 `force=true`。强制模式只绕过“文件未变化”
@@ -173,7 +174,7 @@ claim 保持到后台索引和检索刷新都结束，任务的成功、失败�
 - 任务 ID 不存在：`404 JOB_NOT_FOUND`。
 - 未配置索引、目录或检索运行时：`503 SERVICE_UNAVAILABLE`。
 - Chroma 读取、删除不可用：`503 STORAGE_UNAVAILABLE`。
-- 同一 `source_key` 已有删除或重建：`409 INDEX_MUTATION_CONFLICT`。
+- 已有批量索引、删除或重建正在修改索引：`409 INDEX_MUTATION_CONFLICT`。
 - 删除已持久化但检索刷新失败：`503 RETRIEVAL_UNAVAILABLE`；易失关键词索引
   同时失效，避免陈旧命中。
 
@@ -199,7 +200,7 @@ claim 保持到后台索引和检索刷新都结束，任务的成功、失败�
 3. 使用同一 `source_key` 可创建强制重建任务，未变化内容也会重新执行索引流水线。
 4. UI 可独立查询逐文件失败和任务级失败，不需要解析完整任务结果。
 5. 所有新增错误响应稳定且自动化测试覆盖成功与失败路径。
-6. 重叠单文件变更被确定性拒绝，部分失败或刷新失败不会留下错误的可检索状态。
+6. 重叠索引变更被确定性拒绝，部分失败或刷新失败不会留下错误的可检索状态。
 7. 完整测试套件通过，且提交不包含用户文件、模型、数据库或缓存。
 
 ## 设计自审

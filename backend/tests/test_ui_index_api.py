@@ -11,6 +11,7 @@ from content_retrieval.domain.retrieval import (
     IndexingResult,
 )
 from content_retrieval.services.index_catalog import (
+    GLOBAL_INDEX_MUTATION_KEY,
     IndexedFile,
     IndexedFilePage,
     IndexMutationCoordinator,
@@ -346,8 +347,8 @@ async def test_reindex_file_creates_forced_background_job(
     ]
     assert retrieval.refresh_calls == 1
     coordinator = app.state.index_mutation_coordinator
-    assert coordinator.claim(SOURCE_KEY) is True
-    coordinator.release(SOURCE_KEY)
+    assert coordinator.claim(GLOBAL_INDEX_MUTATION_KEY) is True
+    coordinator.release(GLOBAL_INDEX_MUTATION_KEY)
 
 
 @pytest.mark.anyio
@@ -644,7 +645,7 @@ async def test_overlapping_file_mutation_has_structured_409(
     source.write_text("local notes", encoding="utf-8")
     catalog = FakeCatalogService(make_indexed_file(source))
     coordinator = IndexMutationCoordinator()
-    assert coordinator.claim(SOURCE_KEY) is True
+    assert coordinator.claim(GLOBAL_INDEX_MUTATION_KEY) is True
     app = create_app(
         indexing_service=FakeIndexingService(),
         index_catalog_service=catalog,
@@ -673,4 +674,82 @@ async def test_overlapping_file_mutation_has_structured_409(
         }
     }
     assert catalog.delete_calls == []
-    coordinator.release(SOURCE_KEY)
+    coordinator.release(GLOBAL_INDEX_MUTATION_KEY)
+
+
+@pytest.mark.anyio
+async def test_standard_index_job_conflicts_with_active_mutation(
+    tmp_path: Path,
+) -> None:
+    from content_retrieval.api.app import create_app
+
+    coordinator = IndexMutationCoordinator()
+    assert coordinator.claim(GLOBAL_INDEX_MUTATION_KEY) is True
+    app = create_app(indexing_service=FakeIndexingService())
+    app.state.index_mutation_coordinator = coordinator
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.post(
+            "/v1/indexing/jobs",
+            json={
+                "paths": [str(tmp_path / "notes.txt")],
+                "authorized_roots": [str(tmp_path)],
+                "recursive": False,
+            },
+        )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": {
+            "code": "INDEX_MUTATION_CONFLICT",
+            "message": "Another index mutation is already running",
+        }
+    }
+    coordinator.release(GLOBAL_INDEX_MUTATION_KEY)
+
+
+@pytest.mark.anyio
+async def test_reindex_refresh_failure_invalidates_keyword_state(
+    tmp_path: Path,
+) -> None:
+    from content_retrieval.api.app import create_app
+
+    source = tmp_path / "notes.txt"
+    source.write_text("local notes", encoding="utf-8")
+    retrieval = RefreshOnlyRetrievalService(
+        RetrievalError("keyword catalog refresh failed")
+    )
+    app = create_app(
+        indexing_service=FakeIndexingService(),
+        index_catalog_service=FakeCatalogService(
+            make_indexed_file(source)
+        ),
+        retrieval_service=retrieval,
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        created = await client.post(
+            f"/v1/index/files/{SOURCE_KEY}/reindex"
+        )
+        completed = await wait_for_index_job(
+            client,
+            created.json()["job_id"],
+        )
+        failures = await client.get(
+            f"/v1/indexing/jobs/{created.json()['job_id']}/failures"
+        )
+
+    assert completed["status"] == "failed"
+    assert failures.json()["error"] == {
+        "code": "RETRIEVAL_ERROR",
+        "message": "keyword catalog refresh failed",
+        "retryable": False,
+    }
+    assert retrieval.refresh_calls == 1
+    assert retrieval.invalidate_calls == 1
