@@ -29,7 +29,7 @@ flutter create --platforms=windows,macos,linux --project-name content_retrieval_
 - `frontend/lib/` 默认计数器应用；
 - `frontend/test/` 默认 widget 测试；
 - `frontend/windows/`、`frontend/macos/`、`frontend/linux/` 的正式工程文件；
-- Flutter 标准的 `.metadata`、`.gitignore`、`analysis_options.yaml`、`README.md` 与 IDE 模块描述等可复现配置。
+- Flutter 标准的 `.metadata`、`.gitignore`、`analysis_options.yaml` 与 `README.md` 等可复现配置。
 
 不纳入 Git 的内容包括 `.dart_tool/`、`build/`、`.idea/`、平台 `ephemeral/`、插件符号链接和编译产物。不会修改 `backend/`、仓库根目录的现有未跟踪输出或业务文档。
 
