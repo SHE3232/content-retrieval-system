@@ -52,6 +52,7 @@ class IndexingService:
         *,
         recursive: bool = True,
         authorized_roots: list[Path | str] | None = None,
+        force: bool = False,
     ) -> IndexingResult:
         batch = self.ingestion_service.parse_paths(
             paths,
@@ -82,7 +83,7 @@ class IndexingService:
         for document in batch.results:
             source_key = self.source_key(document.path)
             existing = existing_by_source.get(source_key, [])
-            if self._is_unchanged(document, existing):
+            if not force and self._is_unchanged(document, existing):
                 unchanged_files += 1
                 continue
 

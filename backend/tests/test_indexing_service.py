@@ -194,6 +194,28 @@ def test_repeated_unchanged_file_skips_embedding_and_upsert(
     assert text_backend.calls == [["unchanged"]]
 
 
+def test_force_reindex_bypasses_unchanged_file_short_circuit(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "notes.txt"
+    path.write_text("unchanged", encoding="utf-8")
+    service, repository, text_backend, _ = make_service(tmp_path)
+
+    first = service.index_paths([path], authorized_roots=[tmp_path])
+    second = service.index_paths(
+        [path],
+        authorized_roots=[tmp_path],
+        force=True,
+    )
+
+    assert first.indexed_files == 1
+    assert second.indexed_files == 1
+    assert second.indexed_records == 1
+    assert second.unchanged_files == 0
+    assert repository.count() == 1
+    assert text_backend.calls == [["unchanged"], ["unchanged"]]
+
+
 def test_changed_file_replaces_stale_records_after_new_upsert(
     tmp_path: Path,
 ) -> None:
