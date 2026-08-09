@@ -4,7 +4,7 @@
 
 **Goal:** Recreate the default `content_retrieval_app` Flutter desktop project under `frontend/` and commit its source, tests, and Windows/macOS/Linux project files to Git.
 
-**Architecture:** Run the Flutter 3.44.6 official generator in the existing `frontend/` directory with only the three desktop platforms enabled. Keep the generated counter application and widget test unchanged, rely on Flutter's generated ignore rules for caches and build products, then verify analysis, tests, the Windows build, platform manifests, and the staged Git boundary.
+**Architecture:** Run the Flutter 3.44.6 official generator from the clean worktree root to create `frontend/` with only the three desktop platforms enabled. Keep the generated counter application and widget test unchanged, rely on Flutter's generated ignore rules for caches and build products, then verify analysis, tests, the Windows build, platform manifests, and the staged Git boundary.
 
 **Tech Stack:** Flutter 3.44.6, Dart 3.12.2, Windows PowerShell, Git
 
@@ -31,7 +31,7 @@
 
 - [ ] **Step 1: Confirm the repository and Flutter toolchain state**
 
-Run from `F:\contentretrivalsystem`:
+Run from `F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold`:
 
 ```powershell
 git status --short --branch
@@ -77,20 +77,20 @@ Expected: `Precondition verified: scaffold absent and frontend untracked.`
 - Create: `frontend/analysis_options.yaml`
 - Create: `frontend/README.md`
 
-- [ ] **Step 1: Run Flutter's generator in the existing frontend directory**
+- [ ] **Step 1: Run Flutter's generator from the clean worktree root**
 
 Run:
 
 ```powershell
-Set-Location -LiteralPath 'F:\contentretrivalsystem\frontend'
-flutter create --platforms=windows,macos,linux --project-name content_retrieval_app .
+Set-Location -LiteralPath 'F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold'
+flutter create --platforms=windows,macos,linux --project-name content_retrieval_app frontend
 ```
 
 Expected: Flutter reports project creation, dependency resolution, and `All done!` without replacing or editing files outside `frontend/`.
 
 - [ ] **Step 2: Resolve application dependencies explicitly**
 
-Run from `F:\contentretrivalsystem\frontend`:
+Run from `F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold\frontend`:
 
 ```powershell
 flutter pub get
@@ -118,7 +118,7 @@ Expected: each command returns exactly one matching line.
 
 - [ ] **Step 1: Check formatting without rewriting generated source**
 
-Run from `F:\contentretrivalsystem\frontend`:
+Run from `F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold\frontend`:
 
 ```powershell
 dart format --output=none --set-exit-if-changed lib test
@@ -155,7 +155,7 @@ Expected: the counter increment smoke test passes and the final output contains 
 
 - [ ] **Step 1: Assert the cross-platform project manifest**
 
-Run from `F:\contentretrivalsystem`:
+Run from `F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold`:
 
 ```powershell
 $required = @(
@@ -199,7 +199,7 @@ Expected: `Platform manifest verified: 30/30 files present.`
 
 - [ ] **Step 2: Build the Windows debug application**
 
-Run from `F:\contentretrivalsystem\frontend`:
+Run from `F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold\frontend`:
 
 ```powershell
 flutter build windows --debug
@@ -214,7 +214,7 @@ Expected: exit code 0 and a debug executable under `build\windows\x64\runner\Deb
 
 - [ ] **Step 1: Stage only the frontend project**
 
-Run from `F:\contentretrivalsystem`:
+Run from `F:\contentretrivalsystem\.worktrees\flutter-desktop-scaffold`:
 
 ```powershell
 git add -- frontend
