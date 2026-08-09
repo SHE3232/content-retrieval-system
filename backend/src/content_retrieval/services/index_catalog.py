@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import math
 from pathlib import Path
+from threading import Lock
 
 from content_retrieval.domain.retrieval import (
     IndexRecord,
@@ -33,6 +34,25 @@ class IndexedFilePage:
     page_size: int
     total: int
     total_pages: int
+
+
+class IndexMutationCoordinator:
+    """Reject overlapping process-local mutations for one source."""
+
+    def __init__(self) -> None:
+        self._active: set[str] = set()
+        self._lock = Lock()
+
+    def claim(self, source_key: str) -> bool:
+        with self._lock:
+            if source_key in self._active:
+                return False
+            self._active.add(source_key)
+            return True
+
+    def release(self, source_key: str) -> None:
+        with self._lock:
+            self._active.discard(source_key)
 
 
 class IndexCatalogService:

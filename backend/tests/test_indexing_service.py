@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-from content_retrieval.domain.errors import StorageError
 from content_retrieval.domain.models import (
     BatchResult,
     ParseResult,
@@ -261,6 +260,28 @@ def test_partial_text_failure_does_not_block_other_files(tmp_path: Path) -> None
     }
 
 
+def test_partial_forced_reindex_preserves_previous_records(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "notes.txt"
+    path.write_text("old first\n\nold second", encoding="utf-8")
+    service, repository, _, _ = make_service(tmp_path)
+    service.index_paths([path], authorized_roots=[tmp_path])
+    path.write_text("good\n\nbad", encoding="utf-8")
+
+    result = service.index_paths(
+        [path],
+        authorized_roots=[tmp_path],
+        force=True,
+    )
+
+    assert result.partial_files == 1
+    assert result.removed_stale_records == 0
+    assert {
+        record.document for record in repository.list_records()
+    } == {"old first", "old second", "good"}
+
+
 def test_skipped_files_are_counted_without_processing(tmp_path: Path) -> None:
     path = tmp_path / "ignored.skip"
     path.write_text("ignored", encoding="utf-8")
@@ -273,7 +294,7 @@ def test_skipped_files_are_counted_without_processing(tmp_path: Path) -> None:
     assert repository.count() == 0
 
 
-def test_multiple_errors_mark_one_file_partial_only_once(
+def test_partial_file_skips_stale_record_deletion(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -283,20 +304,22 @@ def test_multiple_errors_mark_one_file_partial_only_once(
     service.index_paths([path], authorized_roots=[tmp_path])
     path.write_text("good\n\nbad", encoding="utf-8")
 
-    def fail_delete(records: object) -> int:
-        del records
-        raise StorageError("cannot remove stale records")
+    delete_called = False
 
-    monkeypatch.setattr(repository, "delete_records", fail_delete)
+    def record_delete(records: object) -> int:
+        nonlocal delete_called
+        del records
+        delete_called = True
+        return 0
+
+    monkeypatch.setattr(repository, "delete_records", record_delete)
 
     result = service.index_paths([path], authorized_roots=[tmp_path])
 
     assert result.indexed_files == 1
     assert result.partial_files == 1
-    assert [failure.stage for failure in result.failures] == [
-        "embedding",
-        "storage",
-    ]
+    assert [failure.stage for failure in result.failures] == ["embedding"]
+    assert delete_called is False
 
 
 def test_repeated_partial_file_retries_missing_embeddings(

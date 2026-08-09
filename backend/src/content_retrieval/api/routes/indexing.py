@@ -22,8 +22,12 @@ from content_retrieval.api.schemas import (
     IndexingFailureResponse,
     IndexingResultResponse,
 )
-from content_retrieval.domain.errors import StorageError
-from content_retrieval.services.index_catalog import IndexCatalogService
+from content_retrieval.domain.errors import RetrievalError, StorageError
+from content_retrieval.retrieval.service import RetrievalService
+from content_retrieval.services.index_catalog import (
+    IndexCatalogService,
+    IndexMutationCoordinator,
+)
 from content_retrieval.services.indexing import IndexingService
 from content_retrieval.services.indexing_jobs import (
     InMemoryIndexingJobStore,
@@ -67,29 +71,47 @@ async def delete_indexed_file(
     request: Request,
 ) -> DeletedIndexedFileResponse:
     service = _require_index_catalog_service(request.app)
-    try:
-        deleted = await asyncio.to_thread(
-            service.delete_file,
-            source_key,
-        )
-        if deleted is not None:
-            retrieval_service = request.app.state.retrieval_service
-            if retrieval_service is not None:
-                await asyncio.to_thread(retrieval_service.refresh)
-    except StorageError as error:
-        raise _storage_unavailable() from error
-    if deleted is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "FILE_NOT_INDEXED",
-                "message": "Indexed file not found",
-            },
-        )
-    return DeletedIndexedFileResponse(
-        source_key=source_key,
-        deleted_records=deleted,
+    retrieval_service = _require_retrieval_service(request.app)
+    coordinator: IndexMutationCoordinator = (
+        request.app.state.index_mutation_coordinator
     )
+    if not coordinator.claim(source_key):
+        raise _mutation_conflict()
+    try:
+        try:
+            deleted = await asyncio.to_thread(
+                service.delete_file,
+                source_key,
+            )
+        except StorageError as error:
+            raise _storage_unavailable() from error
+        if deleted is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "FILE_NOT_INDEXED",
+                    "message": "Indexed file not found",
+                },
+            )
+        try:
+            await asyncio.to_thread(retrieval_service.refresh)
+        except RetrievalError as error:
+            await asyncio.to_thread(retrieval_service.invalidate)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "RETRIEVAL_UNAVAILABLE",
+                    "message": (
+                        "Index records were deleted, but search refresh failed"
+                    ),
+                },
+            ) from error
+        return DeletedIndexedFileResponse(
+            source_key=source_key,
+            deleted_records=deleted,
+        )
+    finally:
+        coordinator.release(source_key)
 
 
 @index_router.post(
@@ -102,47 +124,68 @@ async def reindex_file(
     request: Request,
 ) -> IndexingJobCreatedResponse:
     _require_indexing_service(request.app)
+    _require_retrieval_service(request.app)
     catalog = _require_index_catalog_service(request.app)
+    coordinator: IndexMutationCoordinator = (
+        request.app.state.index_mutation_coordinator
+    )
+    if not coordinator.claim(source_key):
+        raise _mutation_conflict()
+    task_scheduled = False
     try:
-        indexed_file = await asyncio.to_thread(
-            catalog.get_file,
-            source_key,
-        )
-    except StorageError as error:
-        raise _storage_unavailable() from error
-    if indexed_file is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "FILE_NOT_INDEXED",
-                "message": "Indexed file not found",
-            },
-        )
-    if not await asyncio.to_thread(indexed_file.path.is_file):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "SOURCE_FILE_NOT_FOUND",
-                "message": "Source file no longer exists",
-            },
-        )
+        try:
+            indexed_file = await asyncio.to_thread(
+                catalog.get_file,
+                source_key,
+            )
+        except StorageError as error:
+            raise _storage_unavailable() from error
+        if indexed_file is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "FILE_NOT_INDEXED",
+                    "message": "Indexed file not found",
+                },
+            )
+        if not await asyncio.to_thread(indexed_file.path.is_file):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "SOURCE_FILE_NOT_FOUND",
+                    "message": "Source file no longer exists",
+                },
+            )
 
-    store: InMemoryIndexingJobStore = request.app.state.indexing_job_store
-    job = store.create()
-    payload = CreateIndexingJobRequest(
-        paths=[indexed_file.path],
-        authorized_roots=[indexed_file.path.parent],
-        recursive=False,
-    )
-    task = asyncio.create_task(
-        _run_job(request.app, job.job_id, payload, force=True)
-    )
-    background_tasks: set[asyncio.Task[None]] = (
-        request.app.state.background_tasks
-    )
-    background_tasks.add(task)
-    task.add_done_callback(background_tasks.discard)
-    return IndexingJobCreatedResponse(job_id=job.job_id, status=job.status)
+        store: InMemoryIndexingJobStore = request.app.state.indexing_job_store
+        job = store.create()
+        payload = CreateIndexingJobRequest(
+            paths=[indexed_file.path],
+            authorized_roots=[indexed_file.path.parent],
+            recursive=False,
+        )
+        task = asyncio.create_task(
+            _run_job(
+                request.app,
+                job.job_id,
+                payload,
+                force=True,
+                mutation_source_key=source_key,
+            )
+        )
+        task_scheduled = True
+        background_tasks: set[asyncio.Task[None]] = (
+            request.app.state.background_tasks
+        )
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
+        return IndexingJobCreatedResponse(
+            job_id=job.job_id,
+            status=job.status,
+        )
+    finally:
+        if not task_scheduled:
+            coordinator.release(source_key)
 
 
 @router.post(
@@ -224,33 +267,41 @@ async def _run_job(
     payload: CreateIndexingJobRequest,
     *,
     force: bool = False,
+    mutation_source_key: str | None = None,
 ) -> None:
     store: InMemoryIndexingJobStore = app.state.indexing_job_store
     service: IndexingService = app.state.indexing_service
-    store.mark_running(job_id)
     try:
-        if force:
-            result = await asyncio.to_thread(
-                service.index_paths,
-                payload.paths,
-                recursive=payload.recursive,
-                authorized_roots=payload.authorized_roots,
-                force=True,
-            )
+        store.mark_running(job_id)
+        try:
+            if force:
+                result = await asyncio.to_thread(
+                    service.index_paths,
+                    payload.paths,
+                    recursive=payload.recursive,
+                    authorized_roots=payload.authorized_roots,
+                    force=True,
+                )
+            else:
+                result = await asyncio.to_thread(
+                    service.index_paths,
+                    payload.paths,
+                    recursive=payload.recursive,
+                    authorized_roots=payload.authorized_roots,
+                )
+            retrieval_service = app.state.retrieval_service
+            if retrieval_service is not None:
+                await asyncio.to_thread(retrieval_service.refresh)
+        except Exception as error:
+            store.fail(job_id, IndexingJobError.from_exception(error))
         else:
-            result = await asyncio.to_thread(
-                service.index_paths,
-                payload.paths,
-                recursive=payload.recursive,
-                authorized_roots=payload.authorized_roots,
+            store.complete(job_id, result)
+    finally:
+        if mutation_source_key is not None:
+            coordinator: IndexMutationCoordinator = (
+                app.state.index_mutation_coordinator
             )
-        retrieval_service = app.state.retrieval_service
-        if retrieval_service is not None:
-            await asyncio.to_thread(retrieval_service.refresh)
-    except Exception as error:
-        store.fail(job_id, IndexingJobError.from_exception(error))
-    else:
-        store.complete(job_id, result)
+            coordinator.release(mutation_source_key)
 
 
 def _job_response(job: IndexingJob) -> IndexingJobResponse:
@@ -296,6 +347,29 @@ def _require_index_catalog_service(app: FastAPI) -> IndexCatalogService:
     service = IndexCatalogService(repository)
     app.state.index_catalog_service = service
     return service
+
+
+def _require_retrieval_service(app: FastAPI) -> RetrievalService:
+    service = app.state.retrieval_service
+    if service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "SERVICE_UNAVAILABLE",
+                "message": "Week 4 search runtime is not configured",
+            },
+        )
+    return service
+
+
+def _mutation_conflict() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "INDEX_MUTATION_CONFLICT",
+            "message": "Another index mutation is already running",
+        },
+    )
 
 
 def _storage_unavailable() -> HTTPException:

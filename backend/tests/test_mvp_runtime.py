@@ -157,6 +157,7 @@ async def test_mvp_app_builds_runtime_during_lifespan_and_closes_it(
     )
 
     assert app.state.ready is False
+    assert app.state.index_catalog_service is None
     assert builder_calls == []
 
     async with app.router.lifespan_context(app):
@@ -169,6 +170,7 @@ async def test_mvp_app_builds_runtime_during_lifespan_and_closes_it(
         ]
         assert app.state.runtime is runtime
         assert app.state.indexing_service is runtime.indexing_service
+        assert app.state.index_catalog_service.repository is runtime.repository
         assert app.state.retrieval_service is runtime.retrieval_service
         assert app.state.ready is True
 
@@ -182,6 +184,7 @@ async def test_mvp_app_builds_runtime_during_lifespan_and_closes_it(
         assert response.json() == {"status": "ready"}
 
     assert app.state.ready is False
+    assert app.state.index_catalog_service is None
     assert runtime.close_calls == 1
 
 

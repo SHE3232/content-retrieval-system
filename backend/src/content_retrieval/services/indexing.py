@@ -109,26 +109,28 @@ class IndexingService:
                 failed_files += 1
                 continue
 
-            current_identities = {
-                (record.space_id, record.record_id) for record in records
-            }
-            stale = [
-                record
-                for record in existing
-                if (record.space_id, record.record_id)
-                not in current_identities
-            ]
-            try:
-                removed = self.repository.delete_records(stale)
-            except StorageError as error:
-                failures.append(
-                    self._failure_from_processing_error(
-                        document,
-                        error,
+            removed = 0
+            if not is_partial:
+                current_identities = {
+                    (record.space_id, record.record_id)
+                    for record in records
+                }
+                stale = [
+                    record
+                    for record in existing
+                    if (record.space_id, record.record_id)
+                    not in current_identities
+                ]
+                try:
+                    removed = self.repository.delete_records(stale)
+                except StorageError as error:
+                    failures.append(
+                        self._failure_from_processing_error(
+                            document,
+                            error,
+                        )
                     )
-                )
-                is_partial = True
-                removed = 0
+                    is_partial = True
 
             indexed_files += 1
             indexed_records += written

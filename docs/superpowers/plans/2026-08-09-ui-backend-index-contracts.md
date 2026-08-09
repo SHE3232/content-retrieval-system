@@ -516,7 +516,7 @@ suite there with the shared backend interpreter, then remove only that verified
 temporary worktree. Expected: the committed snapshot passes independently of
 untracked files in the development worktree.
 
-## Plan Self-Review
+## Initial Plan Self-Review
 
 - Spec coverage: every endpoint, stable identifier, force behavior, structured
   error, pagination rule, refresh, and verification requirement maps to a task.
@@ -526,3 +526,62 @@ untracked files in the development worktree.
   service, route, and test steps.
 - Scope remains limited to the approved UI backend contracts; no persistent job
   database, batch management, file deletion, or UI code is introduced.
+
+### Task 6: Review-driven mutation safety hardening
+
+**Files:**
+- Modify: `backend/src/content_retrieval/services/index_catalog.py`
+- Modify: `backend/src/content_retrieval/services/indexing.py`
+- Modify: `backend/src/content_retrieval/retrieval/service.py`
+- Modify: `backend/src/content_retrieval/api/app.py`
+- Modify: `backend/src/content_retrieval/api/routes/indexing.py`
+- Modify: `backend/src/content_retrieval/mvp.py`
+- Test: `backend/tests/test_index_catalog.py`
+- Test: `backend/tests/test_indexing_service.py`
+- Test: `backend/tests/test_retrieval_service.py`
+- Test: `backend/tests/test_ui_index_api.py`
+- Test: `backend/tests/test_mvp_runtime.py`
+
+- [ ] **Step 1: Preserve old records on partial forced reindex**
+
+Add a regression test that starts with two valid records, forces a reindex with
+one successful and one failed chunk, and expects all old records plus the new
+successful record. Skip stale deletion whenever per-item failures exist.
+
+- [ ] **Step 2: Reject overlapping single-file mutations**
+
+Add a lock-protected process-local coordinator with atomic `claim(source_key)`
+and `release(source_key)`. Hold the claim through persistent mutation and search
+refresh; return `409 INDEX_MUTATION_CONFLICT` when another delete or reindex owns
+the same key.
+
+- [ ] **Step 3: Make retrieval refresh failure explicit and safe**
+
+Require a retrieval runtime before delete or reindex. Add
+`RetrievalService.invalidate()` to clear only the volatile keyword catalog. If a
+post-delete refresh raises `RetrievalError`, invalidate it and return
+`503 RETRIEVAL_UNAVAILABLE` with a message that persistent deletion succeeded.
+
+- [ ] **Step 4: Rebind the catalog across MVP lifespans**
+
+Construct `IndexCatalogService(runtime.repository)` during each lifespan startup
+and clear it after background work drains, before closing the runtime.
+
+- [ ] **Step 5: Verify safety regressions**
+
+```powershell
+F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -m pytest -q backend/tests/test_index_catalog.py backend/tests/test_indexing_service.py backend/tests/test_retrieval_service.py backend/tests/test_ui_index_api.py backend/tests/test_mvp_runtime.py backend/tests/test_week4_api.py
+```
+
+Expected: zero failures and errors, including partial reindex, missing runtime,
+refresh invalidation, mutation conflict, active-job failure details, and repeated
+MVP lifespan coverage.
+
+## Final Plan Self-Review
+
+- Review findings are mapped to Task 6 with concrete regression tests and stable
+  HTTP behavior.
+- Mutation claims are process-local by design and cover the two new single-file
+  mutation endpoints without adding a persistent job database.
+- The refresh-failure response distinguishes committed deletion from a fully
+  rejected request, while invalidation prevents stale keyword results.

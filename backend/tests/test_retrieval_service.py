@@ -201,6 +201,25 @@ def test_keyword_only_returns_ranked_file_level_results(tmp_path: Path) -> None:
     assert image_backend.query_calls == []
 
 
+def test_invalidate_clears_only_volatile_keyword_catalog(
+    tmp_path: Path,
+) -> None:
+    records = corpus(tmp_path)
+    service, repository, _, _ = make_service(tmp_path, records=records)
+    assert service.search(
+        "alpha",
+        channels=("keyword",),
+    ).hits
+
+    service.invalidate()
+
+    assert service.search(
+        "alpha",
+        channels=("keyword",),
+    ).hits == ()
+    assert repository.count() == len(records)
+
+
 def test_text_semantic_query_uses_text_space_and_deduplicates_chunks(
     tmp_path: Path,
 ) -> None:

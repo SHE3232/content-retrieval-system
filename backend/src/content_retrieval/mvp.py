@@ -15,6 +15,7 @@ from fastapi import FastAPI
 
 from content_retrieval.api.app import create_app
 from content_retrieval.runtime import LocalRuntime, build_local_runtime
+from content_retrieval.services.index_catalog import IndexCatalogService
 
 MODEL_ROOT_ENV = "CONTENT_RETRIEVAL_MODEL_ROOT"
 MANIFEST_PATH_ENV = "CONTENT_RETRIEVAL_MANIFEST_PATH"
@@ -169,6 +170,9 @@ def create_mvp_app(
                 )
             application.state.runtime = runtime
             application.state.indexing_service = runtime.indexing_service
+            application.state.index_catalog_service = IndexCatalogService(
+                runtime.repository
+            )
             application.state.retrieval_service = runtime.retrieval_service
             application.state.ready = True
             yield
@@ -181,6 +185,7 @@ def create_mvp_app(
             shutdown_cancellation = await _drain_background_tasks(
                 background_tasks
             )
+            application.state.index_catalog_service = None
             try:
                 runtime.close()
             except BaseException:

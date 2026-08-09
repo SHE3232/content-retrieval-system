@@ -6,7 +6,10 @@ from fastapi import FastAPI
 from content_retrieval.api.routes import health, indexing, ingestion, search
 from content_retrieval.parsers.registry import create_default_registry
 from content_retrieval.services.batch_ingestion import BatchIngestionService
-from content_retrieval.services.index_catalog import IndexCatalogService
+from content_retrieval.services.index_catalog import (
+    IndexCatalogService,
+    IndexMutationCoordinator,
+)
 from content_retrieval.services.indexing_jobs import InMemoryIndexingJobStore
 from content_retrieval.services.ingestion_jobs import InMemoryIngestionJobStore
 
@@ -37,6 +40,9 @@ def create_app(
     application.state.indexing_job_store = InMemoryIndexingJobStore()
     application.state.indexing_service = indexing_service
     application.state.index_catalog_service = index_catalog_service
+    application.state.index_mutation_coordinator = (
+        IndexMutationCoordinator()
+    )
     application.state.retrieval_service = retrieval_service
     application.state.background_tasks = set()
     application.state.ready = ready

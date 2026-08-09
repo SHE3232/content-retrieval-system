@@ -54,6 +54,10 @@ class RetrievalService:
             ) from error
         self.keyword_index.rebuild(records)
 
+    def invalidate(self) -> None:
+        """Clear volatile keyword state after a failed refresh."""
+        self.keyword_index.rebuild(())
+
     def search(
         self,
         query: str,

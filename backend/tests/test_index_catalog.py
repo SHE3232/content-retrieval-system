@@ -7,7 +7,10 @@ import pytest
 
 from content_retrieval.domain.models import EmbeddingVector
 from content_retrieval.domain.retrieval import IndexRecord
-from content_retrieval.services.index_catalog import IndexCatalogService
+from content_retrieval.services.index_catalog import (
+    IndexCatalogService,
+    IndexMutationCoordinator,
+)
 
 
 MODIFIED_AT = datetime(2026, 8, 9, 10, 0, tzinfo=timezone.utc)
@@ -228,3 +231,15 @@ def test_get_and_delete_file_are_scoped_to_source_key(
     assert catalog.delete_file(target) == 2
     assert repository.deleted_sources == [target]
     assert [record.source_key for record in repository.records] == [other]
+
+
+def test_mutation_coordinator_rejects_conflict_until_release() -> None:
+    coordinator = IndexMutationCoordinator()
+
+    assert coordinator.claim(SOURCE_KEY := digest("path:notes")) is True
+    assert coordinator.claim(SOURCE_KEY) is False
+
+    coordinator.release(SOURCE_KEY)
+
+    assert coordinator.claim(SOURCE_KEY) is True
+    coordinator.release(SOURCE_KEY)

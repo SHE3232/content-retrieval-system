@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from content_retrieval.domain.errors import StorageError
+from content_retrieval.domain.errors import RetrievalError, StorageError
 from content_retrieval.domain.retrieval import (
     IndexingFailure,
     IndexingResult,
@@ -13,6 +13,7 @@ from content_retrieval.domain.retrieval import (
 from content_retrieval.services.index_catalog import (
     IndexedFile,
     IndexedFilePage,
+    IndexMutationCoordinator,
 )
 from content_retrieval.services.indexing_jobs import IndexingJobError
 
@@ -77,11 +78,21 @@ class FakeCatalogService:
 
 
 class RefreshOnlyRetrievalService:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        refresh_error: Exception | None = None,
+    ) -> None:
         self.refresh_calls = 0
+        self.invalidate_calls = 0
+        self.refresh_error = refresh_error
 
     def refresh(self) -> None:
         self.refresh_calls += 1
+        if self.refresh_error is not None:
+            raise self.refresh_error
+
+    def invalidate(self) -> None:
+        self.invalidate_calls += 1
 
 
 class FakeIndexingService:
@@ -176,7 +187,10 @@ async def test_list_indexed_files_rejects_invalid_pagination(
 ) -> None:
     from content_retrieval.api.app import create_app
 
-    app = create_app(index_catalog_service=FakeCatalogService())
+    app = create_app(
+        index_catalog_service=FakeCatalogService(),
+        retrieval_service=RefreshOnlyRetrievalService(),
+    )
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://testserver",
@@ -221,7 +235,10 @@ async def test_delete_indexed_file_refreshes_retrieval(
 async def test_delete_unknown_indexed_file_has_structured_404() -> None:
     from content_retrieval.api.app import create_app
 
-    app = create_app(index_catalog_service=FakeCatalogService())
+    app = create_app(
+        index_catalog_service=FakeCatalogService(),
+        retrieval_service=RefreshOnlyRetrievalService(),
+    )
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://testserver",
@@ -268,7 +285,10 @@ async def test_file_catalog_storage_failure_has_structured_503(
         list_error=error if operation == "list" else None,
         delete_error=error if operation == "delete" else None,
     )
-    app = create_app(index_catalog_service=catalog)
+    app = create_app(
+        index_catalog_service=catalog,
+        retrieval_service=RefreshOnlyRetrievalService(),
+    )
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://testserver",
@@ -325,6 +345,9 @@ async def test_reindex_file_creates_forced_background_job(
         ([source.resolve()], False, [source.parent.resolve()], True)
     ]
     assert retrieval.refresh_calls == 1
+    coordinator = app.state.index_mutation_coordinator
+    assert coordinator.claim(SOURCE_KEY) is True
+    coordinator.release(SOURCE_KEY)
 
 
 @pytest.mark.anyio
@@ -334,6 +357,7 @@ async def test_reindex_unknown_file_has_structured_404() -> None:
     app = create_app(
         indexing_service=FakeIndexingService(),
         index_catalog_service=FakeCatalogService(),
+        retrieval_service=RefreshOnlyRetrievalService(),
     )
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -364,6 +388,7 @@ async def test_reindex_missing_source_file_has_structured_404(
         index_catalog_service=FakeCatalogService(
             make_indexed_file(missing)
         ),
+        retrieval_service=RefreshOnlyRetrievalService(),
     )
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -481,6 +506,36 @@ async def test_indexing_failure_details_serialize_task_error() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("job_status", ["queued", "running"])
+async def test_active_indexing_job_has_empty_failure_details(
+    job_status: str,
+) -> None:
+    from content_retrieval.api.app import create_app
+
+    app = create_app(indexing_service=FakeIndexingService())
+    job = app.state.indexing_job_store.create()
+    if job_status == "running":
+        app.state.indexing_job_store.mark_running(job.job_id)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.get(
+            f"/v1/indexing/jobs/{job.job_id}/failures"
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "job_id": job.job_id,
+        "status": job_status,
+        "total": 0,
+        "failures": [],
+        "error": None,
+    }
+
+
+@pytest.mark.anyio
 async def test_unknown_indexing_failure_details_have_structured_404() -> None:
     from content_retrieval.api.app import create_app
 
@@ -500,3 +555,122 @@ async def test_unknown_indexing_failure_details_have_structured_404() -> None:
             "message": "Indexing job not found",
         }
     }
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("operation", ["delete", "reindex"])
+async def test_file_mutation_requires_retrieval_runtime(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    from content_retrieval.api.app import create_app
+
+    source = tmp_path / "notes.txt"
+    source.write_text("local notes", encoding="utf-8")
+    catalog = FakeCatalogService(make_indexed_file(source))
+    app = create_app(
+        indexing_service=FakeIndexingService(),
+        index_catalog_service=catalog,
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        if operation == "delete":
+            response = await client.delete(
+                f"/v1/index/files/{SOURCE_KEY}"
+            )
+        else:
+            response = await client.post(
+                f"/v1/index/files/{SOURCE_KEY}/reindex"
+            )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": {
+            "code": "SERVICE_UNAVAILABLE",
+            "message": "Week 4 search runtime is not configured",
+        }
+    }
+    assert catalog.delete_calls == []
+
+
+@pytest.mark.anyio
+async def test_delete_refresh_failure_invalidates_keyword_state(
+    tmp_path: Path,
+) -> None:
+    from content_retrieval.api.app import create_app
+
+    source = tmp_path / "notes.txt"
+    source.write_text("local notes", encoding="utf-8")
+    catalog = FakeCatalogService(make_indexed_file(source))
+    retrieval = RefreshOnlyRetrievalService(
+        RetrievalError("keyword catalog refresh failed")
+    )
+    app = create_app(
+        index_catalog_service=catalog,
+        retrieval_service=retrieval,
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        response = await client.delete(f"/v1/index/files/{SOURCE_KEY}")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": {
+            "code": "RETRIEVAL_UNAVAILABLE",
+            "message": (
+                "Index records were deleted, but search refresh failed"
+            ),
+        }
+    }
+    assert catalog.delete_calls == [SOURCE_KEY]
+    assert retrieval.refresh_calls == 1
+    assert retrieval.invalidate_calls == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("operation", ["delete", "reindex"])
+async def test_overlapping_file_mutation_has_structured_409(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    from content_retrieval.api.app import create_app
+
+    source = tmp_path / "notes.txt"
+    source.write_text("local notes", encoding="utf-8")
+    catalog = FakeCatalogService(make_indexed_file(source))
+    coordinator = IndexMutationCoordinator()
+    assert coordinator.claim(SOURCE_KEY) is True
+    app = create_app(
+        indexing_service=FakeIndexingService(),
+        index_catalog_service=catalog,
+        retrieval_service=RefreshOnlyRetrievalService(),
+    )
+    app.state.index_mutation_coordinator = coordinator
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        if operation == "delete":
+            response = await client.delete(
+                f"/v1/index/files/{SOURCE_KEY}"
+            )
+        else:
+            response = await client.post(
+                f"/v1/index/files/{SOURCE_KEY}/reindex"
+            )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": {
+            "code": "INDEX_MUTATION_CONFLICT",
+            "message": "Another index mutation is already running",
+        }
+    }
+    assert catalog.delete_calls == []
+    coordinator.release(SOURCE_KEY)
