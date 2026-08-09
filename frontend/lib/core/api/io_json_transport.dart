@@ -27,18 +27,30 @@ final class IoJsonTransport implements JsonTransport {
     String path, {
     Map<String, Object?>? body,
   }) async {
+    Future<HttpClientRequest>? openingRequest;
+    HttpClientRequest? activeRequest;
     try {
-      final request = await _client.openUrl(method, baseUri.resolve(path));
+      openingRequest = _client.openUrl(method, baseUri.resolve(path));
+      final request = activeRequest = await openingRequest.timeout(timeout);
       request.headers.add(HttpHeaders.acceptHeader, ContentType.json.mimeType);
       if (body != null) {
         request.headers.contentType = ContentType.json;
         request.write(jsonEncode(body));
       }
       final response = await request.close().timeout(timeout);
-      final text = await utf8.decoder.bind(response).join();
+      final text = await utf8.decoder.bind(response.timeout(timeout)).join();
       final decoded = text.trim().isEmpty ? null : jsonDecode(text);
       return JsonResponse(statusCode: response.statusCode, body: decoded);
     } on TimeoutException catch (error) {
+      activeRequest?.abort(error);
+      if (activeRequest == null && openingRequest != null) {
+        unawaited(
+          openingRequest.then<void>(
+            (request) => request.abort(error),
+            onError: (_) {},
+          ),
+        );
+      }
       throw ApiException(
         ApiErrorKind.timeout,
         'Request timed out',
@@ -48,6 +60,12 @@ final class IoJsonTransport implements JsonTransport {
       throw ApiException(
         ApiErrorKind.offline,
         'Backend is unreachable',
+        cause: error,
+      );
+    } on HttpException catch (error) {
+      throw ApiException(
+        ApiErrorKind.invalidResponse,
+        'Backend returned invalid HTTP response',
         cause: error,
       );
     } on FormatException catch (error) {

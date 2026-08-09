@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -57,6 +58,80 @@ void main() {
         isA<ApiException>()
             .having((error) => error.kind, 'kind', ApiErrorKind.invalidResponse)
             .having((error) => error.cause, 'cause', isA<FormatException>()),
+      ),
+    );
+  });
+
+  test('times out while reading a stalled response body', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final releaseResponse = Completer<void>();
+    addTearDown(() async {
+      if (!releaseResponse.isCompleted) {
+        releaseResponse.complete();
+      }
+      await server.close(force: true);
+    });
+    server.listen((request) async {
+      request.response
+        ..statusCode = 200
+        ..headers.contentType = ContentType.json
+        ..write('{"status":');
+      await request.response.flush();
+      await releaseResponse.future;
+      await request.response.close();
+    });
+    final transport = IoJsonTransport(
+      baseUri: Uri.parse('http://127.0.0.1:${server.port}'),
+      timeout: const Duration(milliseconds: 200),
+    );
+    addTearDown(transport.close);
+
+    final guardedRequest = transport
+        .get('/stalled-body')
+        .timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => throw StateError(
+            'Test guard expired before the transport timeout',
+          ),
+        );
+
+    await expectLater(
+      guardedRequest,
+      throwsA(
+        isA<ApiException>()
+            .having((error) => error.kind, 'kind', ApiErrorKind.timeout)
+            .having((error) => error.cause, 'cause', isA<TimeoutException>()),
+      ),
+    );
+  });
+
+  test('maps truncated HTTP responses to invalidResponse', () async {
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    server.listen((socket) async {
+      socket.write(
+        'HTTP/1.1 200 OK\r\n'
+        'Content-Type: application/json\r\n'
+        'Content-Length: 64\r\n'
+        'Connection: close\r\n'
+        '\r\n'
+        '{"status":',
+      );
+      await socket.flush();
+      await socket.close();
+    });
+    final transport = IoJsonTransport(
+      baseUri: Uri.parse('http://127.0.0.1:${server.port}'),
+      timeout: const Duration(seconds: 2),
+    );
+    addTearDown(transport.close);
+
+    await expectLater(
+      transport.get('/truncated'),
+      throwsA(
+        isA<ApiException>()
+            .having((error) => error.kind, 'kind', ApiErrorKind.invalidResponse)
+            .having((error) => error.cause, 'cause', isA<HttpException>()),
       ),
     );
   });
