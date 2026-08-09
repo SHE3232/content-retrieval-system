@@ -54,11 +54,9 @@ void main() {
     await expectLater(
       transport.get('/broken'),
       throwsA(
-        isA<ApiException>().having(
-          (error) => error.kind,
-          'kind',
-          ApiErrorKind.invalidResponse,
-        ),
+        isA<ApiException>()
+            .having((error) => error.kind, 'kind', ApiErrorKind.invalidResponse)
+            .having((error) => error.cause, 'cause', isA<FormatException>()),
       ),
     );
   });

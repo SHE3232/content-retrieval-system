@@ -38,14 +38,23 @@ final class IoJsonTransport implements JsonTransport {
       final text = await utf8.decoder.bind(response).join();
       final decoded = text.trim().isEmpty ? null : jsonDecode(text);
       return JsonResponse(statusCode: response.statusCode, body: decoded);
-    } on TimeoutException {
-      throw const ApiException(ApiErrorKind.timeout, 'Request timed out');
-    } on SocketException {
-      throw const ApiException(ApiErrorKind.offline, 'Backend is unreachable');
-    } on FormatException {
-      throw const ApiException(
+    } on TimeoutException catch (error) {
+      throw ApiException(
+        ApiErrorKind.timeout,
+        'Request timed out',
+        cause: error,
+      );
+    } on SocketException catch (error) {
+      throw ApiException(
+        ApiErrorKind.offline,
+        'Backend is unreachable',
+        cause: error,
+      );
+    } on FormatException catch (error) {
+      throw ApiException(
         ApiErrorKind.invalidResponse,
         'Backend returned invalid JSON',
+        cause: error,
       );
     }
   }
