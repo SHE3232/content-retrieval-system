@@ -120,6 +120,22 @@ class IndexingJobResponse(BaseModel):
     result: IndexingResultResponse | None = None
 
 
+class IndexingJobErrorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str
+    message: str
+    retryable: bool
+
+
+class IndexingFailuresResponse(BaseModel):
+    job_id: str
+    status: IndexingJobStatus
+    total: int
+    failures: list[IndexingFailureResponse]
+    error: IndexingJobErrorResponse | None = None
+
+
 class SearchFiltersRequest(BaseModel):
     mime_types: tuple[str, ...] = ()
     modalities: tuple[SearchModality, ...] = ()
@@ -222,3 +238,32 @@ class IndexStatsResponse(BaseModel):
     file_count: int
     text_record_count: int
     image_record_count: int
+
+
+class IndexedFileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source_key: str
+    file_id: str
+    path: Path
+    name: str
+    mime_type: str
+    modality: SearchModality
+    size_bytes: int
+    modified_at: datetime
+    record_count: int
+
+
+class IndexedFilePageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    items: list[IndexedFileResponse]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+
+
+class DeletedIndexedFileResponse(BaseModel):
+    source_key: str
+    deleted_records: int

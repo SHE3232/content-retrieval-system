@@ -490,7 +490,10 @@ Expected: zero failures; existing dependency-gated tests may remain skipped.
 - [ ] **Step 3: Validate OpenAPI routes and schema names**
 
 ```powershell
+Push-Location backend
+$env:PYTHONPATH = "src"
 F:\contentretrivalsystem\backend\.venv\Scripts\python.exe -c "from content_retrieval.api.app import create_app; app=create_app(); paths=app.openapi()['paths']; required={'/v1/index/files','/v1/index/files/{source_key}','/v1/index/files/{source_key}/reindex','/v1/indexing/jobs/{job_id}/failures'}; assert required <= paths.keys(); print('OpenAPI UI contracts present')"
+Pop-Location
 ```
 
 Expected: `OpenAPI UI contracts present` and exit code 0.
