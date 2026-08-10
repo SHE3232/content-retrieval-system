@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:content_retrieval_app/core/api/api_exception.dart';
 import 'package:content_retrieval_app/core/api/json_transport.dart';
+import 'package:content_retrieval_app/features/search/domain/search_models.dart';
 import 'package:content_retrieval_app/features/status/backend_status_models.dart';
 
 final class CapturedGet {
@@ -83,5 +84,30 @@ final class FakeBackendStatusClient implements BackendStatusApi {
       throw StateError('No queued stats result');
     }
     return statsResults.removeAt(0);
+  }
+}
+
+final class FakeSearchService implements SearchService {
+  final List<Object> results = <Object>[];
+  final List<SearchCriteria> calls = <SearchCriteria>[];
+
+  @override
+  Future<SearchResponse> search(SearchCriteria criteria) async {
+    calls.add(criteria);
+    if (results.isEmpty) {
+      throw StateError('No queued search result');
+    }
+
+    final result = results.removeAt(0);
+    if (result is ApiException) {
+      throw result;
+    }
+    if (result is SearchResponse) {
+      return result;
+    }
+    if (result is Future<SearchResponse>) {
+      return result;
+    }
+    throw StateError('Unsupported search result: ${result.runtimeType}');
   }
 }
