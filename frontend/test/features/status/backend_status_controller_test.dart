@@ -114,10 +114,19 @@ void main() {
             statusCode: 200,
             body: {'record_count': 3, 'file_count': 2, 'text_record_count': 2},
           ),
+          JsonResponse(
+            statusCode: 200,
+            body: {
+              'record_count': 3,
+              'file_count': 2,
+              'text_record_count': 2,
+              'image_record_count': null,
+            },
+          ),
         ]);
       final client = BackendStatusClient(transport);
 
-      for (var index = 0; index < 3; index += 1) {
+      for (var index = 0; index < 4; index += 1) {
         await expectLater(
           client.fetchStats(),
           throwsA(
@@ -148,7 +157,19 @@ void main() {
         );
       final client = BackendStatusClient(transport);
 
-      await expectLater(client.fetchStats(), throwsA(isA<ApiException>()));
+      await expectLater(
+        client.fetchStats(),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', ApiErrorKind.rejected)
+              .having((error) => error.statusCode, 'statusCode', 503)
+              .having(
+                (error) => error.message,
+                'message',
+                'Index stats request failed',
+              ),
+        ),
+      );
     });
   });
 
