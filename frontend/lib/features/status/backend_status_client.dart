@@ -30,10 +30,10 @@ final class BackendStatusClient implements BackendStatusApi {
         throw const FormatException('Index stats body must be an object');
       }
       return IndexStats(
-        recordCount: (root['record_count'] as num).toInt(),
-        fileCount: (root['file_count'] as num).toInt(),
-        textRecordCount: (root['text_record_count'] as num).toInt(),
-        imageRecordCount: (root['image_record_count'] as num).toInt(),
+        recordCount: _requiredInt(root, 'record_count'),
+        fileCount: _requiredInt(root, 'file_count'),
+        textRecordCount: _requiredInt(root, 'text_record_count'),
+        imageRecordCount: _requiredInt(root, 'image_record_count'),
       );
     } catch (error) {
       throw ApiException(
@@ -43,5 +43,13 @@ final class BackendStatusClient implements BackendStatusApi {
         cause: error,
       );
     }
+  }
+
+  int _requiredInt(Map<String, Object?> root, String key) {
+    final value = root[key];
+    if (value is! int) {
+      throw FormatException('$key must be an integer');
+    }
+    return value;
   }
 }

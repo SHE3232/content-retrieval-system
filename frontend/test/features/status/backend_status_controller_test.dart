@@ -33,15 +33,15 @@ void main() {
       },
     );
 
-    test('fetchStats GETs and parses every count with num semantics', () async {
+    test('fetchStats GETs and parses every integer count', () async {
       final transport = FakeJsonTransport()
         ..getResponses.add(
           const JsonResponse(
             statusCode: 200,
             body: {
-              'record_count': 3.9,
+              'record_count': 3,
               'file_count': 2,
-              'text_record_count': 2.8,
+              'text_record_count': 2,
               'image_record_count': 1,
             },
           ),
@@ -55,6 +55,46 @@ void main() {
       expect(stats.fileCount, 2);
       expect(stats.textRecordCount, 2);
       expect(stats.imageRecordCount, 1);
+    });
+
+    test('fetchStats rejects fractional count values', () async {
+      const validBody = <String, Object?>{
+        'record_count': 3,
+        'file_count': 2,
+        'text_record_count': 2,
+        'image_record_count': 1,
+      };
+      const fractionalFields = <String, double>{
+        'record_count': 3.9,
+        'file_count': 2.8,
+        'text_record_count': 2.5,
+        'image_record_count': 1.1,
+      };
+      final transport = FakeJsonTransport();
+      for (final field in fractionalFields.entries) {
+        transport.getResponses.add(
+          JsonResponse(
+            statusCode: 200,
+            body: <String, Object?>{...validBody, field.key: field.value},
+          ),
+        );
+      }
+      final client = BackendStatusClient(transport);
+
+      for (final fieldName in fractionalFields.keys) {
+        await expectLater(
+          client.fetchStats(),
+          throwsA(
+            isA<ApiException>()
+                .having(
+                  (error) => error.kind,
+                  'kind for $fieldName',
+                  ApiErrorKind.invalidResponse,
+                )
+                .having((error) => error.cause, 'cause', isNotNull),
+          ),
+        );
+      }
     });
 
     test('fetchStats normalizes malformed bodies and fields', () async {
@@ -267,6 +307,37 @@ void main() {
         await tester.pump(const Duration(seconds: 2));
 
         expect(controller.state, BackendConnectionState.checking);
+        expect(notifications, 0);
+        expect(client.readyCalls, 1);
+      },
+    );
+
+    testWidgets(
+      'dispose while stats load preserves state and prevents later work',
+      (tester) async {
+        final pendingStats = Completer<IndexStats>();
+        final client = FakeBackendStatusClient()
+          ..readyResults.add(true)
+          ..statsResults.add(pendingStats.future);
+        final controller = BackendStatusController(
+          client,
+          pollInterval: const Duration(seconds: 1),
+        );
+        var notifications = 0;
+        controller.addListener(() => notifications += 1);
+
+        final starting = controller.start();
+        await tester.pump();
+        expect(client.statsCalls, 1);
+        expect(controller.state, BackendConnectionState.online);
+
+        controller.dispose();
+        pendingStats.complete(_stats);
+        await starting;
+        await tester.pump(const Duration(seconds: 2));
+
+        expect(controller.state, BackendConnectionState.online);
+        expect(controller.stats, isNull);
         expect(notifications, 0);
         expect(client.readyCalls, 1);
       },
