@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:content_retrieval_app/core/api/api_exception.dart';
 import 'package:content_retrieval_app/features/search/domain/search_models.dart';
 import 'package:flutter/foundation.dart';
@@ -9,29 +11,42 @@ final class SearchController extends ChangeNotifier {
 
   final SearchService service;
 
-  String query = '';
-  RetrievalMode mode = RetrievalMode.hybrid;
-  Set<SearchChannel> channels = SearchChannel.values.toSet();
-  Set<SearchContentType> contentTypes = SearchContentType.values.toSet();
-  SearchViewState state = SearchViewState.initial;
-  SearchResponse? response;
-  ApiException? error;
-  String? queryError;
+  String _query = '';
+  RetrievalMode _mode = RetrievalMode.hybrid;
+  final Set<SearchChannel> _channels = SearchChannel.values.toSet();
+  final Set<SearchContentType> _contentTypes = SearchContentType.values.toSet();
+  late final Set<SearchChannel> _channelsView = UnmodifiableSetView(_channels);
+  late final Set<SearchContentType> _contentTypesView = UnmodifiableSetView(
+    _contentTypes,
+  );
+  SearchViewState _state = SearchViewState.initial;
+  SearchResponse? _response;
+  ApiException? _error;
+  String? _queryError;
 
   int _requestVersion = 0;
   bool _disposed = false;
+
+  String get query => _query;
+  RetrievalMode get mode => _mode;
+  Set<SearchChannel> get channels => _channelsView;
+  Set<SearchContentType> get contentTypes => _contentTypesView;
+  SearchViewState get state => _state;
+  SearchResponse? get response => _response;
+  ApiException? get error => _error;
+  String? get queryError => _queryError;
 
   void setQuery(String value) {
     if (_disposed) {
       return;
     }
-    final changed = query != value;
-    final clearedError = queryError != null;
+    final changed = _query != value;
+    final clearedError = _queryError != null;
     if (!changed && !clearedError) {
       return;
     }
-    query = value;
-    queryError = null;
+    _query = value;
+    _queryError = null;
     notifyListeners();
   }
 
@@ -40,11 +55,13 @@ final class SearchController extends ChangeNotifier {
       return;
     }
     final nextChannels = Set<SearchChannel>.of(value.channels);
-    if (mode == value && setEquals(channels, nextChannels)) {
+    if (_mode == value && setEquals(_channels, nextChannels)) {
       return;
     }
-    mode = value;
-    channels = nextChannels;
+    _mode = value;
+    _channels
+      ..clear()
+      ..addAll(nextChannels);
     notifyListeners();
   }
 
@@ -52,13 +69,13 @@ final class SearchController extends ChangeNotifier {
     if (_disposed) {
       return false;
     }
-    if (channels.contains(channel)) {
-      if (channels.length == 1) {
+    if (_channels.contains(channel)) {
+      if (_channels.length == 1) {
         return false;
       }
-      channels.remove(channel);
+      _channels.remove(channel);
     } else {
-      channels.add(channel);
+      _channels.add(channel);
     }
     notifyListeners();
     return true;
@@ -68,8 +85,8 @@ final class SearchController extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    if (!contentTypes.remove(contentType)) {
-      contentTypes.add(contentType);
+    if (!_contentTypes.remove(contentType)) {
+      _contentTypes.add(contentType);
     }
     notifyListeners();
   }
@@ -79,35 +96,34 @@ final class SearchController extends ChangeNotifier {
       return;
     }
 
-    final normalizedQuery = query.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final normalizedQuery = _query.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (normalizedQuery.isEmpty) {
       const validationMessage = 'Enter a search query';
-      if (queryError != validationMessage) {
-        queryError = validationMessage;
+      if (_queryError != validationMessage) {
+        _queryError = validationMessage;
         notifyListeners();
       }
       return;
     }
 
-    queryError = null;
-    error = null;
-    final requestVersion = ++_requestVersion;
-    state = SearchViewState.loading;
-    notifyListeners();
-
     final criteria = SearchCriteria(
       query: normalizedQuery,
-      channels: Set<SearchChannel>.of(channels),
-      contentTypes: Set<SearchContentType>.of(contentTypes),
+      channels: Set<SearchChannel>.of(_channels),
+      contentTypes: Set<SearchContentType>.of(_contentTypes),
     );
+    _queryError = null;
+    _error = null;
+    final requestVersion = ++_requestVersion;
+    _state = SearchViewState.loading;
+    notifyListeners();
 
     try {
       final nextResponse = await service.search(criteria);
       if (_disposed || requestVersion != _requestVersion) {
         return;
       }
-      response = nextResponse;
-      state = nextResponse.hits.isEmpty
+      _response = nextResponse;
+      _state = nextResponse.hits.isEmpty
           ? SearchViewState.empty
           : SearchViewState.success;
       notifyListeners();
@@ -115,9 +131,21 @@ final class SearchController extends ChangeNotifier {
       if (_disposed || requestVersion != _requestVersion) {
         return;
       }
-      error = nextError;
-      state = SearchViewState.failure;
+      _error = nextError;
+      _state = SearchViewState.failure;
       notifyListeners();
+    } catch (unexpectedError, stackTrace) {
+      if (!_disposed && requestVersion == _requestVersion) {
+        final retainedResponse = _response;
+        _state = retainedResponse == null
+            ? SearchViewState.initial
+            : retainedResponse.hits.isEmpty
+            ? SearchViewState.empty
+            : SearchViewState.success;
+        _error = null;
+        notifyListeners();
+      }
+      Error.throwWithStackTrace(unexpectedError, stackTrace);
     }
   }
 

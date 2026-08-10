@@ -23,6 +23,43 @@ void main() {
       expect(controller.queryError, isNull);
     });
 
+    test('channels cannot be mutated through public state', () {
+      final controller = SearchController(FakeSearchService());
+      addTearDown(controller.dispose);
+      final initialChannels = Set<SearchChannel>.of(controller.channels);
+
+      expect(controller.channels.clear, throwsUnsupportedError);
+
+      expect(controller.channels, initialChannels);
+    });
+
+    test('content types cannot be mutated through public state', () {
+      final controller = SearchController(FakeSearchService());
+      addTearDown(controller.dispose);
+      final initialContentTypes = Set<SearchContentType>.of(
+        controller.contentTypes,
+      );
+
+      expect(controller.contentTypes.clear, throwsUnsupportedError);
+
+      expect(controller.contentTypes, initialContentTypes);
+    });
+
+    test('public filter views stay stable as internal state changes', () {
+      final controller = SearchController(FakeSearchService());
+      addTearDown(controller.dispose);
+      final channelsView = controller.channels;
+      final contentTypesView = controller.contentTypes;
+
+      controller.setMode(RetrievalMode.semantic);
+      controller.toggleContentType(SearchContentType.images);
+
+      expect(identical(controller.channels, channelsView), isTrue);
+      expect(channelsView, RetrievalMode.semantic.channels);
+      expect(identical(controller.contentTypes, contentTypesView), isTrue);
+      expect(contentTypesView, isNot(contains(SearchContentType.images)));
+    });
+
     test(
       'blank submit reports validation without calling the service',
       () async {
@@ -168,6 +205,43 @@ void main() {
       pendingResponse.complete(searchResponse('snapshot', ['result.txt']));
       await submission;
     });
+
+    test(
+      'submit snapshots all criteria before loading listeners run',
+      () async {
+        final client = FakeSearchService()
+          ..results.add(searchResponse('original query', ['result.txt']));
+        final controller = SearchController(client);
+        addTearDown(controller.dispose);
+        controller.setQuery('  original\tquery  ');
+        final submittedChannels = Set<SearchChannel>.of(controller.channels);
+        final submittedContentTypes = Set<SearchContentType>.of(
+          controller.contentTypes,
+        );
+        var changedDuringLoading = false;
+        controller.addListener(() {
+          if (controller.state != SearchViewState.loading ||
+              changedDuringLoading) {
+            return;
+          }
+          changedDuringLoading = true;
+          controller.setQuery('changed query');
+          controller.toggleChannel(SearchChannel.keyword);
+          controller.toggleContentType(SearchContentType.images);
+        });
+
+        await controller.submit();
+
+        final criteria = client.calls.single;
+        expect(changedDuringLoading, isTrue);
+        expect(criteria.query, 'original query');
+        expect(criteria.channels, submittedChannels);
+        expect(criteria.contentTypes, submittedContentTypes);
+        expect(controller.query, 'changed query');
+        expect(controller.channels, isNot(submittedChannels));
+        expect(controller.contentTypes, isNot(submittedContentTypes));
+      },
+    );
 
     test('semantic mode copies exactly its declared channels', () {
       final controller = SearchController(FakeSearchService());
@@ -344,16 +418,126 @@ void main() {
     });
 
     test(
-      'unexpected service errors propagate instead of becoming failure',
+      'unexpected error restores initial state and original stack trace',
       () async {
-        final controller = SearchController(FakeSearchService());
+        final failure = StateError('Programming failure');
+        final originalStackTrace = StackTrace.fromString(
+          'original search stack',
+        );
+        final controller = SearchController(
+          _FailingSearchService(failure, originalStackTrace),
+        );
         addTearDown(controller.dispose);
         controller.setQuery('query');
+        var notifications = 0;
+        controller.addListener(() => notifications += 1);
+        Object? thrownError;
+        StackTrace? thrownStackTrace;
 
-        await expectLater(controller.submit(), throwsStateError);
+        try {
+          await controller.submit();
+        } catch (error, stackTrace) {
+          thrownError = error;
+          thrownStackTrace = stackTrace;
+        }
+
+        expect(thrownError, same(failure));
+        expect(thrownStackTrace.toString(), originalStackTrace.toString());
+        expect(controller.state, SearchViewState.initial);
+        expect(controller.error, isNull);
+        expect(notifications, 2);
+      },
+    );
+
+    test('unexpected error restores retained success state', () async {
+      final client = FakeSearchService()
+        ..results.add(searchResponse('first', ['first.txt']));
+      final controller = SearchController(client);
+      addTearDown(controller.dispose);
+      controller.setQuery('first');
+      await controller.submit();
+      final retainedResponse = controller.response;
+      controller.setQuery('second');
+      var notifications = 0;
+      controller.addListener(() => notifications += 1);
+
+      await expectLater(controller.submit(), throwsStateError);
+
+      expect(controller.state, SearchViewState.success);
+      expect(controller.response, same(retainedResponse));
+      expect(controller.error, isNull);
+      expect(notifications, 2);
+    });
+
+    test('unexpected error restores retained empty state', () async {
+      final client = FakeSearchService()
+        ..results.add(searchResponse('first', const []));
+      final controller = SearchController(client);
+      addTearDown(controller.dispose);
+      controller.setQuery('first');
+      await controller.submit();
+      final retainedResponse = controller.response;
+      controller.setQuery('second');
+
+      await expectLater(controller.submit(), throwsStateError);
+
+      expect(controller.state, SearchViewState.empty);
+      expect(controller.response, same(retainedResponse));
+      expect(controller.error, isNull);
+    });
+
+    test(
+      'stale unexpected error propagates without changing newer state',
+      () async {
+        final first = Completer<SearchResponse>();
+        final second = Completer<SearchResponse>();
+        final client = FakeSearchService()
+          ..results.addAll([first.future, second.future]);
+        final controller = SearchController(client);
+        addTearDown(controller.dispose);
+        controller.setQuery('first');
+        final firstCall = controller.submit();
+        controller.setQuery('second');
+        final secondCall = controller.submit();
+        second.complete(searchResponse('second', ['new.txt']));
+        await secondCall;
+        var notifications = 0;
+        controller.addListener(() => notifications += 1);
+        final failure = StateError('Old programming failure');
+        final expectation = expectLater(firstCall, throwsA(same(failure)));
+
+        first.completeError(failure);
+        await expectation;
+
+        expect(controller.state, SearchViewState.success);
+        expect(controller.response?.query, 'second');
+        expect(controller.error, isNull);
+        expect(notifications, 0);
+      },
+    );
+
+    test(
+      'disposed unexpected error propagates without updating state',
+      () async {
+        final pending = Completer<SearchResponse>();
+        final client = FakeSearchService()..results.add(pending.future);
+        final controller = SearchController(client);
+        controller.setQuery('query');
+        var notifications = 0;
+        controller.addListener(() => notifications += 1);
+        final submission = controller.submit();
+        notifications = 0;
+        controller.dispose();
+        final failure = StateError('Disposed programming failure');
+        final expectation = expectLater(submission, throwsA(same(failure)));
+
+        pending.completeError(failure);
+        await expectation;
 
         expect(controller.state, SearchViewState.loading);
+        expect(controller.response, isNull);
         expect(controller.error, isNull);
+        expect(notifications, 0);
       },
     );
 
@@ -400,4 +584,16 @@ SearchResponse searchResponse(String query, List<String> names) {
     elapsedMs: 1,
     weights: const {'keyword': 1},
   );
+}
+
+final class _FailingSearchService implements SearchService {
+  const _FailingSearchService(this.failure, this.stackTrace);
+
+  final Object failure;
+  final StackTrace stackTrace;
+
+  @override
+  Future<SearchResponse> search(SearchCriteria criteria) {
+    return Future<SearchResponse>.error(failure, stackTrace);
+  }
 }
