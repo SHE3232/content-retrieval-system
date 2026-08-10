@@ -42,12 +42,20 @@ final class IoFileLauncher implements FileLauncher {
       );
     }
 
+    final executable = switch (platform) {
+      DesktopPlatform.windows => 'explorer.exe',
+      DesktopPlatform.macos => 'open',
+      DesktopPlatform.linux => 'xdg-open',
+      DesktopPlatform.unsupported => throw const FileLaunchException(
+        FileLaunchErrorKind.unsupportedPlatform,
+        '当前系统不支持打开文件',
+      ),
+    };
+
     final bool exists;
     try {
       exists = await _fileExists(path);
-    } on FileLaunchException {
-      rethrow;
-    } catch (error) {
+    } on FileSystemException catch (error) {
       throw FileLaunchException(
         FileLaunchErrorKind.launchFailed,
         '无法打开文件，请检查系统关联设置',
@@ -62,21 +70,9 @@ final class IoFileLauncher implements FileLauncher {
       );
     }
 
-    final executable = switch (platform) {
-      DesktopPlatform.windows => 'explorer.exe',
-      DesktopPlatform.macos => 'open',
-      DesktopPlatform.linux => 'xdg-open',
-      DesktopPlatform.unsupported => throw const FileLaunchException(
-        FileLaunchErrorKind.unsupportedPlatform,
-        '当前系统不支持打开文件',
-      ),
-    };
-
     try {
       await _startProcess(executable, [path]);
-    } on FileLaunchException {
-      rethrow;
-    } catch (error) {
+    } on ProcessException catch (error) {
       throw FileLaunchException(
         FileLaunchErrorKind.launchFailed,
         '无法打开文件，请检查系统关联设置',

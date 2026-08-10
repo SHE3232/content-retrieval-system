@@ -143,10 +143,17 @@ void main() {
     test(
       'rejects an unsupported platform without starting a process',
       () async {
+        var existenceChecks = 0;
+        var processStarts = 0;
         final launcher = IoFileLauncher(
           platform: DesktopPlatform.unsupported,
-          fileExists: (_) async => true,
-          startProcess: (_, _) async => fail('must not start'),
+          fileExists: (_) async {
+            existenceChecks += 1;
+            return true;
+          },
+          startProcess: (_, _) async {
+            processStarts += 1;
+          },
         );
 
         await expectLater(
@@ -162,6 +169,8 @@ void main() {
                 .having((error) => error.cause, 'cause', isNull),
           ),
         );
+        expect(existenceChecks, 0);
+        expect(processStarts, 0);
       },
     );
 
@@ -193,7 +202,7 @@ void main() {
       );
     });
 
-    test('maps any process start error to launchFailed', () async {
+    test('preserves unexpected process start errors', () async {
       final cause = StateError('process start failed');
       final launcher = IoFileLauncher(
         platform: DesktopPlatform.linux,
@@ -201,18 +210,18 @@ void main() {
         startProcess: (_, _) async => throw cause,
       );
 
-      await expectLater(
-        launcher.open('/tmp/report.pdf'),
-        throwsA(
-          isA<FileLaunchException>()
-              .having(
-                (error) => error.kind,
-                'kind',
-                FileLaunchErrorKind.launchFailed,
-              )
-              .having((error) => error.cause, 'cause', same(cause)),
-        ),
+      await expectLater(launcher.open('/tmp/report.pdf'), throwsA(same(cause)));
+    });
+
+    test('preserves unexpected file existence errors', () async {
+      final cause = StateError('existence check failed');
+      final launcher = IoFileLauncher(
+        platform: DesktopPlatform.linux,
+        fileExists: (_) async => throw cause,
+        startProcess: (_, _) async => fail('must not start'),
       );
+
+      await expectLater(launcher.open('/tmp/report.pdf'), throwsA(same(cause)));
     });
 
     test('maps file existence errors to launchFailed', () async {
