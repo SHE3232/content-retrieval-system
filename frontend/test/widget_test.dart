@@ -283,7 +283,7 @@ void main() {
       );
       expect(
         chipLabel.resolve(const {WidgetState.disabled}).color,
-        scheme.onSurface.withValues(alpha: 0.38),
+        scheme.onSurface,
       );
       expect(
         chipLabel.resolve(const <WidgetState>{}).color,

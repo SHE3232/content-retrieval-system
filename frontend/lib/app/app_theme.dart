@@ -75,7 +75,8 @@ abstract final class AppTheme {
         disabledColor: scheme.onSurface.withValues(alpha: 0.12),
         labelStyle: WidgetStateTextStyle.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
-            return TextStyle(color: scheme.onSurface.withValues(alpha: 0.38));
+            // RawChip applies the disabled opacity while painting its label.
+            return TextStyle(color: scheme.onSurface);
           }
           if (states.contains(WidgetState.selected)) {
             return TextStyle(color: scheme.onSecondaryContainer);
