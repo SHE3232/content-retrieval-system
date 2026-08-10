@@ -28,26 +28,51 @@ final class _AppShellState extends State<AppShell> {
               children: [
                 NavigationRail(
                   extended: extended,
+                  scrollable: true,
                   minExtendedWidth: 214,
                   selectedIndex: _selectedIndex,
                   onDestinationSelected: (index) {
                     setState(() => _selectedIndex = index);
                   },
-                  destinations: const [
+                  destinations: [
                     NavigationRailDestination(
-                      icon: Icon(Icons.search_outlined),
-                      selectedIcon: Icon(Icons.search),
-                      label: Text('搜索'),
+                      icon: _destinationIcon(
+                        extended: extended,
+                        label: '搜索',
+                        icon: Icons.search_outlined,
+                      ),
+                      selectedIcon: _destinationIcon(
+                        extended: extended,
+                        label: '搜索',
+                        icon: Icons.search,
+                      ),
+                      label: const Text('搜索'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.library_books_outlined),
-                      selectedIcon: Icon(Icons.library_books),
-                      label: Text('索引库'),
+                      icon: _destinationIcon(
+                        extended: extended,
+                        label: '索引库',
+                        icon: Icons.library_books_outlined,
+                      ),
+                      selectedIcon: _destinationIcon(
+                        extended: extended,
+                        label: '索引库',
+                        icon: Icons.library_books,
+                      ),
+                      label: const Text('索引库'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.settings_outlined),
-                      selectedIcon: Icon(Icons.settings),
-                      label: Text('设置'),
+                      icon: _destinationIcon(
+                        extended: extended,
+                        label: '设置',
+                        icon: Icons.settings_outlined,
+                      ),
+                      selectedIcon: _destinationIcon(
+                        extended: extended,
+                        label: '设置',
+                        icon: Icons.settings,
+                      ),
+                      label: const Text('设置'),
                     ),
                   ],
                 ),
@@ -67,6 +92,22 @@ final class _AppShellState extends State<AppShell> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _destinationIcon({
+    required bool extended,
+    required String label,
+    required IconData icon,
+  }) {
+    final destinationIcon = Icon(icon);
+    if (extended) {
+      return destinationIcon;
+    }
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: destinationIcon,
     );
   }
 }

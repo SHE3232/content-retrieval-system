@@ -2,6 +2,7 @@ import 'package:content_retrieval_app/app/app_theme.dart';
 import 'package:content_retrieval_app/features/placeholders/index_library_page.dart';
 import 'package:content_retrieval_app/features/placeholders/settings_page.dart';
 import 'package:content_retrieval_app/features/shell/app_shell.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -70,7 +71,7 @@ void main() {
   });
 
   testWidgets('extends the navigation rail at desktop width', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    await tester.binding.setSurfaceSize(const Size(1000, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(_buildApp(const Text('SEARCH_PAGE')));
@@ -84,7 +85,7 @@ void main() {
   testWidgets('collapses the navigation rail below desktop width', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(900, 720));
+    await tester.binding.setSurfaceSize(const Size(999, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(_buildApp(const Text('SEARCH_PAGE')));
@@ -92,6 +93,42 @@ void main() {
     final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
     expect(rail.extended, isFalse);
     expect(rail.minExtendedWidth, 214);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows a tooltip when hovering a collapsed destination', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(900, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_buildApp(const Text('SEARCH_PAGE')));
+    final label = find.text('索引库');
+    final labelsBeforeHover = tester.widgetList<Text>(label).length;
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+
+    await mouse.moveTo(
+      tester.getCenter(find.byIcon(Icons.library_books_outlined)),
+    );
+    await tester.pump(
+      AppTheme.light().tooltipTheme.waitDuration! +
+          const Duration(milliseconds: 100),
+    );
+
+    expect(label, findsNWidgets(labelsBeforeHover + 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scrolls destinations instead of overflowing at short heights', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 120));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_buildApp(const Text('SEARCH_PAGE')));
+
     expect(tester.takeException(), isNull);
   });
 
@@ -178,10 +215,58 @@ void main() {
     for (final theme in [light, dark]) {
       final scheme = theme.colorScheme;
       expect(theme.inputDecorationTheme.filled, isTrue);
+      expect(theme.inputDecorationTheme.fillColor, isA<WidgetStateColor>());
+      final inputFill =
+          theme.inputDecorationTheme.fillColor! as WidgetStateColor;
       expect(
-        theme.inputDecorationTheme.fillColor,
+        inputFill.resolve(const <WidgetState>{}),
         scheme.surfaceContainerHighest,
       );
+      expect(
+        inputFill.resolve(const {WidgetState.disabled}),
+        scheme.onSurface.withValues(alpha: 0.04),
+      );
+
+      expect(
+        theme.inputDecorationTheme.labelStyle,
+        isA<WidgetStateTextStyle>(),
+      );
+      final inputLabel =
+          theme.inputDecorationTheme.labelStyle! as WidgetStateTextStyle;
+      expect(inputLabel.resolve(const {WidgetState.error}).color, scheme.error);
+      expect(
+        inputLabel.resolve(const {WidgetState.disabled}).color,
+        scheme.onSurface.withValues(alpha: 0.38),
+      );
+      expect(
+        inputLabel.resolve(const {WidgetState.focused}).color,
+        scheme.primary,
+      );
+      expect(
+        inputLabel.resolve(const <WidgetState>{}).color,
+        scheme.onSurfaceVariant,
+      );
+
+      expect(
+        theme.inputDecorationTheme.floatingLabelStyle,
+        isA<WidgetStateTextStyle>(),
+      );
+      final floatingLabel =
+          theme.inputDecorationTheme.floatingLabelStyle!
+              as WidgetStateTextStyle;
+      expect(
+        floatingLabel.resolve(const {WidgetState.error}).color,
+        scheme.error,
+      );
+      expect(
+        floatingLabel.resolve(const {WidgetState.disabled}).color,
+        scheme.onSurface.withValues(alpha: 0.38),
+      );
+      expect(
+        floatingLabel.resolve(const {WidgetState.focused}).color,
+        scheme.primary,
+      );
+
       expect(theme.inputDecorationTheme.border, isA<OutlineInputBorder>());
       expect(
         (theme.inputDecorationTheme.border! as OutlineInputBorder).borderRadius,
@@ -190,6 +275,35 @@ void main() {
       expect(theme.chipTheme.shape, isA<RoundedRectangleBorder>());
       expect(theme.chipTheme.backgroundColor, scheme.surfaceContainerLow);
       expect(theme.chipTheme.selectedColor, scheme.secondaryContainer);
+      expect(theme.chipTheme.labelStyle, isA<WidgetStateTextStyle>());
+      final chipLabel = theme.chipTheme.labelStyle! as WidgetStateTextStyle;
+      expect(
+        chipLabel.resolve(const {WidgetState.selected}).color,
+        scheme.onSecondaryContainer,
+      );
+      expect(
+        chipLabel.resolve(const {WidgetState.disabled}).color,
+        scheme.onSurface.withValues(alpha: 0.38),
+      );
+      expect(
+        chipLabel.resolve(const <WidgetState>{}).color,
+        scheme.onSurfaceVariant,
+      );
+      expect(theme.chipTheme.secondaryLabelStyle, isNull);
+      expect(theme.chipTheme.side, isA<WidgetStateBorderSide>());
+      final chipSide = theme.chipTheme.side! as WidgetStateBorderSide;
+      expect(
+        chipSide.resolve(const {WidgetState.selected})!.color,
+        scheme.secondary,
+      );
+      expect(
+        chipSide.resolve(const {WidgetState.disabled})!.color,
+        scheme.onSurface.withValues(alpha: 0.12),
+      );
+      expect(
+        chipSide.resolve(const <WidgetState>{})!.color,
+        scheme.outlineVariant,
+      );
       expect(theme.navigationRailTheme.backgroundColor, scheme.surface);
       expect(
         theme.navigationRailTheme.indicatorColor,
@@ -217,6 +331,36 @@ void main() {
       );
     }
   });
+
+  for (final themeCase in <({ThemeMode mode, Brightness brightness})>[
+    (mode: ThemeMode.light, brightness: Brightness.light),
+    (mode: ThemeMode.dark, brightness: Brightness.dark),
+  ]) {
+    testWidgets(
+      'renders ${themeCase.mode.name} state themed controls without overflow',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 720));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: themeCase.mode,
+            home: const Scaffold(body: _ThemeStateProbe()),
+          ),
+        );
+
+        final probeContext = tester.element(
+          find.byKey(const Key('THEME_STATE_PROBE')),
+        );
+        expect(Theme.of(probeContext).brightness, themeCase.brightness);
+        expect(find.byType(TextField), findsNWidgets(2));
+        expect(find.byType(FilterChip), findsNWidgets(3));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   for (final placeholder
       in <
@@ -343,6 +487,50 @@ final class _StatefulSearchProbeState extends State<_StatefulSearchProbe> {
           child: const Text('INCREMENT_SEARCH'),
         ),
       ],
+    );
+  }
+}
+
+final class _ThemeStateProbe extends StatelessWidget {
+  const _ThemeStateProbe();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      key: const Key('THEME_STATE_PROBE'),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const TextField(decoration: InputDecoration(labelText: '可用输入框')),
+          const SizedBox(height: 16),
+          const TextField(
+            enabled: false,
+            decoration: InputDecoration(labelText: '禁用输入框'),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            children: [
+              FilterChip(
+                label: const Text('未选择'),
+                selected: false,
+                onSelected: (_) {},
+              ),
+              FilterChip(
+                label: const Text('已选择'),
+                selected: true,
+                onSelected: (_) {},
+              ),
+              const FilterChip(
+                label: Text('已禁用'),
+                selected: false,
+                onSelected: null,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

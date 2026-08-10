@@ -20,6 +20,18 @@ abstract final class AppTheme {
     final controlShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(_controlRadius),
     );
+    final inputLabelStyle = WidgetStateTextStyle.resolveWith((states) {
+      if (states.contains(WidgetState.error)) {
+        return TextStyle(color: scheme.error);
+      }
+      if (states.contains(WidgetState.disabled)) {
+        return TextStyle(color: scheme.onSurface.withValues(alpha: 0.38));
+      }
+      if (states.contains(WidgetState.focused)) {
+        return TextStyle(color: scheme.primary);
+      }
+      return TextStyle(color: scheme.onSurfaceVariant);
+    });
 
     return ThemeData(
       useMaterial3: true,
@@ -28,7 +40,12 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: scheme.surface,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest,
+        fillColor: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return scheme.onSurface.withValues(alpha: 0.04);
+          }
+          return scheme.surfaceContainerHighest;
+        }),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -47,8 +64,8 @@ abstract final class AppTheme {
         focusedErrorBorder: inputBorder.copyWith(
           borderSide: BorderSide(color: scheme.error, width: 2),
         ),
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        floatingLabelStyle: TextStyle(color: scheme.primary),
+        labelStyle: inputLabelStyle,
+        floatingLabelStyle: inputLabelStyle,
         helperStyle: TextStyle(color: scheme.onSurfaceVariant),
         errorStyle: TextStyle(color: scheme.error),
       ),
@@ -56,9 +73,24 @@ abstract final class AppTheme {
         backgroundColor: scheme.surfaceContainerLow,
         selectedColor: scheme.secondaryContainer,
         disabledColor: scheme.onSurface.withValues(alpha: 0.12),
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        secondaryLabelStyle: TextStyle(color: scheme.onSecondaryContainer),
-        side: BorderSide(color: scheme.outlineVariant),
+        labelStyle: WidgetStateTextStyle.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return TextStyle(color: scheme.onSurface.withValues(alpha: 0.38));
+          }
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(color: scheme.onSecondaryContainer);
+          }
+          return TextStyle(color: scheme.onSurfaceVariant);
+        }),
+        side: WidgetStateBorderSide.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return BorderSide(color: scheme.onSurface.withValues(alpha: 0.12));
+          }
+          if (states.contains(WidgetState.selected)) {
+            return BorderSide(color: scheme.secondary);
+          }
+          return BorderSide(color: scheme.outlineVariant);
+        }),
         shape: controlShape,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         labelPadding: const EdgeInsets.symmetric(horizontal: 4),
