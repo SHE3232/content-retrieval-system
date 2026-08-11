@@ -1,12 +1,126 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:content_retrieval_app/app/content_retrieval_app.dart';
 import 'package:content_retrieval_app/app/app_theme.dart';
+import 'package:content_retrieval_app/core/api/json_transport.dart';
 import 'package:content_retrieval_app/features/placeholders/index_library_page.dart';
 import 'package:content_retrieval_app/features/placeholders/settings_page.dart';
+import 'package:content_retrieval_app/features/search/presentation/search_page.dart';
 import 'package:content_retrieval_app/features/shell/app_shell.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fakes.dart';
+
 void main() {
+  testWidgets('connects the production application shell and themes', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final transport = FakeJsonTransport()
+      ..getResponses.addAll(const <JsonResponse>[
+        JsonResponse(statusCode: 200, body: null),
+        JsonResponse(
+          statusCode: 200,
+          body: {
+            'record_count': 3,
+            'file_count': 2,
+            'text_record_count': 2,
+            'image_record_count': 1,
+          },
+        ),
+      ]);
+
+    await tester.pumpWidget(
+      ContentRetrievalApp(
+        transport: transport,
+        fileLauncher: FakeFileLauncher(),
+        pathClipboard: FakePathClipboard(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    final expectedLight = AppTheme.light();
+    final expectedDark = AppTheme.dark();
+    expect(app.title, '本地内容检索');
+    expect(app.debugShowCheckedModeBanner, isFalse);
+    expect(app.themeMode, ThemeMode.system);
+    expect(app.theme!.brightness, expectedLight.brightness);
+    expect(app.theme!.colorScheme, expectedLight.colorScheme);
+    expect(app.darkTheme!.brightness, expectedDark.brightness);
+    expect(app.darkTheme!.colorScheme, expectedDark.colorScheme);
+    expect(find.byType(AppShell), findsOneWidget);
+    expect(find.byType(SearchPage), findsOneWidget);
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.text('搜索内容'), findsOneWidget);
+    expect(
+      find.text('You have pushed the button this many times:'),
+      findsNothing,
+    );
+    expect(find.byIcon(Icons.add), findsNothing);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(transport.gets.map((request) => request.path), [
+      '/health/ready',
+      '/v1/index/stats',
+    ]);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(transport.isClosed, isTrue);
+  });
+
+  testWidgets('closes its transport once while status startup is pending', (
+    tester,
+  ) async {
+    final transport = _TrackingJsonTransport();
+
+    await tester.pumpWidget(
+      ContentRetrievalApp(
+        transport: transport,
+        fileLauncher: FakeFileLauncher(),
+        pathClipboard: FakePathClipboard(),
+      ),
+    );
+    expect(transport.getPaths, ['/health/ready']);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(transport.closeCalls, 1);
+
+    transport.readiness.complete(
+      const JsonResponse(statusCode: 200, body: null),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pump();
+
+    expect(transport.closeCalls, 1);
+    expect(transport.getPaths, ['/health/ready']);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('main entry boots only ContentRetrievalApp', () {
+    final source = File('lib/main.dart').readAsStringSync();
+
+    expect(source, contains('WidgetsFlutterBinding.ensureInitialized();'));
+    expect(source, contains('runApp(const ContentRetrievalApp());'));
+    for (final forbidden in <String>[
+      'MyApp',
+      'MyHomePage',
+      '_counter',
+      'You have pushed the button',
+      'FloatingActionButton',
+      'Icons.add',
+    ]) {
+      expect(source, isNot(contains(forbidden)), reason: forbidden);
+    }
+  });
+
   testWidgets('shows all destinations and the injected search page initially', (
     tester,
   ) async {
@@ -532,5 +646,36 @@ final class _ThemeStateProbe extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+final class _TrackingJsonTransport implements JsonTransport {
+  final readiness = Completer<JsonResponse>();
+  final getPaths = <String>[];
+  final posts = <({String path, Map<String, Object?> body})>[];
+
+  int closeCalls = 0;
+
+  @override
+  Future<JsonResponse> get(String path) async {
+    getPaths.add(path);
+    if (path == '/health/ready') {
+      return readiness.future;
+    }
+    throw StateError('Unexpected GET $path');
+  }
+
+  @override
+  Future<JsonResponse> post(
+    String path, {
+    required Map<String, Object?> body,
+  }) async {
+    posts.add((path: path, body: Map<String, Object?>.unmodifiable(body)));
+    throw StateError('Unexpected POST $path');
+  }
+
+  @override
+  void close() {
+    closeCalls += 1;
   }
 }
