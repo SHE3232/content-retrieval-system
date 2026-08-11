@@ -18,7 +18,7 @@ final class SearchStateView extends StatelessWidget {
   final SearchController controller;
   final FileLauncher fileLauncher;
   final PathClipboard pathClipboard;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
   final VoidCallback onClearFilters;
 
   @override
@@ -37,37 +37,51 @@ final class SearchStateView extends StatelessWidget {
 
   Widget _loading(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 20),
-      itemCount: 3,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (_, _) => Container(
-        key: const Key('search-loading-skeleton'),
-        height: 132,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FractionallySizedBox(
-              widthFactor: 0.35,
-              child: Container(height: 14, color: scheme.surfaceContainerHigh),
-            ),
-            const SizedBox(height: 18),
-            FractionallySizedBox(
-              widthFactor: 0.82,
-              child: Container(height: 10, color: scheme.surfaceContainerHigh),
-            ),
-            const SizedBox(height: 10),
-            FractionallySizedBox(
-              widthFactor: 0.58,
-              child: Container(height: 10, color: scheme.surfaceContainerHigh),
-            ),
-          ],
+    return Semantics(
+      liveRegion: true,
+      label: '正在搜索',
+      excludeSemantics: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.only(bottom: 20),
+        itemCount: 3,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, _) => Container(
+          key: const Key('search-loading-skeleton'),
+          height: 132,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FractionallySizedBox(
+                widthFactor: 0.35,
+                child: Container(
+                  height: 14,
+                  color: scheme.surfaceContainerHigh,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FractionallySizedBox(
+                widthFactor: 0.82,
+                child: Container(
+                  height: 10,
+                  color: scheme.surfaceContainerHigh,
+                ),
+              ),
+              const SizedBox(height: 10),
+              FractionallySizedBox(
+                widthFactor: 0.58,
+                child: Container(
+                  height: 10,
+                  color: scheme.surfaceContainerHigh,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -93,7 +107,7 @@ final class SearchStateView extends StatelessWidget {
             itemCount: response.hits.length,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (_, index) => SearchResultTile(
-              key: ValueKey(response.hits[index].fileId),
+              key: ValueKey((response, response.hits[index].fileId)),
               hit: response.hits[index],
               fileLauncher: fileLauncher,
               pathClipboard: pathClipboard,

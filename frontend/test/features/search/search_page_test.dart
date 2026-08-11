@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:content_retrieval_app/app/app_theme.dart';
 import 'package:content_retrieval_app/core/api/api_exception.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
+import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
 import 'package:content_retrieval_app/features/search/domain/search_models.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_page.dart';
@@ -30,6 +31,29 @@ void main() {
       isNotNull,
     );
   });
+
+  for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets('online status meets contrast in ${themeMode.name} mode', (
+      tester,
+    ) async {
+      await _SearchHarness.create(tester, themeMode: themeMode);
+      final statusText = find.text('后端在线');
+      final textColor = tester.widget<Text>(statusText).style!.color!;
+      final iconColor = tester
+          .widget<Icon>(find.byIcon(Icons.check_circle_outline))
+          .color!;
+      final background = tester
+          .widget<ColoredBox>(
+            find
+                .ancestor(of: statusText, matching: find.byType(ColoredBox))
+                .first,
+          )
+          .color;
+
+      expect(iconColor, textColor);
+      expect(_contrastRatio(textColor, background), greaterThanOrEqualTo(4.5));
+    });
+  }
 
   testWidgets('checking and offline states are explicit and block search', (
     tester,
@@ -136,6 +160,15 @@ void main() {
       find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
       findsNWidgets(3),
     );
+    final loadingSemantics = find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.label == '正在搜索',
+    );
+    expect(loadingSemantics, findsOneWidget);
+    expect(
+      tester.widget<Semantics>(loadingSemantics).properties.liveRegion,
+      isTrue,
+    );
+    expect(tester.widget<Semantics>(loadingSemantics).excludeSemantics, isTrue);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(harness.submitButton.onPressed, isNull);
     await tester.tap(
@@ -149,6 +182,73 @@ void main() {
     pending.complete(_response(query: 'pending'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('loading locks persistent filters until the response completes', (
+    tester,
+  ) async {
+    final pending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(pending.future);
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      'locked criteria',
+    );
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pump();
+
+    _expectFilterControlsEnabled(tester, false);
+    await tester.tap(find.text('语义'), warnIfMissed: false);
+    await tester.tap(
+      find.byKey(const Key('search-content-images')),
+      warnIfMissed: false,
+    );
+    await tester.tap(
+      find.byKey(const Key('search-channel-keyword')),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+
+    expect(harness.searchController.mode, RetrievalMode.hybrid);
+    expect(harness.searchController.channels, SearchChannel.values.toSet());
+    expect(
+      harness.searchController.contentTypes,
+      SearchContentType.values.toSet(),
+    );
+    expect(harness.searchService.calls, hasLength(1));
+
+    pending.complete(
+      _response(query: 'locked criteria', names: const ['locked.txt']),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('locked.txt'), findsOneWidget);
+    _expectFilterControlsEnabled(tester, true);
+  });
+
+  testWidgets(
+    'loading filter lock stays synchronized inside the bottom sheet',
+    (tester) async {
+      final pending = Completer<SearchResponse>();
+      final harness =
+          await _SearchHarness.create(tester, surfaceSize: const Size(900, 720))
+            ..searchService.results.add(pending.future);
+      await tester.enterText(
+        find.byKey(const Key('search-query-field')),
+        'modal lock',
+      );
+      await tester.tap(find.byKey(const Key('search-submit-button')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('search-filter-button')));
+      await tester.pumpAndSettle();
+
+      _expectFilterControlsEnabled(tester, false);
+      pending.complete(_response(query: 'modal lock'));
+      await tester.pumpAndSettle();
+
+      _expectFilterControlsEnabled(tester, true);
+      expect(harness.searchService.calls, hasLength(1));
+    },
+  );
 
   testWidgets('empty state clears filters and exposes the follow-up request', (
     tester,
@@ -221,6 +321,42 @@ void main() {
     expect(find.text('recovered.txt'), findsOneWidget);
   });
 
+  testWidgets('retry follows backend availability and submits once online', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        const ApiException(
+          ApiErrorKind.rejected,
+          'hidden outage detail',
+          statusCode: 503,
+        ),
+      );
+    await harness.search('retry gating');
+
+    harness.statusController.state = BackendConnectionState.offline;
+    harness.statusController.notifyListeners();
+    await tester.pump();
+    final retry = find.byKey(const Key('search-retry-button'));
+    expect(tester.widget<FilledButton>(retry).onPressed, isNull);
+    await tester.tap(retry, warnIfMissed: false);
+    await tester.pump();
+    expect(harness.searchService.calls, hasLength(1));
+
+    harness.searchService.results.add(
+      _response(query: 'retry gating', names: const ['online.txt']),
+    );
+    harness.statusController.state = BackendConnectionState.online;
+    harness.statusController.notifyListeners();
+    await tester.pump();
+    expect(tester.widget<FilledButton>(retry).onPressed, isNotNull);
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+
+    expect(harness.searchService.calls, hasLength(2));
+    expect(find.text('online.txt'), findsOneWidget);
+  });
+
   testWidgets('other API failures use a generic safe message', (tester) async {
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.add(
@@ -271,7 +407,16 @@ void main() {
     expect(find.text('候选 31 个，用时 12.75 ms'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '打开'), findsOneWidget);
     expect(find.byTooltip('复制完整路径'), findsOneWidget);
+    expect(find.bySemanticsLabel('打开 report.pdf'), findsOneWidget);
     expect(find.bySemanticsLabel('复制 report.pdf 的完整路径'), findsOneWidget);
+    expect(find.bySemanticsLabel(r'完整路径 C:\资料\report.pdf'), findsOneWidget);
+    final pathSemantics = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label == r'完整路径 C:\资料\report.pdf',
+    );
+    expect(pathSemantics, findsOneWidget);
+    expect(tester.widget<Semantics>(pathSemantics).excludeSemantics, isTrue);
   });
 
   testWidgets('paragraph metadata is shown when page is absent', (
@@ -345,6 +490,174 @@ void main() {
     expect(harness.pathClipboard.paths, [r'C:\notes\copy.txt']);
     expect(find.text('路径已复制'), findsOneWidget);
   });
+
+  testWidgets(
+    'result tile open disables while pending and ignores double tap',
+    (tester) async {
+      final pending = Completer<void>();
+      final harness = await _SearchHarness.create(tester)
+        ..fileLauncher.results.add(pending.future)
+        ..searchService.results.add(_response(names: const ['pending.txt']));
+      await harness.search('open pending');
+      final open = find.byKey(const Key('open-file-id-0'));
+
+      await tester.tap(open);
+      await tester.pump();
+      expect(tester.widget<FilledButton>(open).onPressed, isNull);
+      await tester.tap(open, warnIfMissed: false);
+      await tester.pump();
+      expect(harness.fileLauncher.calls, 1);
+
+      pending.complete();
+      await tester.pump();
+      expect(tester.widget<FilledButton>(open).onPressed, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'result tile copy disables while pending and ignores double tap',
+    (tester) async {
+      final pending = Completer<void>();
+      final harness = await _SearchHarness.create(tester)
+        ..pathClipboard.results.add(pending.future)
+        ..searchService.results.add(_response(names: const ['pending.txt']));
+      await harness.search('copy pending');
+      final copy = find.byKey(const Key('copy-path-file-id-0'));
+
+      await tester.tap(copy);
+      await tester.pump();
+      expect(tester.widget<IconButton>(copy).onPressed, isNull);
+      await tester.tap(copy, warnIfMissed: false);
+      await tester.pump();
+      expect(harness.pathClipboard.calls, 1);
+
+      pending.complete();
+      await tester.pump();
+      expect(tester.widget<IconButton>(copy).onPressed, isNotNull);
+      expect(find.text('路径已复制'), findsOneWidget);
+    },
+  );
+
+  testWidgets('result tile pending operations tolerate unmount', (
+    tester,
+  ) async {
+    final pendingOpen = Completer<void>();
+    final pendingCopy = Completer<void>();
+    final harness = await _SearchHarness.create(tester)
+      ..fileLauncher.results.add(pendingOpen.future)
+      ..pathClipboard.results.add(pendingCopy.future)
+      ..searchService.results.add(_response(names: const ['pending.txt']));
+    await harness.search('unmount pending');
+    final dynamic openCallback = tester
+        .widget<FilledButton>(find.byKey(const Key('open-file-id-0')))
+        .onPressed!;
+    final dynamic copyCallback = tester
+        .widget<IconButton>(find.byKey(const Key('copy-path-file-id-0')))
+        .onPressed!;
+
+    final Future<void> openOperation = openCallback() as Future<void>;
+    final Future<void> copyOperation = copyCallback() as Future<void>;
+    await tester.pumpWidget(const SizedBox.shrink());
+    pendingOpen.complete();
+    pendingCopy.complete();
+    await Future.wait([openOperation, copyOperation]);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('result tile shows safe expected copy failure without success', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..pathClipboard.results.add(const PathClipboardException())
+      ..searchService.results.add(_response(names: const ['copy-error.txt']));
+    await harness.search('copy failure');
+
+    await tester.tap(find.byKey(const Key('copy-path-file-id-0')));
+    await tester.pump();
+
+    expect(find.text('无法复制路径，请稍后重试'), findsOneWidget);
+    expect(find.text('路径已复制'), findsNothing);
+  });
+
+  testWidgets('result tile preserves unexpected operation errors', (
+    tester,
+  ) async {
+    final openError = StateError('unexpected open');
+    final copyError = StateError('unexpected copy');
+    final harness = await _SearchHarness.create(tester)
+      ..fileLauncher.results.add(openError)
+      ..pathClipboard.results.add(copyError)
+      ..searchService.results.add(_response(names: const ['errors.txt']));
+    await harness.search('unexpected errors');
+    final dynamic openCallback = tester
+        .widget<FilledButton>(find.byKey(const Key('open-file-id-0')))
+        .onPressed!;
+    final dynamic copyCallback = tester
+        .widget<IconButton>(find.byKey(const Key('copy-path-file-id-0')))
+        .onPressed!;
+
+    await expectLater(openCallback(), throwsA(same(openError)));
+    await expectLater(copyCallback(), throwsA(same(copyError)));
+  });
+
+  testWidgets(
+    'same file in a new response clears errors and ignores stale completion',
+    (tester) async {
+      final pendingOpen = Completer<void>();
+      final harness = await _SearchHarness.create(tester)
+        ..fileLauncher.results.add(pendingOpen.future)
+        ..pathClipboard.results.add(const PathClipboardException())
+        ..searchService.results.addAll([
+          _response(
+            hits: [
+              _hit(
+                fileId: 'same-file',
+                name: 'old.txt',
+                path: r'C:\results\old.txt',
+              ),
+            ],
+          ),
+          _response(
+            hits: [
+              _hit(
+                fileId: 'same-file',
+                name: 'new.txt',
+                path: r'C:\results\new.txt',
+              ),
+            ],
+          ),
+        ]);
+      await harness.search('old response');
+
+      await tester.tap(find.byKey(const Key('copy-path-same-file')));
+      await tester.pump();
+      expect(find.text('无法复制路径，请稍后重试'), findsOneWidget);
+      final dynamic openCallback = tester
+          .widget<FilledButton>(find.byKey(const Key('open-same-file')))
+          .onPressed!;
+      final Future<void> oldOpen = openCallback() as Future<void>;
+      await tester.pump();
+
+      await harness.search('new response');
+      expect(find.text('new.txt'), findsOneWidget);
+      expect(find.text(r'C:\results\new.txt'), findsOneWidget);
+      expect(find.text('无法复制路径，请稍后重试'), findsNothing);
+
+      pendingOpen.completeError(
+        const FileLaunchException(
+          FileLaunchErrorKind.launchFailed,
+          'private stale failure',
+        ),
+      );
+      await oldOpen;
+      await tester.pump();
+
+      expect(find.text('无法打开文件，请检查系统关联设置'), findsNothing);
+      expect(find.textContaining('private stale failure'), findsNothing);
+    },
+  );
 
   testWidgets('desktop keeps a 292 pixel persistent filter panel', (
     tester,
@@ -511,22 +824,53 @@ void main() {
   test(
     'platform fakes queue success and typed failure without swallowing it',
     () async {
-      const error = FileLaunchException(
+      final launcherPending = Completer<void>();
+      final clipboardPending = Completer<void>();
+      const launcherError = FileLaunchException(
         FileLaunchErrorKind.launchFailed,
         'queued failure',
       );
-      final launcher = FakeFileLauncher()..results.addAll([null, error]);
-      final clipboard = FakePathClipboard()..results.addAll([null, error]);
+      const clipboardError = PathClipboardException();
+      final launcher = FakeFileLauncher()
+        ..results.addAll([null, launcherError, launcherPending.future]);
+      final clipboard = FakePathClipboard()
+        ..results.addAll([null, clipboardError, clipboardPending.future]);
 
       await launcher.open('first.txt');
-      await expectLater(launcher.open('second.txt'), throwsA(same(error)));
+      await expectLater(
+        launcher.open('second.txt'),
+        throwsA(same(launcherError)),
+      );
       await clipboard.copy('first.txt');
-      await expectLater(clipboard.copy('second.txt'), throwsA(same(error)));
+      await expectLater(
+        clipboard.copy('second.txt'),
+        throwsA(same(clipboardError)),
+      );
 
-      expect(launcher.paths, ['first.txt', 'second.txt']);
-      expect(clipboard.paths, ['first.txt', 'second.txt']);
+      final pendingOpen = launcher.open('third.txt');
+      final pendingCopy = clipboard.copy('third.txt');
+      launcherPending.complete();
+      clipboardPending.complete();
+      await Future.wait([pendingOpen, pendingCopy]);
+
+      expect(launcher.paths, ['first.txt', 'second.txt', 'third.txt']);
+      expect(clipboard.paths, ['first.txt', 'second.txt', 'third.txt']);
     },
   );
+}
+
+void _expectFilterControlsEnabled(WidgetTester tester, bool enabled) {
+  expect(
+    tester
+        .widget<SegmentedButton<RetrievalMode>>(
+          find.byType(SegmentedButton<RetrievalMode>),
+        )
+        .onSelectionChanged,
+    enabled ? isNotNull : isNull,
+  );
+  for (final chip in tester.widgetList<FilterChip>(find.byType(FilterChip))) {
+    expect(chip.onSelected, enabled ? isNotNull : isNull);
+  }
 }
 
 final class _SearchHarness {
@@ -552,6 +896,7 @@ final class _SearchHarness {
     WidgetTester tester, {
     BackendConnectionState backendState = BackendConnectionState.online,
     Size surfaceSize = const Size(1280, 720),
+    ThemeMode themeMode = ThemeMode.light,
   }) async {
     await tester.binding.setSurfaceSize(surfaceSize);
     final searchService = FakeSearchService();
@@ -581,6 +926,7 @@ final class _SearchHarness {
       MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
+        themeMode: themeMode,
         home: Scaffold(
           body: SearchPage(
             controller: searchController,
@@ -604,6 +950,18 @@ final class _SearchHarness {
     await tester.tap(find.byKey(const Key('search-submit-button')));
     await tester.pumpAndSettle();
   }
+}
+
+double _contrastRatio(Color foreground, Color background) {
+  final foregroundLuminance = foreground.computeLuminance();
+  final backgroundLuminance = background.computeLuminance();
+  final lighter = foregroundLuminance > backgroundLuminance
+      ? foregroundLuminance
+      : backgroundLuminance;
+  final darker = foregroundLuminance > backgroundLuminance
+      ? backgroundLuminance
+      : foregroundLuminance;
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 SearchResponse _response({

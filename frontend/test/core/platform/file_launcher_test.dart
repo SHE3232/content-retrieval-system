@@ -317,4 +317,36 @@ void main() {
     expect(clipboardCall?.method, 'Clipboard.setData');
     expect(clipboardCall?.arguments, {'text': path});
   });
+
+  test('SystemPathClipboard maps PlatformException to a safe error', () async {
+    final cause = PlatformException(
+      code: 'clipboard-unavailable',
+      message: 'private platform detail',
+    );
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (_) async => throw cause,
+    );
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final PathClipboard clipboard = SystemPathClipboard();
+
+    await expectLater(
+      clipboard.copy(r'C:\notes\copy.txt'),
+      throwsA(
+        isA<PathClipboardException>()
+            .having((error) => error.message, 'message', '无法复制路径，请稍后重试')
+            .having(
+              (error) => error.cause,
+              'cause',
+              isA<PlatformException>()
+                  .having((error) => error.code, 'code', cause.code)
+                  .having((error) => error.message, 'message', cause.message),
+            ),
+      ),
+    );
+  });
 }

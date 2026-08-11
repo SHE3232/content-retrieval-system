@@ -21,9 +21,16 @@ final class SearchResultTile extends StatefulWidget {
 }
 
 final class _SearchResultTileState extends State<SearchResultTile> {
+  bool _opening = false;
+  bool _copying = false;
   String? _launchError;
+  String? _copyError;
 
   Future<void> _open() async {
+    if (_opening) {
+      return;
+    }
+    setState(() => _opening = true);
     try {
       await widget.fileLauncher.open(widget.hit.path);
       if (mounted) {
@@ -40,17 +47,36 @@ final class _SearchResultTileState extends State<SearchResultTile> {
           FileLaunchErrorKind.unsupportedPlatform => '当前系统不支持打开文件',
         };
       });
+    } finally {
+      if (mounted) {
+        setState(() => _opening = false);
+      }
     }
   }
 
   Future<void> _copyPath() async {
-    await widget.pathClipboard.copy(widget.hit.path);
-    if (!mounted) {
+    if (_copying) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('路径已复制')));
+    setState(() => _copying = true);
+    try {
+      await widget.pathClipboard.copy(widget.hit.path);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _copyError = null);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('路径已复制')));
+    } on PathClipboardException catch (error) {
+      if (mounted) {
+        setState(() => _copyError = error.message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _copying = false);
+      }
+    }
   }
 
   @override
@@ -86,11 +112,17 @@ final class _SearchResultTileState extends State<SearchResultTile> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                FilledButton.tonalIcon(
-                  key: Key('open-${widget.hit.fileId}'),
-                  onPressed: _open,
-                  icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('打开'),
+                Semantics(
+                  container: true,
+                  button: true,
+                  label: '打开 ${widget.hit.name}',
+                  excludeSemantics: true,
+                  child: FilledButton.tonalIcon(
+                    key: Key('open-${widget.hit.fileId}'),
+                    onPressed: _opening ? null : _open,
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('打开'),
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Semantics(
@@ -102,7 +134,7 @@ final class _SearchResultTileState extends State<SearchResultTile> {
                     message: '复制完整路径',
                     child: IconButton(
                       key: Key('copy-path-${widget.hit.fileId}'),
-                      onPressed: _copyPath,
+                      onPressed: _copying ? null : _copyPath,
                       icon: const Icon(Icons.copy_outlined),
                     ),
                   ),
@@ -124,7 +156,9 @@ final class _SearchResultTileState extends State<SearchResultTile> {
             ],
             const SizedBox(height: 8),
             Semantics(
+              container: true,
               label: '完整路径 ${widget.hit.path}',
+              excludeSemantics: true,
               child: Tooltip(
                 message: widget.hit.path,
                 child: Text(
@@ -156,6 +190,15 @@ final class _SearchResultTileState extends State<SearchResultTile> {
               const SizedBox(height: 8),
               Text(
                 _launchError!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+            if (_copyError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _copyError!,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.error,
                 ),

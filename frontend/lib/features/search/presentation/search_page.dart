@@ -94,10 +94,14 @@ final class _SearchPageState extends State<SearchPage> {
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.82,
           ),
-          child: SearchFilterPanel(
-            key: const Key('search-filter-panel'),
-            controller: widget.controller,
-            onChanged: _filtersChanged,
+          child: ListenableBuilder(
+            listenable: widget.controller,
+            builder: (context, _) => SearchFilterPanel(
+              key: const Key('search-filter-panel'),
+              controller: widget.controller,
+              enabled: widget.controller.state != SearchViewState.loading,
+              onChanged: _filtersChanged,
+            ),
           ),
         ),
       ),
@@ -154,6 +158,9 @@ final class _SearchPageState extends State<SearchPage> {
                             child: SearchFilterPanel(
                               key: const Key('search-filter-panel'),
                               controller: widget.controller,
+                              enabled:
+                                  widget.controller.state !=
+                                  SearchViewState.loading,
                               onChanged: _filtersChanged,
                             ),
                           ),
@@ -251,7 +258,7 @@ final class _SearchMainColumn extends StatelessWidget {
               controller: controller,
               fileLauncher: fileLauncher,
               pathClipboard: pathClipboard,
-              onRetry: () => unawaited(onSubmit()),
+              onRetry: canSubmit ? () => unawaited(onSubmit()) : null,
               onClearFilters: onClearFilters,
             ),
           ),
@@ -278,7 +285,9 @@ final class _BackendStatusBar extends StatelessWidget {
       BackendConnectionState.online => (
         '后端在线',
         Icons.check_circle_outline,
-        Colors.green.shade700,
+        theme.brightness == Brightness.dark
+            ? Colors.green.shade300
+            : Colors.green.shade800,
       ),
       BackendConnectionState.offline => (
         '后端离线',

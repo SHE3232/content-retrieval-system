@@ -6,10 +6,12 @@ final class SearchFilterPanel extends StatefulWidget {
   const SearchFilterPanel({
     super.key,
     required this.controller,
+    required this.enabled,
     required this.onChanged,
   });
 
   final SearchController controller;
+  final bool enabled;
   final VoidCallback onChanged;
 
   @override
@@ -79,8 +81,9 @@ final class _SearchFilterPanelState extends State<SearchFilterPanel> {
                       ),
                     ],
                     selected: {widget.controller.mode},
-                    onSelectionChanged: (selection) =>
-                        _setMode(selection.single),
+                    onSelectionChanged: widget.enabled
+                        ? (selection) => _setMode(selection.single)
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -95,7 +98,9 @@ final class _SearchFilterPanelState extends State<SearchFilterPanel> {
                         key: Key('search-channel-${channel.name}'),
                         label: Text(_channelLabel(channel)),
                         selected: widget.controller.channels.contains(channel),
-                        onSelected: (_) => _toggleChannel(channel),
+                        onSelected: widget.enabled
+                            ? (_) => _toggleChannel(channel)
+                            : null,
                       ),
                   ],
                 ),
@@ -122,7 +127,9 @@ final class _SearchFilterPanelState extends State<SearchFilterPanel> {
                         selected: widget.controller.contentTypes.contains(
                           contentType,
                         ),
-                        onSelected: (_) => _toggleContentType(contentType),
+                        onSelected: widget.enabled
+                            ? (_) => _toggleContentType(contentType)
+                            : null,
                       ),
                   ],
                 ),

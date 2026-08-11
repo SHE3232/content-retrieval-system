@@ -116,7 +116,7 @@ final class FakeSearchService implements SearchService {
 
 final class FakeFileLauncher implements FileLauncher {
   final List<String> paths = <String>[];
-  final List<FileLaunchException?> results = <FileLaunchException?>[];
+  final List<Object?> results = <Object?>[];
 
   int get calls => paths.length;
 
@@ -127,6 +127,10 @@ final class FakeFileLauncher implements FileLauncher {
       return;
     }
     final result = results.removeAt(0);
+    if (result is Future<void>) {
+      await result;
+      return;
+    }
     if (result != null) {
       throw result;
     }
@@ -135,7 +139,7 @@ final class FakeFileLauncher implements FileLauncher {
 
 final class FakePathClipboard implements PathClipboard {
   final List<String> paths = <String>[];
-  final List<FileLaunchException?> results = <FileLaunchException?>[];
+  final List<Object?> results = <Object?>[];
 
   int get calls => paths.length;
 
@@ -146,6 +150,10 @@ final class FakePathClipboard implements PathClipboard {
       return;
     }
     final result = results.removeAt(0);
+    if (result is Future<void>) {
+      await result;
+      return;
+    }
     if (result != null) {
       throw result;
     }
