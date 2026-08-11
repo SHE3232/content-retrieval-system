@@ -178,6 +178,4 @@ final class SearchStateView extends StatelessWidget {
 
 bool isSearchValidationError(ApiException? error) => _isValidationError(error);
 
-bool _isValidationError(ApiException? error) =>
-    error != null &&
-    (error.kind == ApiErrorKind.rejected || error.statusCode == 422);
+bool _isValidationError(ApiException? error) => error?.statusCode == 422;

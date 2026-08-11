@@ -201,7 +201,7 @@ void main() {
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.addAll([
         const ApiException(
-          ApiErrorKind.offline,
+          ApiErrorKind.rejected,
           'nginx secret',
           statusCode: 503,
         ),
@@ -211,6 +211,8 @@ void main() {
 
     expect(find.text('搜索服务暂时不可用，请稍后重试'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
+    expect(find.text('搜索条件有误，请调整后重试'), findsNothing);
+    expect(find.text('请调整搜索条件'), findsNothing);
     expect(find.textContaining('nginx secret'), findsNothing);
 
     await tester.tap(find.byKey(const Key('search-retry-button')));
@@ -223,7 +225,7 @@ void main() {
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.add(
         const ApiException(
-          ApiErrorKind.invalidResponse,
+          ApiErrorKind.rejected,
           'server body must stay hidden',
           statusCode: 500,
         ),
@@ -232,6 +234,8 @@ void main() {
     await harness.search('broken');
 
     expect(find.text('搜索失败，请稍后重试'), findsOneWidget);
+    expect(find.text('搜索条件有误，请调整后重试'), findsNothing);
+    expect(find.text('请调整搜索条件'), findsNothing);
     expect(find.textContaining('server body'), findsNothing);
   });
 
