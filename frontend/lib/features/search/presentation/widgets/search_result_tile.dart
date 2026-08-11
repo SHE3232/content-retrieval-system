@@ -115,7 +115,9 @@ final class _SearchResultTileState extends State<SearchResultTile> {
                 Semantics(
                   container: true,
                   button: true,
+                  enabled: !_opening,
                   label: '打开 ${widget.hit.name}',
+                  onTap: _opening ? null : _open,
                   excludeSemantics: true,
                   child: FilledButton.tonalIcon(
                     key: Key('open-${widget.hit.fileId}'),
@@ -128,7 +130,9 @@ final class _SearchResultTileState extends State<SearchResultTile> {
                 Semantics(
                   container: true,
                   button: true,
+                  enabled: !_copying,
                   label: '复制 ${widget.hit.name} 的完整路径',
+                  onTap: _copying ? null : _copyPath,
                   excludeSemantics: true,
                   child: Tooltip(
                     message: '复制完整路径',

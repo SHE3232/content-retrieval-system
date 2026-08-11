@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:content_retrieval_app/app/app_theme.dart';
 import 'package:content_retrieval_app/core/api/api_exception.dart';
@@ -489,6 +490,74 @@ void main() {
 
     expect(harness.pathClipboard.paths, [r'C:\notes\copy.txt']);
     expect(find.text('路径已复制'), findsOneWidget);
+  });
+
+  testWidgets('open semantics invokes once and reflects pending state', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final pending = Completer<void>();
+    final harness = await _SearchHarness.create(tester)
+      ..fileLauncher.results.add(pending.future)
+      ..searchService.results.add(_response(names: const ['report.pdf']));
+    await harness.search('semantic open');
+    final open = find.semantics.byLabel('打开 report.pdf');
+
+    expect(open.evaluate(), hasLength(1));
+    var data = open.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+
+    tester.semantics.tap(open);
+    await tester.pump();
+
+    expect(harness.fileLauncher.calls, 1);
+    data = open.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isFalse);
+    expect(data.flagsCollection.isEnabled, Tristate.isFalse);
+
+    pending.complete();
+    await tester.pump();
+
+    data = open.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(harness.fileLauncher.calls, 1);
+    semantics.dispose();
+  });
+
+  testWidgets('copy semantics invokes once and reflects pending state', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final pending = Completer<void>();
+    final harness = await _SearchHarness.create(tester)
+      ..pathClipboard.results.add(pending.future)
+      ..searchService.results.add(_response(names: const ['report.pdf']));
+    await harness.search('semantic copy');
+    final copy = find.semantics.byLabel('复制 report.pdf 的完整路径');
+
+    expect(copy.evaluate(), hasLength(1));
+    var data = copy.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+
+    tester.semantics.tap(copy);
+    await tester.pump();
+
+    expect(harness.pathClipboard.calls, 1);
+    data = copy.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isFalse);
+    expect(data.flagsCollection.isEnabled, Tristate.isFalse);
+
+    pending.complete();
+    await tester.pump();
+
+    data = copy.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(harness.pathClipboard.calls, 1);
+    semantics.dispose();
   });
 
   testWidgets(
