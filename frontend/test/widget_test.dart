@@ -675,6 +675,11 @@ final class _TrackingJsonTransport implements JsonTransport {
   }
 
   @override
+  Future<JsonResponse> delete(String path) async {
+    throw StateError('Unexpected DELETE $path');
+  }
+
+  @override
   void close() {
     closeCalls += 1;
   }

@@ -20,11 +20,19 @@ final class CapturedPost {
   final Map<String, Object?> body;
 }
 
+final class CapturedDelete {
+  const CapturedDelete(this.path);
+
+  final String path;
+}
+
 final class FakeJsonTransport implements JsonTransport {
   final List<JsonResponse> getResponses = <JsonResponse>[];
   final List<JsonResponse> postResponses = <JsonResponse>[];
+  final List<JsonResponse> deleteResponses = <JsonResponse>[];
   final List<CapturedGet> gets = <CapturedGet>[];
   final List<CapturedPost> posts = <CapturedPost>[];
+  final List<CapturedDelete> deletes = <CapturedDelete>[];
 
   bool isClosed = false;
 
@@ -47,6 +55,15 @@ final class FakeJsonTransport implements JsonTransport {
       throw StateError('No queued POST response for $path');
     }
     return postResponses.removeAt(0);
+  }
+
+  @override
+  Future<JsonResponse> delete(String path) async {
+    deletes.add(CapturedDelete(path));
+    if (deleteResponses.isEmpty) {
+      throw StateError('No queued DELETE response for $path');
+    }
+    return deleteResponses.removeAt(0);
   }
 
   @override

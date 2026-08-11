@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:content_retrieval_app/app/app_theme.dart';
-import 'package:content_retrieval_app/core/api/io_json_transport.dart';
+import 'package:content_retrieval_app/core/api/http_json_transport.dart';
 import 'package:content_retrieval_app/core/api/json_transport.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
@@ -41,7 +41,7 @@ final class _ContentRetrievalAppState extends State<ContentRetrievalApp> {
     super.initState();
     _transport =
         widget.transport ??
-        IoJsonTransport(
+        HttpJsonTransport(
           baseUri: Uri.parse('http://127.0.0.1:8000'),
           timeout: const Duration(seconds: 15),
         );

@@ -10,5 +10,7 @@ abstract interface class JsonTransport {
 
   Future<JsonResponse> post(String path, {required Map<String, Object?> body});
 
+  Future<JsonResponse> delete(String path);
+
   void close();
 }
