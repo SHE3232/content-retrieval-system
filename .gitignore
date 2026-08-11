@@ -44,3 +44,6 @@ output/week3/conversion/*.json
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local verification renders and scratch artifacts
+/tmp/

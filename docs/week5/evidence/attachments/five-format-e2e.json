@@ -1,0 +1,62 @@
+{
+  "status": "PASS",
+  "fixture_names": [
+    "week5-blue-square.png",
+    "week5-design.docx",
+    "week5-guide.pdf",
+    "week5-notes.txt",
+    "week5-red-apple.jpg"
+  ],
+  "indexing": {
+    "status": "completed",
+    "result": {
+      "parsed_files": 5,
+      "indexed_files": 5,
+      "indexed_records": 5,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "partial_files": 0,
+      "unchanged_files": 0,
+      "removed_stale_records": 0,
+      "failures": []
+    }
+  },
+  "searches": {
+    "week5-notes.txt": {
+      "query_kind": "keyword",
+      "hit_names": [
+        "week5-notes.txt"
+      ]
+    },
+    "week5-guide.pdf": {
+      "query_kind": "keyword",
+      "hit_names": [
+        "week5-guide.pdf"
+      ]
+    },
+    "week5-design.docx": {
+      "query_kind": "keyword",
+      "hit_names": [
+        "week5-design.docx"
+      ]
+    },
+    "week5-red-apple.jpg": {
+      "query_kind": "image_semantic",
+      "hit_names": [
+        "week5-red-apple.jpg",
+        "week5-blue-square.png"
+      ]
+    },
+    "week5-blue-square.png": {
+      "query_kind": "image_semantic",
+      "hit_names": [
+        "week5-blue-square.png",
+        "week5-red-apple.jpg"
+      ]
+    }
+  },
+  "mutations": {
+    "reindex": "PASS",
+    "remove": "PASS"
+  }
+}

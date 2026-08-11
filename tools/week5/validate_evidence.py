@@ -50,9 +50,28 @@ def validate_evidence(root: Path, allow_incomplete: bool = False) -> int:
         print(f"ERROR evidence root not found: {root}")
         return 1
 
-    for path in sorted(root.rglob("*.json")):
-        if path.name == "manifest.json":
-            continue
+    manifest_path = root / "manifest.json"
+    record_paths: list[Path] = []
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        declared_records = manifest.get("records") if isinstance(manifest, dict) else None
+        if not _nonempty_list(declared_records):
+            raise ValueError("records must be a non-empty string list")
+        for relative_path in declared_records:
+            path = (root / relative_path).resolve()
+            if not path.is_relative_to(root) or path.suffix.lower() != ".json":
+                structural_errors.append(
+                    f"manifest: invalid record path {relative_path!r}"
+                )
+                continue
+            if not path.is_file():
+                structural_errors.append(f"manifest: missing record {relative_path!r}")
+                continue
+            record_paths.append(path)
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
+        structural_errors.append(f"manifest.json: invalid manifest ({error})")
+
+    for path in record_paths:
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError) as error:

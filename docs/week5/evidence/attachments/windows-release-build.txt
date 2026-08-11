@@ -1,0 +1,9 @@
+Source commit: 04c498f37315f455c5fcc625f66268e460204065
+Command: flutter build windows --release
+Result: PASS (exit code 0)
+Output: Built build\windows\x64\runner\Release\content_retrieval_app.exe
+Duration: 100.8 seconds
+EXE bytes: 90112
+EXE SHA-256: C6C94B241EB2DBDE6E5D4358774B4B8AEB54D9B7D0B1BDECC4FC3935FC2F44FB
+Flutter: 3.44.6 stable; Dart 3.12.2
+Environment: Microsoft Windows 11 Home Chinese, 10.0.26200, x64

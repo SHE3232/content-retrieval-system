@@ -1,0 +1,8 @@
+Source commit: 04c498f37315f455c5fcc625f66268e460204065
+Commands:
+- flutter test test\accessibility
+- flutter test
+- flutter analyze
+Automated coverage includes semantic headings/labels, labeled and Android-size tap-target guidelines, Ctrl/Cmd destination shortcuts, F5 dispatch, system/user text-scale composition capped at 200%, reduced-motion composition, and WCAG contrast ratios for light/dark high-contrast themes.
+Result at implementation checkpoint: PASS.
+Important: these automated checks do not replace Windows keyboard-only walkthrough, NVDA, VoiceOver, Accessibility Scanner, WAVE, or participant sessions.

@@ -11,5 +11,25 @@
     "version": "Week 5 integration baseline",
     "commit": "04c498f37315f455c5fcc625f66268e460204065"
   },
-  "records": []
+  "records": [
+    "windows/build.json",
+    "macos/build.json",
+    "linux/build.json",
+    "android/build.json",
+    "web/build.json",
+    "windows/nvda.json",
+    "macos/voiceover.json",
+    "android/accessibility-scanner.json",
+    "web/wave.json",
+    "windows/keyboard.json",
+    "windows/high-contrast.json",
+    "windows/text-scale-200.json",
+    "windows/reduced-motion.json",
+    "e2e/five-formats.json",
+    "e2e/persistence.json",
+    "usability/participant-01.json",
+    "usability/participant-02.json",
+    "usability/participant-03.json",
+    "usability/summary.json"
+  ]
 }

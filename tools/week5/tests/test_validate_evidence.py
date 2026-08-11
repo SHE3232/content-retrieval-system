@@ -12,8 +12,10 @@ def _write_complete_tree(root: Path) -> None:
     records = root / "records"
     records.mkdir(exist_ok=True)
     tested_at = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    manifest_records = []
     for index, gate_id in enumerate(sorted(REQUIRED_GATES)):
-        (records / f"{index:02d}.json").write_text(
+        path = records / f"{index:02d}.json"
+        path.write_text(
             json.dumps(
                 {
                     "gate_id": gate_id,
@@ -29,6 +31,11 @@ def _write_complete_tree(root: Path) -> None:
             ),
             encoding="utf-8",
         )
+        manifest_records.append(path.relative_to(root).as_posix())
+    (root / "manifest.json").write_text(
+        json.dumps({"records": manifest_records}),
+        encoding="utf-8",
+    )
 
 
 def test_all_required_pass_returns_success(tmp_path: Path) -> None:
@@ -67,4 +74,15 @@ def test_duplicate_gate_id_fails(tmp_path: Path) -> None:
     first = sorted((tmp_path / "records").glob("*.json"))[0]
     duplicate = tmp_path / "records" / "duplicate.json"
     duplicate.write_text(first.read_text(encoding="utf-8"), encoding="utf-8")
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    manifest["records"].append(duplicate.relative_to(tmp_path).as_posix())
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     assert validate_evidence(tmp_path) == 1
+
+
+def test_unlisted_json_attachment_is_not_treated_as_a_gate(tmp_path: Path) -> None:
+    _write_complete_tree(tmp_path)
+    attachment = tmp_path / "attachments" / "result.json"
+    attachment.write_text(json.dumps({"status": "PASS"}), encoding="utf-8")
+
+    assert validate_evidence(tmp_path) == 0

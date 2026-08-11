@@ -1,0 +1,25 @@
+{
+  "gate_id": "e2e.five_formats",
+  "status": "PASS",
+  "tested_at": "2026-08-11T23:39:46+08:00",
+  "tester": "Codex automated execution",
+  "environment": "Windows 11; live MVP backend on 127.0.0.1:8000; real text and MobileCLIP model weights",
+  "procedure": [
+    "Created controlled real TXT, PDF, DOCX, JPG, and PNG fixtures outside the repository",
+    "Indexed all five formats through POST /v1/indexing/jobs",
+    "Verified keyword retrieval for TXT, PDF, and DOCX",
+    "Verified image-semantic top ranking for JPG and PNG",
+    "Reindexed one fixture, removed it from the index, and cleaned up the remaining test index records"
+  ],
+  "observations": [
+    "Five files parsed and indexed with zero failures",
+    "All three text fixtures were returned by their unique keyword",
+    "The red-apple JPG and blue-square PNG each ranked first for the matching image-semantic query",
+    "Reindex and remove mutations passed; post-test index record count returned to zero"
+  ],
+  "attachments": [
+    "attachments/five-format-e2e.json"
+  ],
+  "issues": [],
+  "source_commit": "04c498f37315f455c5fcc625f66268e460204065"
+}

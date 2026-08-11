@@ -1,0 +1,4 @@
+Command: flutter build apk --debug
+Result: BLOCKED (exit code 1)
+Observed error: No Android SDK found. Try setting the ANDROID_HOME environment variable.
+The Android target exists, but no APK build or Accessibility Scanner run is claimed.
