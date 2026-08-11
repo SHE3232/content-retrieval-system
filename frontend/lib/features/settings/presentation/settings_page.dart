@@ -1,3 +1,4 @@
+import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
 import 'package:content_retrieval_app/features/settings/domain/app_settings.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_controller.dart';
 import 'package:flutter/material.dart';
@@ -50,9 +51,12 @@ final class _SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      '设置',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        '设置',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -237,7 +241,10 @@ final class _SettingsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            Semantics(
+              header: true,
+              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+            ),
             const SizedBox(height: 16),
             ...children,
           ],
@@ -262,15 +269,15 @@ final class _MessageBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Semantics(
-        liveRegion: true,
-        child: MaterialBanner(
-          content: Text(message),
-          actions: [
-            if (actionLabel != null && onAction != null)
-              TextButton(onPressed: onAction, child: Text(actionLabel!)),
-          ],
+      child: MaterialBanner(
+        content: LiveRegionMessage(
+          message: message.endsWith('。') ? message : '$message。',
+          child: Text(message),
         ),
+        actions: [
+          if (actionLabel != null && onAction != null)
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+        ],
       ),
     );
   }

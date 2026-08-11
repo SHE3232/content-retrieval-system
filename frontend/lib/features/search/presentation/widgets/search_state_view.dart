@@ -1,4 +1,5 @@
 import 'package:content_retrieval_app/core/api/api_exception.dart';
+import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
@@ -37,10 +38,8 @@ final class SearchStateView extends StatelessWidget {
 
   Widget _loading(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      liveRegion: true,
-      label: '正在搜索',
-      excludeSemantics: true,
+    return LiveRegionMessage(
+      message: '正在搜索“${controller.query.trim()}”。',
       child: ListView.separated(
         padding: const EdgeInsets.only(bottom: 20),
         itemCount: 3,
@@ -93,11 +92,14 @@ final class SearchStateView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '候选 ${response.totalCandidates} 个，用时 ${response.elapsedMs.toStringAsFixed(2)} ms',
-          key: const Key('search-summary'),
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        LiveRegionMessage(
+          message: '搜索完成，找到 ${response.hits.length} 条结果。',
+          child: Text(
+            '候选 ${response.totalCandidates} 个，用时 ${response.elapsedMs.toStringAsFixed(2)} ms',
+            key: const Key('search-summary'),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -123,6 +125,7 @@ final class SearchStateView extends StatelessWidget {
     icon: Icons.search_off,
     title: '未找到匹配内容',
     body: '尝试更换关键词或恢复完整筛选范围',
+    liveMessage: '搜索完成，没有匹配结果。',
     action: FilledButton.tonal(
       key: const Key('clear-search-filters-button'),
       onPressed: onClearFilters,
@@ -138,6 +141,7 @@ final class SearchStateView extends StatelessWidget {
         icon: Icons.tune,
         title: '请调整搜索条件',
         body: '修改查询后可重新搜索',
+        liveMessage: '搜索失败：请调整搜索条件。',
       );
     }
     final serviceUnavailable = error?.statusCode == 503;
@@ -146,6 +150,7 @@ final class SearchStateView extends StatelessWidget {
       icon: Icons.error_outline,
       title: serviceUnavailable ? '搜索服务暂时不可用，请稍后重试' : '搜索失败，请稍后重试',
       body: '当前结果未更新',
+      liveMessage: serviceUnavailable ? '搜索失败：搜索服务暂时不可用，请稍后重试。' : '搜索失败：请稍后重试。',
       action: FilledButton.tonal(
         key: const Key('search-retry-button'),
         onPressed: onRetry,
@@ -160,13 +165,15 @@ final class SearchStateView extends StatelessWidget {
     required String title,
     required String body,
     Widget? action,
+    String? liveMessage,
   }) {
     final theme = Theme.of(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Semantics(
-          container: true,
+        child: LiveRegionMessage(
+          message: liveMessage ?? '$title。$body。',
+          excludeChildSemantics: false,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

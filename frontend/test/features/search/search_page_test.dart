@@ -162,14 +162,21 @@ void main() {
       findsNWidgets(3),
     );
     final loadingSemantics = find.byWidgetPredicate(
-      (widget) => widget is Semantics && widget.properties.label == '正在搜索',
+      (widget) =>
+          widget is Semantics && widget.properties.label == '正在搜索“pending”。',
     );
     expect(loadingSemantics, findsOneWidget);
     expect(
       tester.widget<Semantics>(loadingSemantics).properties.liveRegion,
       isTrue,
     );
-    expect(tester.widget<Semantics>(loadingSemantics).excludeSemantics, isTrue);
+    expect(
+      find.descendant(
+        of: loadingSemantics,
+        matching: find.byType(ExcludeSemantics),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(harness.submitButton.onPressed, isNull);
     await tester.tap(

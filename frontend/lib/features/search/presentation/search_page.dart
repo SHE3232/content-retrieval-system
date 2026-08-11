@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
 import 'package:content_retrieval_app/features/search/domain/search_models.dart';
@@ -295,27 +296,37 @@ final class _BackendStatusBar extends StatelessWidget {
         theme.colorScheme.error,
       ),
     };
+    final announcement = switch (controller.state) {
+      BackendConnectionState.checking => '正在检测后端。',
+      BackendConnectionState.online =>
+        '后端已连接，共索引 ${controller.stats?.fileCount ?? 0} 个文件。',
+      BackendConnectionState.offline => '后端连接已断开。',
+    };
     return ColoredBox(
       color: theme.colorScheme.surfaceContainerLow,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: theme.textTheme.labelLarge?.copyWith(color: color),
-            ),
-            const Spacer(),
-            if (controller.state == BackendConnectionState.offline)
-              TextButton.icon(
-                key: const Key('backend-refresh-button'),
-                onPressed: () => unawaited(controller.refresh()),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('重新检测'),
+        child: LiveRegionMessage(
+          message: announcement,
+          excludeChildSemantics: false,
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(color: color),
               ),
-          ],
+              const Spacer(),
+              if (controller.state == BackendConnectionState.offline)
+                TextButton.icon(
+                  key: const Key('backend-refresh-button'),
+                  onPressed: () => unawaited(controller.refresh()),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('重新检测'),
+                ),
+            ],
+          ),
         ),
       ),
     );

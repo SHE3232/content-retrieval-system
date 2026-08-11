@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:content_retrieval_app/app/app_theme.dart';
+import 'package:content_retrieval_app/core/accessibility/effective_media_query.dart';
 import 'package:content_retrieval_app/core/api/http_json_transport.dart';
 import 'package:content_retrieval_app/core/api/json_transport.dart';
 import 'package:content_retrieval_app/core/platform/directory_picker.dart';
@@ -143,9 +144,10 @@ final class _ContentRetrievalAppState extends State<ContentRetrievalApp> {
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: TextScaler.linear(settings.textScale),
-            disableAnimations: settings.reduceMotion,
+          data: effectiveMediaQuery(
+            mediaQuery,
+            textScalePreference: settings.textScale,
+            reduceMotionPreference: settings.reduceMotion,
           ),
           child: child ?? const SizedBox.shrink(),
         );
@@ -178,6 +180,8 @@ final class _ContentRetrievalAppState extends State<ContentRetrievalApp> {
                 controller: _settingsController,
                 onSettingsSaved: _applySavedSettings,
               ),
+              onRefreshSearch: _statusController!.refresh,
+              onRefreshLibrary: _libraryController!.refresh,
             ),
     );
   }

@@ -11,11 +11,14 @@ abstract final class AppTheme {
       _build(Brightness.dark, highContrast: highContrast);
 
   static ThemeData _build(Brightness brightness, {required bool highContrast}) {
-    final scheme = ColorScheme.fromSeed(
+    final generatedScheme = ColorScheme.fromSeed(
       seedColor: _seedColor,
       brightness: brightness,
       contrastLevel: highContrast ? 1 : 0,
     );
+    final scheme = highContrast
+        ? _highContrastScheme(generatedScheme, brightness)
+        : generatedScheme;
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(_controlRadius),
       borderSide: BorderSide(color: scheme.outline),
@@ -139,8 +142,40 @@ abstract final class AppTheme {
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant,
         space: 1,
-        thickness: 1,
+        thickness: highContrast ? 2 : 1,
       ),
+    );
+  }
+
+  static ColorScheme _highContrastScheme(
+    ColorScheme generated,
+    Brightness brightness,
+  ) {
+    if (brightness == Brightness.light) {
+      return generated.copyWith(
+        primary: const Color(0xFF002A78),
+        onPrimary: Colors.white,
+        secondaryContainer: const Color(0xFFD6E1FF),
+        onSecondaryContainer: const Color(0xFF001A42),
+        surface: Colors.white,
+        onSurface: const Color(0xFF101114),
+        outline: const Color(0xFF42474F),
+        outlineVariant: const Color(0xFF5F636B),
+        error: const Color(0xFF8C0009),
+        onError: Colors.white,
+      );
+    }
+    return generated.copyWith(
+      primary: const Color(0xFFADC6FF),
+      onPrimary: const Color(0xFF001B3F),
+      secondaryContainer: const Color(0xFF12315F),
+      onSecondaryContainer: Colors.white,
+      surface: const Color(0xFF0C0E12),
+      onSurface: Colors.white,
+      outline: const Color(0xFFC5C6CC),
+      outlineVariant: const Color(0xFFAEB0B7),
+      error: const Color(0xFFFFB4AB),
+      onError: const Color(0xFF690005),
     );
   }
 }

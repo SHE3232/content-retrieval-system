@@ -52,9 +52,12 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '索引库',
-                          style: Theme.of(context).textTheme.headlineMedium,
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            '索引库',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
                         ),
                         Text('共 ${controller.total} 个文件'),
                         if (!controller.directoryPicker.isSupported)
@@ -67,21 +70,37 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      IconButton(
-                        tooltip: '刷新索引库',
-                        onPressed: controller.isRefreshing
-                            ? null
-                            : controller.refresh,
-                        icon: const Icon(Icons.refresh),
+                      Semantics(
+                        label: '刷新索引库',
+                        button: true,
+                        enabled: !controller.isRefreshing,
+                        child: ExcludeSemantics(
+                          child: IconButton(
+                            tooltip: '刷新索引库',
+                            onPressed: controller.isRefreshing
+                                ? null
+                                : controller.refresh,
+                            icon: const Icon(Icons.refresh),
+                          ),
+                        ),
                       ),
-                      FilledButton.icon(
-                        onPressed:
+                      Semantics(
+                        label: '添加文件夹',
+                        button: true,
+                        enabled:
                             controller.directoryPicker.isSupported &&
-                                !controller.isMutationInProgress
-                            ? controller.selectDirectoryAndStart
-                            : null,
-                        icon: const Icon(Icons.create_new_folder_outlined),
-                        label: const Text('添加文件夹'),
+                            !controller.isMutationInProgress,
+                        child: ExcludeSemantics(
+                          child: FilledButton.icon(
+                            onPressed:
+                                controller.directoryPicker.isSupported &&
+                                    !controller.isMutationInProgress
+                                ? controller.selectDirectoryAndStart
+                                : null,
+                            icon: const Icon(Icons.create_new_folder_outlined),
+                            label: const Text('添加文件夹'),
+                          ),
+                        ),
                       ),
                     ],
                   ),
