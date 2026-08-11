@@ -4,14 +4,17 @@ abstract final class AppTheme {
   static const _seedColor = Color(0xFF3659AD);
   static const _controlRadius = 12.0;
 
-  static ThemeData light() => _build(Brightness.light);
+  static ThemeData light({bool highContrast = false}) =>
+      _build(Brightness.light, highContrast: highContrast);
 
-  static ThemeData dark() => _build(Brightness.dark);
+  static ThemeData dark({bool highContrast = false}) =>
+      _build(Brightness.dark, highContrast: highContrast);
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build(Brightness brightness, {required bool highContrast}) {
     final scheme = ColorScheme.fromSeed(
       seedColor: _seedColor,
       brightness: brightness,
+      contrastLevel: highContrast ? 1 : 0,
     );
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(_controlRadius),

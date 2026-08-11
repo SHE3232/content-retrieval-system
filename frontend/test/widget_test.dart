@@ -4,9 +4,10 @@ import 'dart:io';
 import 'package:content_retrieval_app/app/content_retrieval_app.dart';
 import 'package:content_retrieval_app/app/app_theme.dart';
 import 'package:content_retrieval_app/core/api/json_transport.dart';
-import 'package:content_retrieval_app/features/placeholders/index_library_page.dart';
-import 'package:content_retrieval_app/features/placeholders/settings_page.dart';
+import 'package:content_retrieval_app/features/library/presentation/index_library_page.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_page.dart';
+import 'package:content_retrieval_app/features/settings/data/settings_repository.dart';
+import 'package:content_retrieval_app/features/settings/presentation/settings_page.dart';
 import 'package:content_retrieval_app/features/shell/app_shell.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +33,16 @@ void main() {
             'image_record_count': 1,
           },
         ),
+        JsonResponse(
+          statusCode: 200,
+          body: {
+            'items': <Object?>[],
+            'page': 1,
+            'page_size': 20,
+            'total': 0,
+            'total_pages': 0,
+          },
+        ),
       ]);
 
     await tester.pumpWidget(
@@ -39,10 +50,10 @@ void main() {
         transport: transport,
         fileLauncher: FakeFileLauncher(),
         pathClipboard: FakePathClipboard(),
+        settingsStore: _WidgetSettingsStore(),
       ),
     );
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     final expectedLight = AppTheme.light();
@@ -68,6 +79,13 @@ void main() {
       '/health/ready',
       '/v1/index/stats',
     ]);
+    await tester.tap(find.text('索引库'));
+    await tester.pumpAndSettle();
+    expect(find.byType(IndexLibraryPage), findsOneWidget);
+    expect(transport.gets.last.path, '/v1/index/files?page=1&page_size=20');
+    await tester.tap(find.text('设置'));
+    await tester.pump();
+    expect(find.byType(SettingsPage), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -85,8 +103,10 @@ void main() {
         transport: transport,
         fileLauncher: FakeFileLauncher(),
         pathClipboard: FakePathClipboard(),
+        settingsStore: _WidgetSettingsStore(),
       ),
     );
+    await tester.pump();
     expect(transport.getPaths, ['/health/ready']);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -138,7 +158,7 @@ void main() {
     expect(rail.selectedIndex, 0);
   });
 
-  testWidgets('opens the index library placeholder', (tester) async {
+  testWidgets('opens the injected index library page', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -146,22 +166,14 @@ void main() {
     await tester.tap(find.text('索引库'));
     await tester.pump();
 
-    final page = find.byType(IndexLibraryPage);
-    expect(
-      find.descendant(of: page, matching: find.text('索引库')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: page, matching: find.text('索引库功能将在后续版本提供')),
-      findsOneWidget,
-    );
+    expect(find.text('INDEX_PAGE'), findsOneWidget);
     expect(
       tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
       1,
     );
   });
 
-  testWidgets('opens the settings placeholder', (tester) async {
+  testWidgets('opens the injected settings page', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -169,15 +181,7 @@ void main() {
     await tester.tap(find.text('设置'));
     await tester.pump();
 
-    final page = find.byType(SettingsPage);
-    expect(
-      find.descendant(of: page, matching: find.text('设置')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: page, matching: find.text('设置功能将在后续版本提供')),
-      findsOneWidget,
-    );
+    expect(find.text('SETTINGS_PAGE'), findsOneWidget);
     expect(
       tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
       2,
@@ -475,102 +479,31 @@ void main() {
       },
     );
   }
-
-  for (final placeholder
-      in <
-        ({
-          Widget page,
-          Type pageType,
-          String semanticsLabel,
-          String title,
-          String sentence,
-        })
-      >[
-        (
-          page: const IndexLibraryPage(),
-          pageType: IndexLibraryPage,
-          semanticsLabel: '索引库空状态',
-          title: '索引库',
-          sentence: '索引库功能将在后续版本提供',
-        ),
-        (
-          page: const SettingsPage(),
-          pageType: SettingsPage,
-          semanticsLabel: '设置空状态',
-          title: '设置',
-          sentence: '设置功能将在后续版本提供',
-        ),
-      ]) {
-    testWidgets(
-      '${placeholder.pageType} is a semantic control-free empty state',
-      (tester) async {
-        await tester.binding.setSurfaceSize(const Size(1280, 720));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        final semantics = tester.ensureSemantics();
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.light(),
-            home: Scaffold(body: placeholder.page),
-          ),
-        );
-
-        final page = find.byWidgetPredicate(
-          (widget) => widget.runtimeType == placeholder.pageType,
-        );
-        expect(
-          find.bySemanticsLabel(placeholder.semanticsLabel),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(Icon)),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(of: page, matching: find.text(placeholder.title)),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(of: page, matching: find.text(placeholder.sentence)),
-          findsOneWidget,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(FilledButton)),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(OutlinedButton)),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(TextButton)),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(ElevatedButton)),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(IconButton)),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: page, matching: find.byType(TextField)),
-          findsNothing,
-        );
-        expect(tester.takeException(), isNull);
-        semantics.dispose();
-      },
-    );
-  }
 }
 
 Widget _buildApp(Widget searchPage) {
   return MaterialApp(
     theme: AppTheme.light(),
     darkTheme: AppTheme.dark(),
-    home: AppShell(searchPage: searchPage),
+    home: AppShell(
+      searchPage: searchPage,
+      indexLibraryPage: const Text('INDEX_PAGE'),
+      settingsPage: const Text('SETTINGS_PAGE'),
+    ),
   );
+}
+
+final class _WidgetSettingsStore implements SettingsStore {
+  @override
+  Future<SettingsStoreSnapshot> load() async {
+    return const SettingsStoreSnapshot(
+      values: <String, Object?>{},
+      storageRecovered: false,
+    );
+  }
+
+  @override
+  Future<void> save(Map<String, Object?> values) async {}
 }
 
 final class _StatefulSearchProbe extends StatefulWidget {

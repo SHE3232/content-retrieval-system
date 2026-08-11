@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:content_retrieval_app/core/platform/directory_picker.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
+import 'package:content_retrieval_app/core/platform/file_launcher_io.dart';
 
 typedef RunDirectoryPickerProcess =
     Future<ProcessResult> Function(String executable, List<String> arguments);
@@ -87,4 +88,8 @@ final class IoDirectoryPicker implements DirectoryPicker {
   ) {
     return Process.run(executable, arguments, runInShell: false);
   }
+}
+
+DirectoryPicker createPlatformDirectoryPicker() {
+  return IoDirectoryPicker(platform: currentDesktopPlatform());
 }

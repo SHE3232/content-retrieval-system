@@ -1,11 +1,16 @@
-import 'package:content_retrieval_app/features/placeholders/index_library_page.dart';
-import 'package:content_retrieval_app/features/placeholders/settings_page.dart';
 import 'package:flutter/material.dart';
 
 final class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.searchPage});
+  const AppShell({
+    super.key,
+    required this.searchPage,
+    required this.indexLibraryPage,
+    required this.settingsPage,
+  });
 
   final Widget searchPage;
+  final Widget indexLibraryPage;
+  final Widget settingsPage;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -15,6 +20,7 @@ final class _AppShellState extends State<AppShell> {
   static const _desktopBreakpoint = 1000.0;
 
   int _selectedIndex = 0;
+  final Set<int> _visited = <int>{0};
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +38,10 @@ final class _AppShellState extends State<AppShell> {
                   minExtendedWidth: 214,
                   selectedIndex: _selectedIndex,
                   onDestinationSelected: (index) {
-                    setState(() => _selectedIndex = index);
+                    setState(() {
+                      _selectedIndex = index;
+                      _visited.add(index);
+                    });
                   },
                   destinations: [
                     NavigationRailDestination(
@@ -82,8 +91,12 @@ final class _AppShellState extends State<AppShell> {
                     index: _selectedIndex,
                     children: [
                       widget.searchPage,
-                      const IndexLibraryPage(),
-                      const SettingsPage(),
+                      _visited.contains(1)
+                          ? widget.indexLibraryPage
+                          : const SizedBox.shrink(),
+                      _visited.contains(2)
+                          ? widget.settingsPage
+                          : const SizedBox.shrink(),
                     ],
                   ),
                 ),

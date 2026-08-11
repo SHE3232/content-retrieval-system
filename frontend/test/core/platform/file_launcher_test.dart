@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
+import 'package:content_retrieval_app/core/platform/file_launcher_io.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

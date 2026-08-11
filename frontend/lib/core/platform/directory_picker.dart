@@ -1,3 +1,6 @@
+export 'directory_picker_stub.dart'
+    if (dart.library.io) 'io_directory_picker.dart';
+
 abstract interface class DirectoryPicker {
   bool get isSupported;
 
