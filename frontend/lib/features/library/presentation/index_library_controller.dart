@@ -1,0 +1,217 @@
+import 'dart:async';
+
+import 'package:content_retrieval_app/core/api/api_exception.dart';
+import 'package:content_retrieval_app/core/platform/directory_picker.dart';
+import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
+import 'package:flutter/foundation.dart';
+
+enum LibraryViewState { initial, loading, ready, empty, failure }
+
+typedef WaitForPoll = Future<void> Function(Duration duration);
+
+final class IndexLibraryController extends ChangeNotifier {
+  IndexLibraryController({
+    required this.service,
+    required this.directoryPicker,
+    this.pageSize = 20,
+    this.pollInterval = const Duration(seconds: 2),
+    WaitForPoll? wait,
+  }) : _wait = wait ?? Future<void>.delayed;
+
+  final IndexLibraryService service;
+  final DirectoryPicker directoryPicker;
+  final int pageSize;
+  final Duration pollInterval;
+  final WaitForPoll _wait;
+
+  LibraryViewState state = LibraryViewState.initial;
+  List<IndexedFile> files = const <IndexedFile>[];
+  int page = 1;
+  int total = 0;
+  int totalPages = 0;
+  bool isRefreshing = false;
+  bool isMutationInProgress = false;
+  IndexJob? activeJob;
+  IndexFailureDetails? failureDetails;
+  String? errorMessage;
+
+  bool _disposed = false;
+  int _pollGeneration = 0;
+
+  Future<void> load({int page = 1, bool preserveError = false}) async {
+    if (_disposed || isRefreshing) return;
+    isRefreshing = true;
+    if (!preserveError) errorMessage = null;
+    if (files.isEmpty) state = LibraryViewState.loading;
+    _notify();
+
+    try {
+      final result = await service.fetchFiles(page: page, pageSize: pageSize);
+      if (_disposed) return;
+      files = List<IndexedFile>.unmodifiable(result.items);
+      this.page = result.page;
+      total = result.total;
+      totalPages = result.totalPages;
+      state = files.isEmpty ? LibraryViewState.empty : LibraryViewState.ready;
+    } on ApiException catch (error) {
+      if (_disposed) return;
+      errorMessage = _messageFor(error);
+      if (files.isEmpty) state = LibraryViewState.failure;
+    } finally {
+      isRefreshing = false;
+      _notify();
+    }
+  }
+
+  Future<void> refresh() => load(page: page);
+
+  Future<void> nextPage() {
+    if (page >= totalPages) return Future<void>.value();
+    return load(page: page + 1);
+  }
+
+  Future<void> previousPage() {
+    if (page <= 1) return Future<void>.value();
+    return load(page: page - 1);
+  }
+
+  Future<void> selectDirectoryAndStart() async {
+    if (_disposed || isMutationInProgress) return;
+    if (!directoryPicker.isSupported) {
+      errorMessage = '当前平台不能把文件夹路径交给桌面后端，请使用桌面版管理索引。';
+      _notify();
+      return;
+    }
+
+    final directory = await directoryPicker.pickDirectory();
+    if (_disposed || directory == null || directory.trim().isEmpty) return;
+
+    await _startMutation(() => service.startIndexing(directory));
+  }
+
+  Future<void> reindex(String sourceKey) async {
+    if (_disposed || isMutationInProgress) return;
+    await _startMutation(() => service.reindex(sourceKey));
+  }
+
+  Future<DeletedIndexedFile?> remove(String sourceKey) async {
+    if (_disposed || isMutationInProgress) return null;
+    isMutationInProgress = true;
+    errorMessage = null;
+    _notify();
+    try {
+      final deleted = await service.remove(sourceKey);
+      if (_disposed) return null;
+      final remaining = total > 0 ? total - 1 : 0;
+      final previousPageWouldBeEmpty =
+          page > 1 && remaining <= (page - 1) * pageSize;
+      isMutationInProgress = false;
+      await load(page: previousPageWouldBeEmpty ? page - 1 : page);
+      return deleted;
+    } on ApiException catch (error) {
+      if (!_disposed) {
+        errorMessage = _messageFor(error);
+      }
+      return null;
+    } finally {
+      isMutationInProgress = false;
+      _notify();
+    }
+  }
+
+  Future<void> _startMutation(Future<IndexJob> Function() start) async {
+    isMutationInProgress = true;
+    errorMessage = null;
+    failureDetails = null;
+    _notify();
+    try {
+      final job = await start();
+      if (_disposed) return;
+      activeJob = job;
+      _notify();
+      if (job.status.isTerminal) {
+        await _finishJob(job);
+      } else {
+        final generation = ++_pollGeneration;
+        unawaited(_monitorJob(job.jobId, generation));
+      }
+    } on ApiException catch (error) {
+      if (_disposed) return;
+      errorMessage = _messageFor(error);
+      isMutationInProgress = false;
+      _notify();
+    }
+  }
+
+  Future<void> _monitorJob(String jobId, int generation) async {
+    await _wait(pollInterval);
+    if (_disposed || generation != _pollGeneration) return;
+    try {
+      final job = await service.fetchJob(jobId);
+      if (_disposed || generation != _pollGeneration) return;
+      activeJob = job;
+      _notify();
+      if (job.status.isTerminal) {
+        await _finishJob(job);
+      } else {
+        unawaited(_monitorJob(jobId, generation));
+      }
+    } on ApiException catch (error) {
+      if (_disposed || generation != _pollGeneration) return;
+      errorMessage = _messageFor(error);
+      isMutationInProgress = false;
+      _notify();
+    }
+  }
+
+  Future<void> _finishJob(IndexJob job) async {
+    if (_disposed) return;
+    if (job.status == IndexJobStatus.failed ||
+        job.status == IndexJobStatus.completedWithErrors ||
+        (job.result?.failures.isNotEmpty ?? false)) {
+      try {
+        failureDetails = await service.fetchFailures(job.jobId);
+      } on ApiException catch (error) {
+        errorMessage = _messageFor(error);
+      }
+    }
+    if (job.status == IndexJobStatus.failed) {
+      errorMessage = '索引任务失败，请查看失败详情后重试。';
+    }
+    isMutationInProgress = false;
+    _notify();
+    await load(page: 1, preserveError: errorMessage != null);
+  }
+
+  String _messageFor(ApiException error) {
+    return switch (error.code) {
+      'INDEX_MUTATION_CONFLICT' => '另一项索引操作正在进行，请稍后重试。',
+      'FILE_NOT_INDEXED' => '此文件已不在索引中，列表将刷新。',
+      'SOURCE_FILE_NOT_FOUND' => '源文件不存在，无法重新索引。',
+      'STORAGE_UNAVAILABLE' => '索引存储暂时不可用，请稍后刷新。',
+      'RETRIEVAL_UNAVAILABLE' => '索引已变更，但搜索刷新失败，请重启后端后重试。',
+      'SERVICE_UNAVAILABLE' => '后端服务暂时不可用，请检查服务状态后重试。',
+      _ when error.kind == ApiErrorKind.offline => '后端无法连接，请检查地址和服务状态。',
+      _ when error.kind == ApiErrorKind.timeout => '请求超时，请稍后重试。',
+      _ => '操作失败，请刷新后重试。',
+    };
+  }
+
+  void clearError() {
+    if (errorMessage == null || _disposed) return;
+    errorMessage = null;
+    _notify();
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _pollGeneration += 1;
+    super.dispose();
+  }
+}
