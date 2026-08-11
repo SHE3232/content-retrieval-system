@@ -34,6 +34,7 @@ final class IndexLibraryController extends ChangeNotifier {
   IndexJob? activeJob;
   IndexFailureDetails? failureDetails;
   String? errorMessage;
+  String? successMessage;
 
   bool _disposed = false;
   int _pollGeneration = 0;
@@ -98,10 +99,12 @@ final class IndexLibraryController extends ChangeNotifier {
     if (_disposed || isMutationInProgress) return null;
     isMutationInProgress = true;
     errorMessage = null;
+    successMessage = null;
     _notify();
     try {
       final deleted = await service.remove(sourceKey);
       if (_disposed) return null;
+      successMessage = '已从索引移除 ${deleted.deletedRecords} 条记录';
       final remaining = total > 0 ? total - 1 : 0;
       final previousPageWouldBeEmpty =
           page > 1 && remaining <= (page - 1) * pageSize;
@@ -122,6 +125,7 @@ final class IndexLibraryController extends ChangeNotifier {
   Future<void> _startMutation(Future<IndexJob> Function() start) async {
     isMutationInProgress = true;
     errorMessage = null;
+    successMessage = null;
     failureDetails = null;
     _notify();
     try {
@@ -200,6 +204,12 @@ final class IndexLibraryController extends ChangeNotifier {
   void clearError() {
     if (errorMessage == null || _disposed) return;
     errorMessage = null;
+    _notify();
+  }
+
+  void clearSuccess() {
+    if (successMessage == null || _disposed) return;
+    successMessage = null;
     _notify();
   }
 
