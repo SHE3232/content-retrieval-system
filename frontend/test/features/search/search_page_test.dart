@@ -1,0 +1,652 @@
+import 'dart:async';
+
+import 'package:content_retrieval_app/app/app_theme.dart';
+import 'package:content_retrieval_app/core/api/api_exception.dart';
+import 'package:content_retrieval_app/core/platform/file_launcher.dart';
+import 'package:content_retrieval_app/features/search/domain/search_models.dart';
+import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
+import 'package:content_retrieval_app/features/search/presentation/search_page.dart';
+import 'package:content_retrieval_app/features/status/backend_status_controller.dart';
+import 'package:content_retrieval_app/features/status/backend_status_models.dart';
+import 'package:flutter/material.dart' hide SearchController;
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/fakes.dart';
+
+void main() {
+  testWidgets('online initial state exposes a labeled search control', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester);
+
+    expect(find.text('后端在线'), findsOneWidget);
+    expect(find.text('搜索内容'), findsOneWidget);
+    expect(find.byKey(const Key('search-query-field')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('search-submit-button')))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('checking and offline states are explicit and block search', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(
+      tester,
+      backendState: BackendConnectionState.checking,
+    );
+
+    expect(find.text('正在检测后端'), findsOneWidget);
+    expect(harness.submitButton.onPressed, isNull);
+
+    harness.statusController.state = BackendConnectionState.offline;
+    harness.statusController.notifyListeners();
+    await tester.pump();
+
+    expect(find.text('后端离线'), findsOneWidget);
+    expect(find.text('重新检测'), findsOneWidget);
+    expect(harness.submitButton.onPressed, isNull);
+  });
+
+  testWidgets('offline status retains the last successful result', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(_response(names: const ['notes.txt']));
+    await harness.search('notes');
+
+    harness.statusController.state = BackendConnectionState.offline;
+    harness.statusController.notifyListeners();
+    await tester.pump();
+
+    expect(find.text('后端离线'), findsOneWidget);
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(harness.submitButton.onPressed, isNull);
+
+    harness.backendApi.readyResults.add(false);
+    await tester.tap(find.byKey(const Key('backend-refresh-button')));
+    await tester.pumpAndSettle();
+    expect(harness.backendApi.readyCalls, 1);
+    expect(find.text('notes.txt'), findsOneWidget);
+  });
+
+  testWidgets('enter and click each submit exactly one request', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'alpha'),
+        _response(query: 'beta'),
+      ]);
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      ' alpha ',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(harness.searchService.calls, hasLength(1));
+    expect(harness.searchService.calls.single.query, 'alpha');
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      ' beta ',
+    );
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pumpAndSettle();
+    expect(harness.searchService.calls, hasLength(2));
+    expect(harness.searchService.calls.last.query, 'beta');
+  });
+
+  testWidgets('blank search stays local and shows Chinese inline validation', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester);
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      '   \t ',
+    );
+
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pump();
+
+    expect(harness.searchService.calls, isEmpty);
+    expect(find.text('请输入搜索内容'), findsOneWidget);
+    expect(find.text('Enter a search query'), findsNothing);
+  });
+
+  testWidgets('loading uses three structural skeletons and blocks repeats', (
+    tester,
+  ) async {
+    final pending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(pending.future);
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      'pending',
+    );
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
+      findsNWidgets(3),
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(harness.submitButton.onPressed, isNull);
+    await tester.tap(
+      find.byKey(const Key('search-submit-button')),
+      warnIfMissed: false,
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    expect(harness.searchService.calls, hasLength(1));
+
+    pending.complete(_response(query: 'pending'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('empty state clears filters and exposes the follow-up request', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchController.setMode(RetrievalMode.semantic)
+      ..searchController.toggleContentType(SearchContentType.images)
+      ..searchService.results.addAll([
+        _response(hits: const <SearchHit>[]),
+        _response(query: 'missing', names: const ['found.txt']),
+      ]);
+    await harness.search('missing');
+
+    expect(find.text('未找到匹配内容'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('clear-search-filters-button')));
+    await tester.pumpAndSettle();
+
+    expect(harness.searchController.mode, RetrievalMode.hybrid);
+    expect(
+      harness.searchController.contentTypes,
+      SearchContentType.values.toSet(),
+    );
+    expect(harness.searchService.calls, hasLength(2));
+    expect(find.text('found.txt'), findsOneWidget);
+  });
+
+  testWidgets('422 rejection maps to stable Chinese validation only', (
+    tester,
+  ) async {
+    final privateCause = StateError('private stack marker');
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        ApiException(
+          ApiErrorKind.rejected,
+          'backend private validation',
+          statusCode: 422,
+          cause: privateCause,
+        ),
+      );
+
+    await harness.search('bad');
+
+    expect(find.text('搜索条件有误，请调整后重试'), findsOneWidget);
+    expect(find.textContaining('backend private'), findsNothing);
+    expect(find.textContaining('private stack'), findsNothing);
+    expect(find.textContaining('StateError'), findsNothing);
+  });
+
+  testWidgets('503 maps to service unavailable with retry', (tester) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        const ApiException(
+          ApiErrorKind.offline,
+          'nginx secret',
+          statusCode: 503,
+        ),
+        _response(query: 'retry', names: const ['recovered.txt']),
+      ]);
+    await harness.search('retry');
+
+    expect(find.text('搜索服务暂时不可用，请稍后重试'), findsOneWidget);
+    expect(find.text('重试'), findsOneWidget);
+    expect(find.textContaining('nginx secret'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('search-retry-button')));
+    await tester.pumpAndSettle();
+    expect(harness.searchService.calls, hasLength(2));
+    expect(find.text('recovered.txt'), findsOneWidget);
+  });
+
+  testWidgets('other API failures use a generic safe message', (tester) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        const ApiException(
+          ApiErrorKind.invalidResponse,
+          'server body must stay hidden',
+          statusCode: 500,
+        ),
+      );
+
+    await harness.search('broken');
+
+    expect(find.text('搜索失败，请稍后重试'), findsOneWidget);
+    expect(find.textContaining('server body'), findsNothing);
+  });
+
+  testWidgets('success rows show real metadata and active response summary', (
+    tester,
+  ) async {
+    final hit = _hit(
+      fileId: 'one',
+      name: 'report.pdf',
+      path: r'C:\资料\report.pdf',
+      snippet: 'alpha appears in this paragraph',
+      pageNumber: 7,
+      paragraphNumber: null,
+      matchReasons: const [SearchChannel.keyword, SearchChannel.textSemantic],
+    );
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        _response(
+          query: 'alpha',
+          hits: [hit],
+          totalCandidates: 31,
+          elapsedMs: 12.75,
+        ),
+      );
+    await harness.search('alpha');
+
+    expect(find.text('report.pdf'), findsOneWidget);
+    expect(find.text('alpha appears in this paragraph'), findsOneWidget);
+    expect(find.text('第 7 页'), findsOneWidget);
+    expect(find.text(r'C:\资料\report.pdf'), findsOneWidget);
+    expect(find.text('关键词'), findsWidgets);
+    expect(find.text('文本语义'), findsWidgets);
+    expect(find.text('候选 31 个，用时 12.75 ms'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '打开'), findsOneWidget);
+    expect(find.byTooltip('复制完整路径'), findsOneWidget);
+    expect(find.bySemanticsLabel('复制 report.pdf 的完整路径'), findsOneWidget);
+  });
+
+  testWidgets('paragraph metadata is shown when page is absent', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        _response(
+          hits: [
+            _hit(fileId: 'paragraph', name: 'notes.txt', paragraphNumber: 4),
+          ],
+        ),
+      );
+    await harness.search('notes');
+
+    expect(find.text('第 4 段'), findsOneWidget);
+  });
+
+  testWidgets('file launch errors stay inline and isolated to their row', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..fileLauncher.results.addAll([
+        const FileLaunchException(
+          FileLaunchErrorKind.notFound,
+          'private missing detail',
+        ),
+        const FileLaunchException(
+          FileLaunchErrorKind.launchFailed,
+          'private launch detail',
+        ),
+      ])
+      ..searchService.results.add(
+        _response(names: const ['one.txt', 'two.txt']),
+      );
+    await harness.search('files');
+
+    await tester.tap(find.byKey(const Key('open-file-id-0')));
+    await tester.pump();
+    expect(find.text('文件不存在或已被移动'), findsOneWidget);
+    expect(find.text('无法打开文件，请检查系统关联设置'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('open-file-id-1')));
+    await tester.pump();
+    expect(find.text('文件不存在或已被移动'), findsOneWidget);
+    expect(find.text('无法打开文件，请检查系统关联设置'), findsOneWidget);
+    expect(find.textContaining('private missing'), findsNothing);
+    expect(find.textContaining('private launch'), findsNothing);
+  });
+
+  testWidgets('copy records the path and confirms with a snack bar', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        _response(
+          hits: [
+            _hit(
+              fileId: 'copy-me',
+              name: 'copy.txt',
+              path: r'C:\notes\copy.txt',
+            ),
+          ],
+        ),
+      );
+    await harness.search('copy');
+
+    await tester.tap(find.byKey(const Key('copy-path-copy-me')));
+    await tester.pump();
+
+    expect(harness.pathClipboard.paths, [r'C:\notes\copy.txt']);
+    expect(find.text('路径已复制'), findsOneWidget);
+  });
+
+  testWidgets('desktop keeps a 292 pixel persistent filter panel', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester, surfaceSize: const Size(1280, 720));
+
+    expect(find.byKey(const Key('search-filter-button')), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const Key('search-filter-panel'))).width,
+      292,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'compact layout opens the shared filter panel in a bottom sheet',
+    (tester) async {
+      await _SearchHarness.create(tester, surfaceSize: const Size(900, 720));
+
+      expect(find.byKey(const Key('search-filter-panel')), findsNothing);
+      await tester.tap(find.byKey(const Key('search-filter-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('search-filter-panel')), findsOneWidget);
+      expect(find.text('检索模式'), findsOneWidget);
+      expect(find.text('内容类型'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('bottom sheet filter selection stays visually synchronized', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(
+      tester,
+      surfaceSize: const Size(900, 720),
+    );
+    await tester.tap(find.byKey(const Key('search-filter-button')));
+    await tester.pumpAndSettle();
+    final imagesChip = find.byKey(const Key('search-content-images'));
+    expect(tester.widget<FilterChip>(imagesChip).selected, isTrue);
+
+    await tester.tap(imagesChip);
+    await tester.pump();
+
+    expect(tester.widget<FilterChip>(imagesChip).selected, isFalse);
+    expect(
+      harness.searchController.contentTypes,
+      isNot(contains(SearchContentType.images)),
+    );
+    expect(harness.searchService.calls, isEmpty);
+  });
+
+  testWidgets('mode and content mutations submit once with updated criteria', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'filters'),
+        _response(query: 'filters'),
+        _response(query: 'filters'),
+      ]);
+    await harness.search('  filters  ');
+
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+    expect(harness.searchController.mode, RetrievalMode.semantic);
+    expect(harness.searchController.channels, RetrievalMode.semantic.channels);
+    expect(harness.searchService.calls, hasLength(2));
+    expect(
+      harness.searchService.calls.last.channels,
+      RetrievalMode.semantic.channels,
+    );
+
+    await tester.tap(find.byKey(const Key('search-content-images')));
+    await tester.pumpAndSettle();
+    expect(
+      harness.searchController.contentTypes,
+      isNot(contains(SearchContentType.images)),
+    );
+    expect(harness.searchService.calls, hasLength(3));
+    expect(harness.searchService.calls.last.query, 'filters');
+  });
+
+  testWidgets('the final retrieval channel cannot be deselected', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchController.setMode(RetrievalMode.exact);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('search-channel-keyword')));
+    await tester.pump();
+
+    expect(harness.searchController.channels, {SearchChannel.keyword});
+    expect(find.text('至少保留一个检索通道'), findsOneWidget);
+    expect(harness.searchService.calls, isEmpty);
+  });
+
+  testWidgets('Ctrl+K focuses search and Escape only removes focus', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester);
+    final field = find.byKey(const Key('search-query-field'));
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
+
+    await tester.enterText(field, 'keep this text');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isFalse,
+    );
+    expect(find.text('keep this text'), findsOneWidget);
+  });
+
+  for (final state in [
+    BackendConnectionState.checking,
+    BackendConnectionState.offline,
+  ]) {
+    testWidgets('filter mutation does not submit while ${state.name}', (
+      tester,
+    ) async {
+      final harness = await _SearchHarness.create(tester, backendState: state);
+      harness.searchController.setQuery('not submitted');
+      await tester.pump();
+
+      await tester.tap(find.text('语义'));
+      await tester.pump();
+
+      expect(harness.searchController.mode, RetrievalMode.semantic);
+      expect(harness.searchService.calls, isEmpty);
+    });
+  }
+
+  for (final size in [
+    const Size(1280, 720),
+    const Size(1440, 900),
+    const Size(640, 720),
+  ]) {
+    testWidgets(
+      'success workbench has no overflow at ${size.width}x${size.height}',
+      (tester) async {
+        final harness = await _SearchHarness.create(tester, surfaceSize: size)
+          ..searchService.results.add(
+            _response(names: const ['one.txt', 'two.txt', 'three.txt']),
+          );
+        await harness.search('responsive');
+
+        expect(find.text('one.txt'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  test(
+    'platform fakes queue success and typed failure without swallowing it',
+    () async {
+      const error = FileLaunchException(
+        FileLaunchErrorKind.launchFailed,
+        'queued failure',
+      );
+      final launcher = FakeFileLauncher()..results.addAll([null, error]);
+      final clipboard = FakePathClipboard()..results.addAll([null, error]);
+
+      await launcher.open('first.txt');
+      await expectLater(launcher.open('second.txt'), throwsA(same(error)));
+      await clipboard.copy('first.txt');
+      await expectLater(clipboard.copy('second.txt'), throwsA(same(error)));
+
+      expect(launcher.paths, ['first.txt', 'second.txt']);
+      expect(clipboard.paths, ['first.txt', 'second.txt']);
+    },
+  );
+}
+
+final class _SearchHarness {
+  _SearchHarness._({
+    required this.tester,
+    required this.searchService,
+    required this.searchController,
+    required this.backendApi,
+    required this.statusController,
+    required this.fileLauncher,
+    required this.pathClipboard,
+  });
+
+  final WidgetTester tester;
+  final FakeSearchService searchService;
+  final SearchController searchController;
+  final FakeBackendStatusClient backendApi;
+  final BackendStatusController statusController;
+  final FakeFileLauncher fileLauncher;
+  final FakePathClipboard pathClipboard;
+
+  static Future<_SearchHarness> create(
+    WidgetTester tester, {
+    BackendConnectionState backendState = BackendConnectionState.online,
+    Size surfaceSize = const Size(1280, 720),
+  }) async {
+    await tester.binding.setSurfaceSize(surfaceSize);
+    final searchService = FakeSearchService();
+    final searchController = SearchController(searchService);
+    final backendApi = FakeBackendStatusClient();
+    final statusController = BackendStatusController(backendApi)
+      ..state = backendState;
+    final fileLauncher = FakeFileLauncher();
+    final pathClipboard = FakePathClipboard();
+    final harness = _SearchHarness._(
+      tester: tester,
+      searchService: searchService,
+      searchController: searchController,
+      backendApi: backendApi,
+      statusController: statusController,
+      fileLauncher: fileLauncher,
+      pathClipboard: pathClipboard,
+    );
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.binding.setSurfaceSize(null);
+      searchController.dispose();
+      statusController.dispose();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        home: Scaffold(
+          body: SearchPage(
+            controller: searchController,
+            statusController: statusController,
+            fileLauncher: fileLauncher,
+            pathClipboard: pathClipboard,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    return harness;
+  }
+
+  FilledButton get submitButton => tester.widget<FilledButton>(
+    find.byKey(const Key('search-submit-button')),
+  );
+
+  Future<void> search(String query) async {
+    await tester.enterText(find.byKey(const Key('search-query-field')), query);
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pumpAndSettle();
+  }
+}
+
+SearchResponse _response({
+  String query = 'query',
+  List<String> names = const ['result.txt'],
+  List<SearchHit>? hits,
+  int totalCandidates = 9,
+  double elapsedMs = 8.5,
+}) {
+  return SearchResponse(
+    query: query,
+    hits:
+        hits ??
+        [
+          for (var index = 0; index < names.length; index += 1)
+            _hit(
+              fileId: 'file-id-$index',
+              name: names[index],
+              path: 'C:\\results\\${names[index]}',
+            ),
+        ],
+    totalCandidates: totalCandidates,
+    elapsedMs: elapsedMs,
+    weights: const {'keyword': 1},
+  );
+}
+
+SearchHit _hit({
+  required String fileId,
+  required String name,
+  String path = r'C:\results\result.txt',
+  String? snippet = 'matching snippet',
+  int? pageNumber,
+  int? paragraphNumber,
+  List<SearchChannel> matchReasons = const [SearchChannel.keyword],
+}) {
+  return SearchHit(
+    fileId: fileId,
+    sourceId: 'source-$fileId',
+    path: path,
+    name: name,
+    mimeType: 'text/plain',
+    modality: 'text',
+    score: 0.91,
+    matchReasons: matchReasons,
+    snippet: snippet,
+    pageNumber: pageNumber,
+    paragraphNumber: paragraphNumber,
+  );
+}
