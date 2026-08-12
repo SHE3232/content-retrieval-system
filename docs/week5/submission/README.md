@@ -1,15 +1,12 @@
-# Week 5 最终提交包
+# Week 5 四项最终交付物
 
-`第五周最终提交内容.zip` 是第五周材料的整合副本，内容包括：
+`第五周四项最终交付物.zip` 的顶层严格包含：
 
-- `00-第五周最终提交说明.md`
-- `01-无障碍合规验证报告.docx`
-- `02-UI可用性测试报告.docx`
-- `03-无障碍用户指南（草稿）.docx`
-- `evidence/` 完整证据目录
-- `SOURCE_VERSION.txt` 应用源码提交与验证口径
-- `SHA256SUMS.txt` 包内主要交付文档的 SHA-256
+1. `1. Functional crossplatform Flutter UI/`：可构建的 Flutter 工程源码，包含 `lib/`、`test/`、`pubspec.yaml` 及 Windows、macOS、Linux、Android、Web target。
+2. `2. Accessibility compliance validation report (WCAG 2.1 AA aligned).docx`。
+3. `3. UI usability test report.docx`。
+4. `4. Draft accessibility user guide.docx`。
 
-功能源码以仓库 `frontend/` 和 `SOURCE_VERSION.txt` 记录的提交为准，不在 ZIP 中重复打包整个 Git 仓库。
+压缩包不包含构建缓存、Git 元数据、用户文档或测试生成数据。应用源码版本见同目录 `SOURCE_VERSION.txt`。
 
-Android Accessibility Scanner 已按项目决定延后，ZIP 和报告均保留该项为 BLOCKED；严格状态为 10/19，而非全部完成。
+Android Accessibility Scanner 最终复扫已按项目决定延后，报告仍如实保留该项为 BLOCKED；严格状态为 10/19，而非全部完成。
