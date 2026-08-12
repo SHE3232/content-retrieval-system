@@ -37,6 +37,44 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('compact shell destinations meet Android tap target size', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(411, 914));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(useMaterial3: true),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: const AppShell(
+          searchPage: Text('SEARCH_PAGE'),
+          indexLibraryPage: Text('LIBRARY_PAGE'),
+          settingsPage: Text('SETTINGS_PAGE'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    for (final label in ['搜索', '索引库', '设置']) {
+      final node = tester.getSemantics(
+        find.bySemanticsLabel(RegExp('^$label')),
+      );
+      expect(
+        node.rect.height,
+        greaterThanOrEqualTo(48),
+        reason: '$label destination must expose a 48dp semantics target',
+      );
+    }
+    semantics.dispose();
+  });
+
   testWidgets('settings exposes headings, labels, values, and tap targets', (
     tester,
   ) async {

@@ -63,6 +63,7 @@ final class _AppShellState extends State<AppShell> {
                       onDestinationSelected: _selectDestination,
                       destinations: [
                         NavigationRailDestination(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
                           icon: _destinationIcon(
                             extended: extended,
                             label: '搜索',
@@ -76,6 +77,7 @@ final class _AppShellState extends State<AppShell> {
                           label: const Text('搜索'),
                         ),
                         NavigationRailDestination(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
                           icon: _destinationIcon(
                             extended: extended,
                             label: '索引库',
@@ -89,6 +91,7 @@ final class _AppShellState extends State<AppShell> {
                           label: const Text('索引库'),
                         ),
                         NavigationRailDestination(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
                           icon: _destinationIcon(
                             extended: extended,
                             label: '设置',
