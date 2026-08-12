@@ -1,11 +1,11 @@
 Strict Week 5 external evidence is not fully available in the current session.
 
 Required next environments/actions:
-- Windows: complete the remaining keyboard dialog focus-containment/restoration walkthrough and run NVDA. High contrast, 200% text scale, and reduced motion already passed.
+- Windows: NVDA 2026.1.1 is installed and signature-verified, but the native application-focused transcript is still pending; complete the remaining keyboard dialog focus-containment/restoration walkthrough. High contrast, 200% text scale, and reduced motion already passed.
 - macOS: release build and VoiceOver workflow on the manifest source commit.
 - Linux: completed release build and WSLg visual smoke workflow.
 - Android: release APK build/install/start and settings restart persistence passed; user must sign in to Google Play, install the official Google Accessibility Scanner, scan all required states, resolve findings, and rerun.
-- Web: serve committed release and run WAVE across every required UI state, resolving errors and contrast errors.
+- Web: WAVE four-state scan completed with zero errors and zero contrast errors; non-error structural alerts were manually reviewed.
 - E2E: controlled TXT/PDF/DOCX/JPG/PNG fixture and restart-persistence workflows passed.
 - Usability: conduct three consented, anonymized moderated sessions; at least one keyboard-only.
 

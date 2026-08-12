@@ -36,9 +36,10 @@ def test_generated_reports_have_expected_structure(monkeypatch, tmp_path: Path):
     accessibility_text = "\n".join(
         paragraph.text for paragraph in accessibility.paragraphs
     )
-    assert "9/19 严格门禁 PASS" in accessibility_text
+    assert "10/19 严格门禁 PASS" in accessibility_text
     assert "当前全量 Flutter 测试 177 项通过" in accessibility_text
     assert "Android release、Linux release、Web release 与 Windows release" in accessibility_text
+    assert "WAVE 四状态扫描" in accessibility_text
 
     guide = Document(tmp_path / "无障碍用户指南（草稿）.docx")
     guide_text = "\n".join(paragraph.text for paragraph in guide.paragraphs)

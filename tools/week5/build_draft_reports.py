@@ -18,7 +18,7 @@ from docx.shared import Inches, Mm, Pt, RGBColor
 
 FONT = "Times New Roman"
 BLACK = RGBColor(0, 0, 0)
-REPORT_DATE = "2026-08-12"
+REPORT_DATE = "2026-08-13"
 
 
 def set_font(run, size=11, bold=False, italic=False):
@@ -115,7 +115,7 @@ def cover(doc: Document, title: str, subtitle: str, status: str, source_commit: 
     p.paragraph_format.space_after = Pt(28)
     for label, value in (
         ("状态", status),
-        ("版本", "Week 5 Draft 1.1"),
+        ("版本", "Week 5 Draft 1.2"),
         ("日期", REPORT_DATE),
         ("应用源码提交", source_commit),
     ):
@@ -231,7 +231,7 @@ def build_accessibility(records, output):
     source_commit = application_source_commit(records)
     cover(doc, "无障碍合规验证报告", "本地多模态内容检索系统", f"BLOCKED（{passed}/19 严格门禁 PASS）", source_commit)
     heading(doc, "1. 执行摘要")
-    para(doc, f"严格完成状态为 BLOCKED。当前 19 项门禁中已有 {passed} 项通过，包括 Android release、Linux release、Web release 与 Windows release、真实五格式 E2E、设置重启持久化、高对比度、200% 字体和减少动态效果；其余项目保留为 BLOCKED。自动化无障碍测试证明实现行为，但不替代 NVDA、VoiceOver、Accessibility Scanner、WAVE 或人工走查。")
+    para(doc, f"严格完成状态为 BLOCKED。当前 19 项门禁中已有 {passed} 项通过，包括 Android release、Linux release、Web release 与 Windows release、真实五格式 E2E、设置重启持久化、高对比度、200% 字体、减少动态效果和 WAVE 四状态扫描；其余项目保留为 BLOCKED。自动化无障碍测试证明实现行为，但不替代 NVDA、VoiceOver、Accessibility Scanner 或人工走查。")
     heading(doc, "2. 范围与实现概况")
     for item in (
         "Flutter Material 3 搜索、索引库、设置三页已接入真实导航。",
@@ -255,7 +255,7 @@ def build_accessibility(records, output):
         ("macOS / VoiceOver", "无 macOS 环境，构建与 VoiceOver 均为 BLOCKED。"),
         ("Android / Accessibility Scanner", "Android release APK 已构建、签名校验并在 API 36 模拟器完成设置持久化复验；官方 Accessibility Scanner 尚未执行，工具门禁仍为 BLOCKED。"),
         ("Linux / WSLg", "Linux release 已完成构建、启动和可视化检查，状态 PASS。"),
-        ("Web / WAVE", "Web release 已构建；尚未执行 WAVE 多状态审查，状态 BLOCKED。"),
+        ("Web / WAVE", "WAVE 已对搜索离线态、索引库、设置和筛选对话框完成真实扫描；所有状态均为 0 errors、0 contrast errors，状态 PASS。七项非错误结构提示已人工复核并保留在证据中。"),
     ):
         heading(doc, title, 2)
         para(doc, body)

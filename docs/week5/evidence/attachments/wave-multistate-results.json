@@ -1,0 +1,544 @@
+{
+  "testedAt": "2026-08-12T16:14:30.961Z",
+  "environment": "Windows 11; Microsoft Edge 151; Flutter Web release; official WAVE Edge extension 3.3.1.0",
+  "sourceCommit": "3afe8ee",
+  "states": [
+    {
+      "waveVersion": "3.3.1.0",
+      "title": "本地内容检索",
+      "totalElements": 60,
+      "aim": 10,
+      "categories": {
+        "error": {
+          "count": 0,
+          "items": {}
+        },
+        "contrast": {
+          "count": 0,
+          "items": {}
+        },
+        "alert": {
+          "count": 2,
+          "items": {
+            "heading_missing": {
+              "description": "No heading structure",
+              "count": 1,
+              "text": [
+                false
+              ]
+            },
+            "region_missing": {
+              "description": "No page regions",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        },
+        "feature": {
+          "count": 1,
+          "items": {
+            "lang": {
+              "description": "Language",
+              "count": 1,
+              "text": [
+                "en-US"
+              ]
+            }
+          }
+        },
+        "structure": {
+          "count": 0,
+          "items": {}
+        },
+        "aria": {
+          "count": 30,
+          "items": {
+            "aria": {
+              "description": "ARIA",
+              "count": 9,
+              "text": [
+                "role=\"group\"",
+                "aria-current=\"true\"",
+                "aria-current=\"false\"",
+                "aria-current=\"false\"",
+                "role=\"group\"",
+                "role=\"group\"",
+                "aria-disabled=\"true\"",
+                "role=\"group\"",
+                "role=\"group\""
+              ]
+            },
+            "aria_label": {
+              "description": "ARIA label",
+              "count": 4,
+              "text": [
+                "aria-label=\"当前页面：搜索\"",
+                "aria-label=\"后端连接已断开。\"",
+                "aria-label=\"搜索内容\"",
+                "aria-label=\"输入关键词开始搜索。可按文件类型和检索通道缩小结果范围。\""
+              ]
+            },
+            "aria_tabindex": {
+              "description": "ARIA tabindex",
+              "count": 8,
+              "text": [
+                "tabindex=-1",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0"
+              ]
+            },
+            "aria_live_region": {
+              "description": "ARIA alert or live region",
+              "count": 2,
+              "text": [
+                false,
+                false
+              ]
+            },
+            "aria_button": {
+              "description": "ARIA button",
+              "count": 6,
+              "text": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "aria_hidden": {
+              "description": "ARIA hidden",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        }
+      },
+      "state": "search-offline",
+      "pageText": "◀ The following apply to the entire page: *en-US* 搜索 Tab 1 of 3*aria-current=\"true\"**tabindex=0* 索引库 Tab 2 of 3*aria-current=\"false\"**tabindex=0* 设置 Tab 3 of 3*aria-current=\"false\"**tabindex=0* *role=\"group\"* 后端离线 重新检测*tabindex=0* *role=\"group\"**aria-label=\"后端连接已断开。\"* *aria-label=\"搜索内容\"* 筛选*tabindex=0* 搜索*aria-disabled=\"true\"* 输入关键词开始搜索 可按文件类型和检索通道缩小结果范围 *role=\"group\"**aria-label=\"输入关键词开始搜索。可按文件类型和检索通道缩小结果范围。\"* *role=\"group\"* *role=\"group\"**aria-label=\"当前页面：搜索\"**tabindex=0* *tabindex=0* *tabindex=-1* Loading..."
+    },
+    {
+      "waveVersion": "3.3.1.0",
+      "title": "本地内容检索",
+      "totalElements": 50,
+      "aim": 10,
+      "categories": {
+        "error": {
+          "count": 0,
+          "items": {}
+        },
+        "contrast": {
+          "count": 0,
+          "items": {}
+        },
+        "alert": {
+          "count": 1,
+          "items": {
+            "heading_missing": {
+              "description": "No heading structure",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        },
+        "feature": {
+          "count": 1,
+          "items": {
+            "lang": {
+              "description": "Language",
+              "count": 1,
+              "text": [
+                "en-US"
+              ]
+            }
+          }
+        },
+        "structure": {
+          "count": 1,
+          "items": {
+            "header": {
+              "description": "Header",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        },
+        "aria": {
+          "count": 23,
+          "items": {
+            "aria": {
+              "description": "ARIA",
+              "count": 5,
+              "text": [
+                "role=\"group\"",
+                "aria-current=\"false\"",
+                "aria-current=\"true\"",
+                "aria-current=\"false\"",
+                "aria-disabled=\"true\""
+              ]
+            },
+            "aria_label": {
+              "description": "ARIA label",
+              "count": 1,
+              "text": [
+                "aria-label=\"当前页面：索引库\n索引库\n共 0 个文件\n当前验证平台不支持桌面路径，请使用桌面版管理索引。\n后端无法连接，请检查地址和服务状态。\n无法加载索引库，请刷新重试。\""
+              ]
+            },
+            "aria_tabindex": {
+              "description": "ARIA tabindex",
+              "count": 7,
+              "text": [
+                "tabindex=-1",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0"
+              ]
+            },
+            "aria_live_region": {
+              "description": "ARIA alert or live region",
+              "count": 2,
+              "text": [
+                false,
+                false
+              ]
+            },
+            "aria_button": {
+              "description": "ARIA button",
+              "count": 7,
+              "text": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "aria_hidden": {
+              "description": "ARIA hidden",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        }
+      },
+      "state": "library",
+      "pageText": "◀ The following apply to the entire page: *en-US* 搜索 Tab 1 of 3*aria-current=\"false\"**tabindex=0* 索引库 Tab 2 of 3*aria-current=\"true\"**tabindex=0* 设置 Tab 3 of 3*aria-current=\"false\"**tabindex=0* *role=\"group\"* 刷新索引库 添加文件夹*aria-disabled=\"true\"* 刷新重试*tabindex=0* 关闭*tabindex=0* *aria-label=\"当前页面：索引库 索引库 共 0 个文件 当前验证平台不支持桌面路径，请使用桌面版管理索引。 后端无法连接，请检查地址和服务状态。 无法加载索引库，请刷新重试。\"* *tabindex=0* *tabindex=-1* Loading..."
+    },
+    {
+      "waveVersion": "3.3.1.0",
+      "title": "本地内容检索",
+      "totalElements": 67,
+      "aim": 10,
+      "categories": {
+        "error": {
+          "count": 0,
+          "items": {}
+        },
+        "contrast": {
+          "count": 0,
+          "items": {}
+        },
+        "alert": {
+          "count": 2,
+          "items": {
+            "h1_missing": {
+              "description": "Missing first level heading",
+              "count": 1,
+              "text": [
+                false
+              ]
+            },
+            "text_small": {
+              "description": "Very small text",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        },
+        "feature": {
+          "count": 1,
+          "items": {
+            "lang": {
+              "description": "Language",
+              "count": 1,
+              "text": [
+                "en-US"
+              ]
+            }
+          }
+        },
+        "structure": {
+          "count": 3,
+          "items": {
+            "h2": {
+              "description": "Heading level 2",
+              "count": 1,
+              "text": [
+                false
+              ]
+            },
+            "header": {
+              "description": "Header",
+              "count": 2,
+              "text": [
+                false,
+                false
+              ]
+            }
+          }
+        },
+        "aria": {
+          "count": 52,
+          "items": {
+            "aria": {
+              "description": "ARIA",
+              "count": 15,
+              "text": [
+                "role=\"group\"",
+                "aria-current=\"false\"",
+                "aria-current=\"false\"",
+                "aria-current=\"true\"",
+                "role=\"group\"",
+                "role=\"group\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"false\"",
+                "role=\"checkbox\", aria-checked=\"false\"",
+                "role=\"switch\", aria-checked=\"false\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"false\"",
+                "role=\"checkbox\", aria-checked=\"false\"",
+                "role=\"checkbox\", aria-checked=\"false\"",
+                "role=\"switch\", aria-checked=\"false\""
+              ]
+            },
+            "aria_label": {
+              "description": "ARIA label",
+              "count": 13,
+              "text": [
+                "aria-label=\"当前页面：设置\"",
+                "aria-label=\"设置\n偏好设置保存在本机，不会上传。\"",
+                "aria-label=\"后端地址\"",
+                "aria-label=\"外观与无障碍\n主题\n文字大小\"",
+                "aria-label=\"跟随系统\"",
+                "aria-label=\"浅色\"",
+                "aria-label=\"深色\"",
+                "aria-label=\"高对比度\n增强边框和文字与背景的区分度\"",
+                "aria-label=\"100%\"",
+                "aria-label=\"125%\"",
+                "aria-label=\"150%\"",
+                "aria-label=\"200%\"",
+                "aria-label=\"减少动态效果\n关闭非必要动画和过渡效果\""
+              ]
+            },
+            "aria_tabindex": {
+              "description": "ARIA tabindex",
+              "count": 16,
+              "text": [
+                "tabindex=-1",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0"
+              ]
+            },
+            "aria_live_region": {
+              "description": "ARIA alert or live region",
+              "count": 2,
+              "text": [
+                false,
+                false
+              ]
+            },
+            "aria_button": {
+              "description": "ARIA button",
+              "count": 5,
+              "text": [
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "aria_hidden": {
+              "description": "ARIA hidden",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        }
+      },
+      "state": "settings",
+      "pageText": "◀ The following apply to the entire page: *en-US* 搜索 Tab 1 of 3*aria-current=\"false\"**tabindex=0* 索引库 Tab 2 of 3*aria-current=\"false\"**tabindex=0* 设置 Tab 3 of 3*aria-current=\"true\"**tabindex=0* *role=\"group\"* 后端连接 *aria-label=\"后端地址\"* 仅支持 HTTP 或 HTTPS 根地址。 *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"跟随系统\"**tabindex=0* *role=\"checkbox\", aria-checked=\"false\"**aria-label=\"浅色\"**tabindex=0* *role=\"checkbox\", aria-checked=\"false\"**aria-label=\"深色\"**tabindex=0* *role=\"switch\", aria-checked=\"false\"**aria-label=\"高对比度 增强边框和文字与背景的区分度\"**tabindex=0* *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"100%\"**tabindex=0* *role=\"checkbox\", aria-checked=\"false\"**aria-label=\"125%\"**tabindex=0* *role=\"checkbox\", aria-checked=\"false\"**aria-label=\"150%\"**tabindex=0* *role=\"checkbox\", aria-checked=\"false\"**aria-label=\"200%\"**tabindex=0* *role=\"switch\", aria-checked=\"false\"**aria-label=\"减少动态效果 关闭非必要动画和过渡效果\"**tabindex=0* *aria-label=\"外观与无障碍 主题 文字大小\"* 恢复默认设置*tabindex=0* 保存设置*tabindex=0* *aria-label=\"设置 偏好设"
+    },
+    {
+      "waveVersion": "3.3.1.0",
+      "title": "本地内容检索",
+      "totalElements": 60,
+      "aim": 10,
+      "categories": {
+        "error": {
+          "count": 0,
+          "items": {}
+        },
+        "contrast": {
+          "count": 0,
+          "items": {}
+        },
+        "alert": {
+          "count": 2,
+          "items": {
+            "heading_missing": {
+              "description": "No heading structure",
+              "count": 1,
+              "text": [
+                false
+              ]
+            },
+            "region_missing": {
+              "description": "No page regions",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        },
+        "feature": {
+          "count": 1,
+          "items": {
+            "lang": {
+              "description": "Language",
+              "count": 1,
+              "text": [
+                "en-US"
+              ]
+            }
+          }
+        },
+        "structure": {
+          "count": 0,
+          "items": {}
+        },
+        "aria": {
+          "count": 34,
+          "items": {
+            "aria": {
+              "description": "ARIA",
+              "count": 10,
+              "text": [
+                "role=\"group\"",
+                "aria-current=\"false\"",
+                "aria-current=\"true\"",
+                "aria-current=\"false\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"true\"",
+                "role=\"checkbox\", aria-checked=\"true\""
+              ]
+            },
+            "aria_label": {
+              "description": "ARIA label",
+              "count": 7,
+              "text": [
+                "aria-label=\"Dialog\"",
+                "aria-label=\"关键词\"",
+                "aria-label=\"文本语义\"",
+                "aria-label=\"图像语义\"",
+                "aria-label=\"文档\"",
+                "aria-label=\"文本文件\"",
+                "aria-label=\"图片\""
+              ]
+            },
+            "aria_tabindex": {
+              "description": "ARIA tabindex",
+              "count": 10,
+              "text": [
+                "tabindex=-1",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0",
+                "tabindex=0"
+              ]
+            },
+            "aria_live_region": {
+              "description": "ARIA alert or live region",
+              "count": 2,
+              "text": [
+                false,
+                false
+              ]
+            },
+            "aria_button": {
+              "description": "ARIA button",
+              "count": 4,
+              "text": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            "aria_hidden": {
+              "description": "ARIA hidden",
+              "count": 1,
+              "text": [
+                false
+              ]
+            }
+          }
+        }
+      },
+      "state": "filter-dialog",
+      "pageText": "◀ The following apply to the entire page: *en-US* Dismiss 筛选 检索模式 精确*aria-current=\"false\"**tabindex=0* 混合*aria-current=\"true\"**tabindex=0* 语义*aria-current=\"false\"**tabindex=0* 检索通道 *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"关键词\"**tabindex=0* *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"文本语义\"**tabindex=0* *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"图像语义\"**tabindex=0* 内容类型 *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"文档\"**tabindex=0* *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"文本文件\"**tabindex=0* *role=\"checkbox\", aria-checked=\"true\"**aria-label=\"图片\"**tabindex=0* *role=\"group\"* *aria-label=\"Dialog\"* *tabindex=-1* Loading..."
+    }
+  ],
+  "aggregate": {
+    "errors": 0,
+    "contrastErrors": 0,
+    "alerts": 7
+  }
+}
