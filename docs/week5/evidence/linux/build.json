@@ -1,3 +1,27 @@
 {
-  "gate_id": "build.linux", "status": "BLOCKED", "tested_at": "2026-08-11T22:02:45+08:00", "tester": "Codex environment audit", "environment": "Windows-only host; no Linux runner", "procedure": ["Audited available build hosts"], "observations": ["A Linux release build and visual smoke run cannot be produced on this host"], "attachments": ["attachments/external-gates-blocked.txt"], "issues": ["Run the manifest commit on Linux and perform human visual smoke testing"]
+  "gate_id": "build.linux",
+  "status": "PASS",
+  "tested_at": "2026-08-12T18:57:56+08:00",
+  "tester": "Codex automated build and visual inspection",
+  "environment": "Ubuntu 24.04.3 LTS on WSL2/WSLg; Flutter framework ee80f08bbf97172ec030b8751ceab557177a34a6; Dart 3.12.2; Linux x64",
+  "procedure": [
+    "Checked out the application source commit in a clean ext4 worktree",
+    "Ran flutter analyze",
+    "Ran flutter build linux --release",
+    "Started the release executable through WSLg",
+    "Captured and visually inspected the rendered application window"
+  ],
+  "observations": [
+    "Static analysis exited 0 with no issues",
+    "Linux release build exited 0",
+    "content_retrieval_app SHA-256 A5D8DA474368FA5BAEB82C66457F38DA0B055A9D9E846056EA551F4DEFCCC157",
+    "The release process remained running after launch and rendered the search, library, settings, backend status, search field, and filter controls with readable Chinese text",
+    "WSLg reported EGL fallback warnings, but the application window rendered successfully"
+  ],
+  "attachments": [
+    "attachments/linux-release-build.txt",
+    "attachments/linux-wslg-smoke-new.png"
+  ],
+  "issues": [],
+  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
 }

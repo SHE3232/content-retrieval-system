@@ -1,3 +1,29 @@
 {
-  "gate_id": "a11y.text_scale_200", "status": "BLOCKED", "tested_at": "2026-08-11T22:02:45+08:00", "tester": "Codex environment audit", "environment": "Automated 200% widget layouts only", "procedure": ["Ran 200% Flutter layout tests", "Checked for Windows 200% walkthrough evidence"], "observations": ["Automated search/library/settings layouts pass; OS-level visual walkthrough not executed"], "attachments": ["attachments/automated-accessibility-tests.txt", "attachments/external-gates-blocked.txt"], "issues": ["Run Windows 200% review across all required states"]
+  "gate_id": "a11y.text_scale_200",
+  "status": "PASS",
+  "tested_at": "2026-08-12T19:18:00+08:00",
+  "tester": "Codex Windows release walkthrough and visual inspection",
+  "environment": "Windows 11 25H2 x64; 1280x800 application window; application text scale set to 200%",
+  "procedure": [
+    "Set the application text-size control to 200% and saved it",
+    "Reviewed Search, Library, Settings, filter dialog, loading state, empty search result, and online backend status",
+    "Verified scrolling exposes all Settings controls and actions",
+    "Cross-checked the rendered release application against the automated 200% widget-layout suite"
+  ],
+  "observations": [
+    "All primary content and actions remained readable and reachable",
+    "No text clipping, overlap, inaccessible horizontal overflow, or hidden primary action was observed",
+    "The search loading placeholders and empty state reflowed within the 1280x800 window"
+  ],
+  "attachments": [
+    "attachments/automated-accessibility-tests.txt",
+    "attachments/windows-search-hc-200-ready.png",
+    "attachments/windows-search-loading-hc-200.png",
+    "attachments/windows-search-empty-hc-200.png",
+    "attachments/windows-library-empty-hc-200.png",
+    "attachments/windows-settings-hc-200-bottom.png",
+    "attachments/windows-filter-dialog-hc-200.png"
+  ],
+  "issues": [],
+  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
 }

@@ -1,0 +1,37 @@
+Week 5 Android release build evidence
+Tested at: 2026-08-12T18:35:28+08:00
+Application source commit: e32a6cf718be3862c4603132b82f95013f525c13
+Environment: Windows 11 25H2 x64
+Flutter: 3.44.6 (framework ee80f08bbf97172ec030b8751ceab557177a34a6)
+Dart: 3.12.2
+Android SDK / Build Tools: 36.0.0
+Android NDK: 28.2.13676358
+Java: OpenJDK 24
+
+Build command:
+  flutter build apk --release
+
+Artifact:
+  frontend/build/app/outputs/flutter-apk/app-release.apk
+  size: 50,965,204 bytes
+  SHA-256: 38AE30CF47AD6547511561A6267EC03BD9BB5AC0DCFC0AE9DC9D01E08C784F70
+
+apksigner verification:
+  Verifies: yes
+  APK Signature Scheme v2: true
+  Number of signers: 1
+  Signer certificate: C=US, O=Android, CN=Android Debug
+
+aapt package metadata:
+  package: com.example.content_retrieval_app
+  versionName: 1.0.0
+  versionCode: 1
+  minSdkVersion: 24
+  targetSdkVersion: 36
+  compileSdkVersion: 36
+  application label: 本地内容检索
+
+Scope note:
+  The Gradle release configuration intentionally uses the debug signing key so
+  the package can be installed for Week 5 device and Accessibility Scanner
+  validation. A production signing identity remains a later release concern.

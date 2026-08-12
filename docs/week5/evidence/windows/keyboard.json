@@ -1,3 +1,29 @@
 {
-  "gate_id": "a11y.keyboard", "status": "BLOCKED", "tested_at": "2026-08-11T22:02:45+08:00", "tester": "Codex environment audit", "environment": "Automated Flutter keyboard tests only", "procedure": ["Ran automated Ctrl/Cmd destination and F5 dispatch tests", "Checked for human keyboard-only walkthrough evidence"], "observations": ["Automated tests pass; complete no-pointer E2E walkthrough not executed"], "attachments": ["attachments/automated-accessibility-tests.txt", "attachments/external-gates-blocked.txt"], "issues": ["Run and record the complete keyboard-only workflow"]
+  "gate_id": "a11y.keyboard",
+  "status": "BLOCKED",
+  "tested_at": "2026-08-12T19:18:00+08:00",
+  "tester": "Codex partial Windows release keyboard walkthrough",
+  "environment": "Windows 11 25H2 x64; Flutter 3.44.6 release build; high contrast, 200% text, reduced motion",
+  "procedure": [
+    "Traversed forward with Tab and backward with Shift+Tab",
+    "Verified visible focus on Search, Library, Settings, query input, filter, and search controls",
+    "Activated the Library destination with Enter",
+    "Reviewed automated shortcut, focus order, dialog containment, Escape, and focus restoration tests"
+  ],
+  "observations": [
+    "Forward and reverse traversal visibly moved focus in logical order",
+    "Enter activated the focused Library destination without pointer input",
+    "The automated keyboard suite passes, but the full release walkthrough for every dialog action and post-dialog focus restoration remains incomplete"
+  ],
+  "attachments": [
+    "attachments/automated-accessibility-tests.txt",
+    "attachments/windows-keyboard-tab-3.png",
+    "attachments/windows-keyboard-tab-4.png",
+    "attachments/windows-keyboard-tab-6.png",
+    "attachments/windows-keyboard-enter-library.png"
+  ],
+  "issues": [
+    "Complete every confirmation-dialog action with Enter/Space/Escape and record focus containment and restoration before changing this gate to PASS"
+  ],
+  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
 }

@@ -1,0 +1,32 @@
+Week 5 Linux release build evidence
+Tested at: 2026-08-12T18:57:56+08:00
+Environment: Ubuntu 24.04.3 LTS on WSL2/WSLg, Linux x64
+Application source commit: e32a6cf718be3862c4603132b82f95013f525c13
+Flutter framework commit: ee80f08bbf97172ec030b8751ceab557177a34a6
+Dart: 3.12.2
+
+Commands:
+  flutter analyze
+  flutter build linux --release
+  ./build/linux/x64/release/bundle/content_retrieval_app
+
+Results:
+  flutter analyze: PASS, no issues found
+  flutter build linux --release: PASS
+  output: build/linux/x64/release/bundle/content_retrieval_app
+  executable size: 23840 bytes
+  SHA-256: a5d8da474368fa5baeb82c66457f38da0b055a9d9e846056ea551f4defccc157
+  ldd: all runtime libraries resolved; no "not found" entries
+  WSLg launch: PASS; process remained running and application window rendered
+
+Visual inspection:
+  Screenshot: attachments/linux-wslg-smoke-new.png
+  Search, library, settings, backend status, search input, and filter controls rendered.
+  Chinese text was readable after installing the Noto CJK system font package.
+  WSLg emitted EGL fallback warnings, but no visible rendering failure was observed.
+
+Additional environment note:
+  flutter test on this WSL instance exits while the flutter_tester shell connects
+  to its local VM service and does not reach project assertions. The same source
+  commit's 177 Flutter tests pass on Windows. This environmental test-runner issue
+  is not used as a substitute for the Linux build and WSLg launch evidence above.

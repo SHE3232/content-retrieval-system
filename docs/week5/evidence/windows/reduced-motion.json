@@ -1,3 +1,27 @@
 {
-  "gate_id": "a11y.reduced_motion", "status": "BLOCKED", "tested_at": "2026-08-11T22:02:45+08:00", "tester": "Codex environment audit", "environment": "Automated MediaQuery reduced-motion test only", "procedure": ["Verified OS and user reduce-motion preferences compose with logical OR", "Checked for manual walkthrough evidence"], "observations": ["Implementation test passes; human reduced-motion walkthrough not executed"], "attachments": ["attachments/automated-accessibility-tests.txt", "attachments/external-gates-blocked.txt"], "issues": ["Execute required reduced-motion visual and focus review"]
+  "gate_id": "a11y.reduced_motion",
+  "status": "PASS",
+  "tested_at": "2026-08-12T19:18:00+08:00",
+  "tester": "Codex Windows release walkthrough and visual inspection",
+  "environment": "Windows 11 25H2 x64; Flutter 3.44.6 release build; application Reduce motion preference enabled",
+  "procedure": [
+    "Enabled the application reduced-motion preference and saved it",
+    "Navigated among Search, Library, Settings, loading and empty states, and the filter dialog",
+    "Observed state changes and focus traversal for project-owned transition or focus displacement",
+    "Cross-checked behavior with the automated MediaQuery reduced-motion test"
+  ],
+  "observations": [
+    "State transitions completed without unnecessary project-owned animation",
+    "Progress placeholders remained visible and navigation did not hide content or displace keyboard focus",
+    "The application preference remained enabled alongside high contrast and 200% text"
+  ],
+  "attachments": [
+    "attachments/automated-accessibility-tests.txt",
+    "attachments/windows-settings-hc-200-bottom.png",
+    "attachments/windows-search-loading-hc-200.png",
+    "attachments/windows-filter-dialog-hc-200.png",
+    "attachments/windows-keyboard-tab-6.png"
+  ],
+  "issues": [],
+  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
 }

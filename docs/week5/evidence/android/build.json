@@ -1,3 +1,26 @@
 {
-  "gate_id": "build.android", "status": "BLOCKED", "tested_at": "2026-08-11T22:02:45+08:00", "tester": "Codex environment audit", "environment": "Windows 11; Android SDK unavailable", "procedure": ["Ran flutter build apk --debug"], "observations": ["Flutter reported No Android SDK found"], "attachments": ["attachments/android-build-blocked.txt"], "issues": ["Install Android SDK and configure ANDROID_HOME, then rebuild"]
+  "gate_id": "build.android",
+  "status": "PASS",
+  "tested_at": "2026-08-12T18:35:28+08:00",
+  "tester": "Codex automated build and artifact verification",
+  "environment": "Windows 11 25H2 x64; Flutter 3.44.6; Dart 3.12.2; Android SDK 36.0.0; Build Tools 36.0.0; NDK 28.2.13676358; OpenJDK 24",
+  "procedure": [
+    "Checked the application source commit",
+    "Accepted Android SDK package licenses",
+    "Ran flutter build apk --release",
+    "Verified the APK signature with apksigner",
+    "Inspected package metadata with aapt"
+  ],
+  "observations": [
+    "Release APK build completed from the Android persistence fix and produced app-release.apk (50,965,204 bytes)",
+    "APK SHA-256 38AE30CF47AD6547511561A6267EC03BD9BB5AC0DCFC0AE9DC9D01E08C784F70",
+    "APK Signature Scheme v2 verification passed with one signer",
+    "Package com.example.content_retrieval_app version 1.0.0 targets Android 36 with minimum SDK 24",
+    "The release build currently uses the project-configured Android debug signing key and is suitable for Week 5 validation, not store distribution"
+  ],
+  "attachments": [
+    "attachments/android-release-build.txt"
+  ],
+  "issues": [],
+  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
 }

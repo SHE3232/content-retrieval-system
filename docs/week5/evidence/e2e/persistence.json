@@ -1,3 +1,28 @@
 {
-  "gate_id": "e2e.persistence", "status": "BLOCKED", "tested_at": "2026-08-11T22:02:45+08:00", "tester": "Codex environment audit", "environment": "Repository/controller persistence tests pass; process restart walkthrough not executed", "procedure": ["Ran JSON-store and settings-controller tests", "Checked for process restart evidence"], "observations": ["Atomic persistence is implemented; no recorded close/restart verification exists"], "attachments": ["attachments/automated-accessibility-tests.txt", "attachments/external-gates-blocked.txt"], "issues": ["Save all settings, close app, restart, and record restored values/catalog"]
+  "gate_id": "e2e.persistence",
+  "status": "PASS",
+  "tested_at": "2026-08-12T18:34:00+08:00",
+  "tester": "Codex automated device walkthrough with visual inspection",
+  "environment": "Android 16 API 36 Google Play x86_64 emulator; Flutter 3.44.6 release APK",
+  "procedure": [
+    "Opened Settings in the installed release application",
+    "Selected dark theme, high contrast, 200% text scale, and reduced motion",
+    "Saved the settings and verified the in-app success message",
+    "Force-stopped the application process",
+    "Relaunched the application, returned to Settings, captured the UI hierarchy and screenshot, and verified the restored selections"
+  ],
+  "observations": [
+    "The application displayed the success message 设置已保存",
+    "After a process-level restart, the UI hierarchy still marked 深色 as selected and 高对比度 as checked",
+    "The restarted settings screen remained in dark high-contrast presentation at the enlarged 200% text scale",
+    "The persisted settings were read from application-private Android storage introduced in source commit e32a6cf718be3862c4603132b82f95013f525c13"
+  ],
+  "attachments": [
+    "attachments/android-settings-fixed-saved.png",
+    "attachments/android-settings-fixed-saved.xml",
+    "attachments/android-settings-after-restart.png",
+    "attachments/android-settings-after-restart.xml"
+  ],
+  "issues": [],
+  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
 }
