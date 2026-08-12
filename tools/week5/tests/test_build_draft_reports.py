@@ -37,13 +37,14 @@ def test_generated_reports_have_expected_structure(monkeypatch, tmp_path: Path):
         paragraph.text for paragraph in accessibility.paragraphs
     )
     assert "10/19 严格门禁 PASS" in accessibility_text
-    assert "当前全量 Flutter 测试 177 项通过" in accessibility_text
+    assert "当前全量 Flutter 测试 178 项通过" in accessibility_text
     assert "Android release、Linux release、Web release 与 Windows release" in accessibility_text
     assert "WAVE 四状态扫描" in accessibility_text
 
     guide = Document(tmp_path / "无障碍用户指南（草稿）.docx")
     guide_text = "\n".join(paragraph.text for paragraph in guide.paragraphs)
     assert "Android release 已完成构建和设备启动" in guide_text
+    assert "Accessibility Scanner 最终复扫按项目决定延后" in guide_text
     assert "Linux release 已完成 WSLg 启动检查" in guide_text
     assert "当前环境缺少 Android SDK" not in guide_text
 

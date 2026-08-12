@@ -1,3 +1,28 @@
 {
-  "gate_id": "a11y.android_scanner", "status": "BLOCKED", "tested_at": "2026-08-12T18:35:28+08:00", "tester": "Codex environment audit", "environment": "Windows 11 25H2 x64; Android API 36 Google Play emulator; release APK installed", "procedure": ["Built and installed the release APK", "Verified the application starts on the Android emulator", "Audited the official Google Accessibility Scanner installation prerequisite"], "observations": ["The release APK builds, installs, and starts successfully", "The official Google Accessibility Scanner has not been installed from Google Play or run against the required UI states because Play Store account authentication requires user action"], "attachments": ["attachments/android-release-build.txt", "attachments/android-settings-after-restart.png", "attachments/external-gates-blocked.txt"], "issues": ["Sign in to Google Play, install the official Accessibility Scanner, scan all required states, resolve findings, and rerun"], "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13"
+  "gate_id": "a11y.android_scanner",
+  "status": "BLOCKED",
+  "tested_at": "2026-08-13T01:41:00+08:00",
+  "tester": "Codex assisted Android emulator session",
+  "environment": "Windows 11 25H2 x64; Android API 36 Google Play emulator; official Accessibility Scanner 2.5.1.896851528 installed by Google Play",
+  "procedure": [
+    "Verified the Scanner package, version, Google Play installer source, and enabled accessibility service",
+    "Ran an initial Snapshot against the compact search state",
+    "Reviewed three touch-target suggestions on the compact navigation rail",
+    "Raised all three navigation semantics targets from 44dp to at least 48dp and added a regression test",
+    "Stopped before a valid final multi-state rescan at the project owner's request"
+  ],
+  "observations": [
+    "The official Scanner was installed and the initial scan produced three touch-target suggestions",
+    "The three findings shared one root cause in the compact Material 3 navigation rail and the code-level regression now passes",
+    "No valid post-fix Scanner result was retained, so this gate remains BLOCKED and is explicitly deferred"
+  ],
+  "attachments": [
+    "attachments/android-release-build.txt",
+    "attachments/android-settings-after-restart.png",
+    "attachments/external-gates-blocked.txt"
+  ],
+  "issues": [
+    "Deferred: run and retain an official post-fix Scanner result for search, library, settings, and filter states"
+  ],
+  "source_commit": "875bb430f93d11d43b78d738328e633f48f57283"
 }

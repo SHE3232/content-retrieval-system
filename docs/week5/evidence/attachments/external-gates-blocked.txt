@@ -4,7 +4,7 @@ Required next environments/actions:
 - Windows: NVDA 2026.1.1 is installed and signature-verified, but the native application-focused transcript is still pending; complete the remaining keyboard dialog focus-containment/restoration walkthrough. High contrast, 200% text scale, and reduced motion already passed.
 - macOS: release build and VoiceOver workflow on the manifest source commit.
 - Linux: completed release build and WSLg visual smoke workflow.
-- Android: release APK build/install/start and settings restart persistence passed; user must sign in to Google Play, install the official Google Accessibility Scanner, scan all required states, resolve findings, and rerun.
+- Android: release APK build/install/start and settings restart persistence passed. The official Google Play Accessibility Scanner was installed and an initial scan found three compact-navigation touch-target issues; the targets were raised from 44dp to at least 48dp with a regression test. The valid post-fix four-state rescan is deferred by project decision, so the gate remains BLOCKED.
 - Web: WAVE four-state scan completed with zero errors and zero contrast errors; non-error structural alerts were manually reviewed.
 - E2E: controlled TXT/PDF/DOCX/JPG/PNG fixture and restart-persistence workflows passed.
 - Usability: conduct three consented, anonymized moderated sessions; at least one keyboard-only.

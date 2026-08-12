@@ -115,7 +115,7 @@ def cover(doc: Document, title: str, subtitle: str, status: str, source_commit: 
     p.paragraph_format.space_after = Pt(28)
     for label, value in (
         ("状态", status),
-        ("版本", "Week 5 Draft 1.2"),
+        ("版本", "Week 5 Final Draft 1.3"),
         ("日期", REPORT_DATE),
         ("应用源码提交", source_commit),
     ):
@@ -213,6 +213,11 @@ def load_records(root: Path):
     return sorted(records, key=lambda value: value["gate_id"])
 
 
+def manifest_source_commit(root: Path):
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    return manifest.get("source_commit") or "未记录"
+
+
 def application_source_commit(records):
     commits = [
         record["source_commit"]
@@ -224,14 +229,13 @@ def application_source_commit(records):
     return Counter(commits).most_common(1)[0][0]
 
 
-def build_accessibility(records, output):
+def build_accessibility(records, output, source_commit):
     doc = Document()
     configure(doc, "Week 5 合规报告")
     passed = sum(record["status"] == "PASS" for record in records)
-    source_commit = application_source_commit(records)
     cover(doc, "无障碍合规验证报告", "本地多模态内容检索系统", f"BLOCKED（{passed}/19 严格门禁 PASS）", source_commit)
     heading(doc, "1. 执行摘要")
-    para(doc, f"严格完成状态为 BLOCKED。当前 19 项门禁中已有 {passed} 项通过，包括 Android release、Linux release、Web release 与 Windows release、真实五格式 E2E、设置重启持久化、高对比度、200% 字体、减少动态效果和 WAVE 四状态扫描；其余项目保留为 BLOCKED。自动化无障碍测试证明实现行为，但不替代 NVDA、VoiceOver、Accessibility Scanner 或人工走查。")
+    para(doc, f"严格完成状态为 BLOCKED。当前 19 项门禁中已有 {passed} 项通过，包括 Android release、Linux release、Web release 与 Windows release、真实五格式 E2E、设置重启持久化、高对比度、200% 字体、减少动态效果和 WAVE 四状态扫描；其余项目保留为 BLOCKED。项目已决定本轮暂停 Android Accessibility Scanner 最终复扫，因此该项明确列为延后验证。自动化无障碍测试证明实现行为，但不替代 NVDA、VoiceOver、Accessibility Scanner 或人工走查。")
     heading(doc, "2. 范围与实现概况")
     for item in (
         "Flutter Material 3 搜索、索引库、设置三页已接入真实导航。",
@@ -248,28 +252,28 @@ def build_accessibility(records, output):
         rows.append((record["gate_id"], record["status"], record["observations"][0], issue))
     table(doc, ("门禁", "状态", "实际结果", "后续动作/问题"), rows, (1.25, 0.85, 2.2, 2.4))
     heading(doc, "4. 自动化 Flutter 无障碍检查")
-    para(doc, "自动化套件覆盖语义标题与标签、点击目标规则、键盘快捷键、高对比度比值、200% 布局、设置持久化及状态播报。当前全量 Flutter 测试 177 项通过，静态分析无问题；后端 450 项通过、5 项跳过。该结论只描述代码层门禁。")
+    para(doc, "自动化套件覆盖语义标题与标签、点击目标规则、键盘快捷键、高对比度比值、200% 布局、设置持久化及状态播报。当前全量 Flutter 测试 178 项通过，静态分析无问题；后端 450 项通过、5 项跳过。紧凑导航的三个入口已由约 44dp 修复为不小于 48dp，并有回归测试。该结论只描述代码层门禁。")
     heading(doc, "5. 平台辅助技术验证")
     for title, body in (
         ("Windows / NVDA", "未执行完整 NVDA 人工流程，状态 BLOCKED。"),
         ("macOS / VoiceOver", "无 macOS 环境，构建与 VoiceOver 均为 BLOCKED。"),
-        ("Android / Accessibility Scanner", "Android release APK 已构建、签名校验并在 API 36 模拟器完成设置持久化复验；官方 Accessibility Scanner 尚未执行，工具门禁仍为 BLOCKED。"),
+        ("Android / Accessibility Scanner", "Android release APK 已构建并在 API 36 模拟器完成设置持久化复验。官方 Accessibility Scanner 已由 Google Play 安装；首次扫描发现三个导航触控目标问题，代码已修复到不小于 48dp。按项目决定暂停最终复扫，因此没有有效的修复后多状态结果，门禁保持 BLOCKED。"),
         ("Linux / WSLg", "Linux release 已完成构建、启动和可视化检查，状态 PASS。"),
         ("Web / WAVE", "WAVE 已对搜索离线态、索引库、设置和筛选对话框完成真实扫描；所有状态均为 0 errors、0 contrast errors，状态 PASS。七项非错误结构提示已人工复核并保留在证据中。"),
     ):
         heading(doc, title, 2)
         para(doc, body)
     heading(doc, "6. 剩余风险与验收决定")
-    para(doc, "不得将本报告作为第五周全部完成证明。完成条件是 evidence validator 在不带 --allow-incomplete 时输出 19/19，并且所有记录对应同一应用源码提交。")
+    para(doc, "本报告可作为当前已完成范围的最终提交材料，但不得作为第五周 19/19 全部完成证明。若后续要求严格关闭全部门禁，仍需完成 Android Scanner 最终复扫、macOS/VoiceOver、NVDA 与完整人工键盘流程，以及三名真实参与者测试。")
     heading(doc, "7. 证据索引")
     table(doc, ("门禁", "记录路径", "附件数"), [(r["gate_id"], r["_path"], len(r["attachments"])) for r in records], (2.0, 3.8, 0.9))
     doc.save(output)
 
 
-def build_usability(records, output):
+def build_usability(records, output, source_commit):
     doc = Document()
     configure(doc, "Week 5 可用性报告")
-    cover(doc, "UI 可用性测试报告", "本地多模态内容检索系统", "BLOCKED（0/3 参与者已完成）", application_source_commit(records))
+    cover(doc, "UI 可用性测试报告", "本地多模态内容检索系统", "阶段性提交；BLOCKED（0/3 参与者已完成）", source_commit)
     heading(doc, "1. 目标与工作流")
     para(doc, "目标是验证用户能否完成后端状态确认、搜索与筛选、结果打开/复制、索引库添加/进度/重建/移除以及无障碍设置。")
     heading(doc, "2. 参与者与隐私")
@@ -293,12 +297,12 @@ def build_usability(records, output):
     doc.save(output)
 
 
-def build_guide(records, output):
+def build_guide(records, output, source_commit):
     doc = Document()
     configure(doc, "Week 5 用户指南（草稿）")
-    cover(doc, "无障碍用户指南（草稿）", "本地多模态内容检索系统", "草稿；辅助技术跨平台验证待完成", application_source_commit(records))
+    cover(doc, "无障碍用户指南（草稿）", "本地多模态内容检索系统", "最终提交草稿；辅助技术跨平台验证待完成", source_commit)
     heading(doc, "1. 适用范围")
-    para(doc, "Windows 是当前主要运行平台。Android release 已完成构建和设备启动，用于后续 Accessibility Scanner 验证；Linux release 已完成 WSLg 启动检查；Web release 已能构建，用于 WAVE 验证。macOS 构建与 VoiceOver 仍待真实 Mac 环境完成。")
+    para(doc, "Windows 是当前主要运行平台。Android release 已完成构建和设备启动；Accessibility Scanner 最终复扫按项目决定延后。Linux release 已完成 WSLg 启动检查；Web release 已完成 WAVE 四状态验证。macOS 构建与 VoiceOver 仍待真实 Mac 环境完成。")
     heading(doc, "2. 启动应用")
     for item in (
         "在项目根目录运行 start-mvp.ps1 -CheckOnly，确认输出 MVP preflight passed。",
@@ -331,7 +335,7 @@ def build_guide(records, output):
     heading(doc, "VoiceOver（macOS）", 2)
     para(doc, "使用 VoiceOver 键盘命令遍历导航、表单、结果和对话框。当前无 macOS 实测记录，因此本节为待验证说明。")
     heading(doc, "9. 常见问题")
-    table(doc, ("现象", "处理"), (("后端离线", "确认服务和地址，选择“重新检测”"), ("模型清单缺失", "恢复 models/model-manifest.json 及对应权重，再运行预检"), ("Android Scanner 未执行", "在 Google Play 模拟器安装官方 Accessibility Scanner，启用服务后记录完整工作流"), ("索引任务失败", "打开失败详情，确认路径权限和文件格式后重试"), ("设置数据损坏", "应用恢复默认值；重新设置并保存")), (2.1, 4.6))
+    table(doc, ("现象", "处理"), (("后端离线", "确认服务和地址，选择“重新检测”"), ("模型清单缺失", "恢复 models/model-manifest.json 及对应权重，再运行预检"), ("Android Scanner 延后", "后续在 Google Play 模拟器运行官方 Scanner，保留修复后的四状态结果"), ("索引任务失败", "打开失败详情，确认路径权限和文件格式后重试"), ("设置数据损坏", "应用恢复默认值；重新设置并保存")), (2.1, 4.6))
     heading(doc, "10. 隐私与反馈")
     para(doc, "检索与设置以本机处理为主。不要在测试证据中提交私人文档内容、完整敏感路径或参与者身份。反馈应包含平台、应用提交、操作步骤、期望与实际结果。")
     doc.save(output)
@@ -344,9 +348,10 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     records = load_records(args.evidence)
-    build_accessibility(records, args.output / "无障碍合规验证报告.docx")
-    build_usability(records, args.output / "UI可用性测试报告.docx")
-    build_guide(records, args.output / "无障碍用户指南（草稿）.docx")
+    source_commit = manifest_source_commit(args.evidence)
+    build_accessibility(records, args.output / "无障碍合规验证报告.docx", source_commit)
+    build_usability(records, args.output / "UI可用性测试报告.docx", source_commit)
+    build_guide(records, args.output / "无障碍用户指南（草稿）.docx", source_commit)
 
 
 if __name__ == "__main__":

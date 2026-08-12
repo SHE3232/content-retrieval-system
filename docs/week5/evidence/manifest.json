@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "Local Multimodal Content Retrieval System",
-  "source_commit": "e32a6cf718be3862c4603132b82f95013f525c13",
+  "source_commit": "875bb430f93d11d43b78d738328e633f48f57283",
   "flutter": {
     "version": "3.44.6",
     "framework_revision": "ee80f08bbf97172ec030b8751ceab557177a34a6",
@@ -9,7 +9,7 @@
   },
   "backend": {
     "version": "Week 5 integration baseline",
-    "commit": "e32a6cf718be3862c4603132b82f95013f525c13"
+    "commit": "875bb430f93d11d43b78d738328e633f48f57283"
   },
   "records": [
     "windows/build.json",

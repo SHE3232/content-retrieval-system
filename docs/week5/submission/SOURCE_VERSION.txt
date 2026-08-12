@@ -1,0 +1,8 @@
+Project: Local Multimodal Content Retrieval System
+Week: 5
+Application source commit: 875bb430f93d11d43b78d738328e633f48f57283
+Branch: master
+Strict evidence status: 10/19 PASS, 9/19 BLOCKED
+Android Accessibility Scanner: deferred by project decision; not claimed PASS
+Flutter UI source: frontend/
+Evidence manifest: docs/week5/evidence/manifest.json
