@@ -1,12 +1,12 @@
-Strict Week 5 external evidence is not available in the current Windows-only automated session.
+Strict Week 5 external evidence is not fully available in the current session.
 
 Required next environments/actions:
-- Windows: human keyboard-only walkthrough, NVDA run, OS/app high-contrast and 200% visual review, reduced-motion walkthrough.
+- Windows: complete the remaining keyboard dialog focus-containment/restoration walkthrough and run NVDA. High contrast, 200% text scale, and reduced motion already passed.
 - macOS: release build and VoiceOver workflow on the manifest source commit.
-- Linux: release build and human visual smoke workflow on the manifest source commit.
-- Android: install/configure Android SDK, build APK, run on Android 9+ with Google Accessibility Scanner, resolve and rerun findings.
+- Linux: completed release build and WSLg visual smoke workflow.
+- Android: release APK build/install/start and settings restart persistence passed; user must sign in to Google Play, install the official Google Accessibility Scanner, scan all required states, resolve findings, and rerun.
 - Web: serve committed release and run WAVE across every required UI state, resolving errors and contrast errors.
-- E2E: execute controlled TXT/PDF/DOCX/JPG/PNG fixture and restart-persistence workflows.
+- E2E: controlled TXT/PDF/DOCX/JPG/PNG fixture and restart-persistence workflows passed.
 - Usability: conduct three consented, anonymized moderated sessions; at least one keyboard-only.
 
 No blocked item is represented as PASS.

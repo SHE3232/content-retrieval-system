@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from docx.shared import Inches, Mm, Pt, RGBColor
 
 FONT = "Times New Roman"
 BLACK = RGBColor(0, 0, 0)
-SOURCE_COMMIT = "04c498f37315f455c5fcc625f66268e460204065"
+REPORT_DATE = "2026-08-12"
 
 
 def set_font(run, size=11, bold=False, italic=False):
@@ -103,7 +104,7 @@ def _field(paragraph, instruction: str):
         run.append(item)
 
 
-def cover(doc: Document, title: str, subtitle: str, status: str):
+def cover(doc: Document, title: str, subtitle: str, status: str, source_commit: str):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(72)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -114,9 +115,9 @@ def cover(doc: Document, title: str, subtitle: str, status: str):
     p.paragraph_format.space_after = Pt(28)
     for label, value in (
         ("状态", status),
-        ("版本", "Week 5 Draft 1.0"),
-        ("日期", "2026-08-11"),
-        ("应用源码提交", SOURCE_COMMIT),
+        ("版本", "Week 5 Draft 1.1"),
+        ("日期", REPORT_DATE),
+        ("应用源码提交", source_commit),
     ):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -212,13 +213,25 @@ def load_records(root: Path):
     return sorted(records, key=lambda value: value["gate_id"])
 
 
+def application_source_commit(records):
+    commits = [
+        record["source_commit"]
+        for record in records
+        if record.get("status") == "PASS" and record.get("source_commit")
+    ]
+    if not commits:
+        return "未记录"
+    return Counter(commits).most_common(1)[0][0]
+
+
 def build_accessibility(records, output):
     doc = Document()
     configure(doc, "Week 5 合规报告")
     passed = sum(record["status"] == "PASS" for record in records)
-    cover(doc, "无障碍合规验证报告", "本地多模态内容检索系统", f"BLOCKED（{passed}/19 严格门禁 PASS）")
+    source_commit = application_source_commit(records)
+    cover(doc, "无障碍合规验证报告", "本地多模态内容检索系统", f"BLOCKED（{passed}/19 严格门禁 PASS）", source_commit)
     heading(doc, "1. 执行摘要")
-    para(doc, f"严格完成状态为 BLOCKED。当前 19 项门禁中已有 {passed} 项通过：Windows release、Web release 与真实五格式 E2E；其余项目保留为 BLOCKED。自动化无障碍测试证明实现行为，但不替代 NVDA、VoiceOver、Accessibility Scanner、WAVE 或人工走查。")
+    para(doc, f"严格完成状态为 BLOCKED。当前 19 项门禁中已有 {passed} 项通过，包括 Android release、Linux release、Web release 与 Windows release、真实五格式 E2E、设置重启持久化、高对比度、200% 字体和减少动态效果；其余项目保留为 BLOCKED。自动化无障碍测试证明实现行为，但不替代 NVDA、VoiceOver、Accessibility Scanner、WAVE 或人工走查。")
     heading(doc, "2. 范围与实现概况")
     for item in (
         "Flutter Material 3 搜索、索引库、设置三页已接入真实导航。",
@@ -235,12 +248,13 @@ def build_accessibility(records, output):
         rows.append((record["gate_id"], record["status"], record["observations"][0], issue))
     table(doc, ("门禁", "状态", "实际结果", "后续动作/问题"), rows, (1.25, 0.85, 2.2, 2.4))
     heading(doc, "4. 自动化 Flutter 无障碍检查")
-    para(doc, "自动化套件覆盖语义标题与标签、点击目标规则、键盘快捷键、高对比度比值、200% 布局、设置持久化及状态播报。当前全量 Flutter 测试 176 项通过，静态分析无问题；后端 450 项通过、5 项跳过。该结论只描述代码层门禁。")
+    para(doc, "自动化套件覆盖语义标题与标签、点击目标规则、键盘快捷键、高对比度比值、200% 布局、设置持久化及状态播报。当前全量 Flutter 测试 177 项通过，静态分析无问题；后端 450 项通过、5 项跳过。该结论只描述代码层门禁。")
     heading(doc, "5. 平台辅助技术验证")
     for title, body in (
         ("Windows / NVDA", "未执行完整 NVDA 人工流程，状态 BLOCKED。"),
         ("macOS / VoiceOver", "无 macOS 环境，构建与 VoiceOver 均为 BLOCKED。"),
-        ("Android / Accessibility Scanner", "Android target 已生成；因缺少 Android SDK，APK 和 Scanner 均为 BLOCKED。"),
+        ("Android / Accessibility Scanner", "Android release APK 已构建、签名校验并在 API 36 模拟器完成设置持久化复验；官方 Accessibility Scanner 尚未执行，工具门禁仍为 BLOCKED。"),
+        ("Linux / WSLg", "Linux release 已完成构建、启动和可视化检查，状态 PASS。"),
         ("Web / WAVE", "Web release 已构建；尚未执行 WAVE 多状态审查，状态 BLOCKED。"),
     ):
         heading(doc, title, 2)
@@ -255,7 +269,7 @@ def build_accessibility(records, output):
 def build_usability(records, output):
     doc = Document()
     configure(doc, "Week 5 可用性报告")
-    cover(doc, "UI 可用性测试报告", "本地多模态内容检索系统", "BLOCKED（0/3 参与者已完成）")
+    cover(doc, "UI 可用性测试报告", "本地多模态内容检索系统", "BLOCKED（0/3 参与者已完成）", application_source_commit(records))
     heading(doc, "1. 目标与工作流")
     para(doc, "目标是验证用户能否完成后端状态确认、搜索与筛选、结果打开/复制、索引库添加/进度/重建/移除以及无障碍设置。")
     heading(doc, "2. 参与者与隐私")
@@ -279,12 +293,12 @@ def build_usability(records, output):
     doc.save(output)
 
 
-def build_guide(output):
+def build_guide(records, output):
     doc = Document()
     configure(doc, "Week 5 用户指南（草稿）")
-    cover(doc, "无障碍用户指南（草稿）", "本地多模态内容检索系统", "草稿；辅助技术跨平台验证待完成")
+    cover(doc, "无障碍用户指南（草稿）", "本地多模态内容检索系统", "草稿；辅助技术跨平台验证待完成", application_source_commit(records))
     heading(doc, "1. 适用范围")
-    para(doc, "Windows 是当前主要运行平台。Web release 已能构建，用于 WAVE 验证；Android target 用于 Accessibility Scanner，但当前环境缺少 Android SDK。macOS、Linux 的正式验证待相应平台完成。")
+    para(doc, "Windows 是当前主要运行平台。Android release 已完成构建和设备启动，用于后续 Accessibility Scanner 验证；Linux release 已完成 WSLg 启动检查；Web release 已能构建，用于 WAVE 验证。macOS 构建与 VoiceOver 仍待真实 Mac 环境完成。")
     heading(doc, "2. 启动应用")
     for item in (
         "在项目根目录运行 start-mvp.ps1 -CheckOnly，确认输出 MVP preflight passed。",
@@ -317,7 +331,7 @@ def build_guide(output):
     heading(doc, "VoiceOver（macOS）", 2)
     para(doc, "使用 VoiceOver 键盘命令遍历导航、表单、结果和对话框。当前无 macOS 实测记录，因此本节为待验证说明。")
     heading(doc, "9. 常见问题")
-    table(doc, ("现象", "处理"), (("后端离线", "确认服务和地址，选择“重新检测”"), ("模型清单缺失", "恢复 models/model-manifest.json 及对应权重，再运行预检"), ("Android 无法构建", "安装 Android SDK 并配置 ANDROID_HOME"), ("索引任务失败", "打开失败详情，确认路径权限和文件格式后重试"), ("设置数据损坏", "应用恢复默认值；重新设置并保存")), (2.1, 4.6))
+    table(doc, ("现象", "处理"), (("后端离线", "确认服务和地址，选择“重新检测”"), ("模型清单缺失", "恢复 models/model-manifest.json 及对应权重，再运行预检"), ("Android Scanner 未执行", "在 Google Play 模拟器安装官方 Accessibility Scanner，启用服务后记录完整工作流"), ("索引任务失败", "打开失败详情，确认路径权限和文件格式后重试"), ("设置数据损坏", "应用恢复默认值；重新设置并保存")), (2.1, 4.6))
     heading(doc, "10. 隐私与反馈")
     para(doc, "检索与设置以本机处理为主。不要在测试证据中提交私人文档内容、完整敏感路径或参与者身份。反馈应包含平台、应用提交、操作步骤、期望与实际结果。")
     doc.save(output)
@@ -332,7 +346,7 @@ def main():
     records = load_records(args.evidence)
     build_accessibility(records, args.output / "无障碍合规验证报告.docx")
     build_usability(records, args.output / "UI可用性测试报告.docx")
-    build_guide(args.output / "无障碍用户指南（草稿）.docx")
+    build_guide(records, args.output / "无障碍用户指南（草稿）.docx")
 
 
 if __name__ == "__main__":
