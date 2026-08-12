@@ -16,7 +16,7 @@
 3. **UI Usability Test Report**：`reports/UI可用性测试报告.docx`。该报告如实说明真实参与者测试尚未完成。
 4. **Draft Accessibility User Guide**：`reports/无障碍用户指南（草稿）.docx`。
 5. **验收证据**：`evidence/manifest.json` 及其引用的构建、WAVE、E2E、设置持久化和桌面无障碍附件。
-6. **整合提交包**：`submission/Week5-final-submission.zip`。
+6. **整合提交包**：`submission/第五周最终提交内容.zip`。
 
 ## 已通过的严格门禁（10）
 
