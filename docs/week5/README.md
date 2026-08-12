@@ -11,12 +11,12 @@
 
 ## 本次提交内容
 
-1. **Functional Flutter UI**：`frontend/`，包含搜索、索引库、设置、状态反馈、键盘快捷键和无障碍语义。
-2. **Accessibility Compliance Validation Report**：`reports/无障碍合规验证报告.docx`。
-3. **UI Usability Test Report**：`reports/UI可用性测试报告.docx`。该报告如实说明真实参与者测试尚未完成。
-4. **Draft Accessibility User Guide**：`reports/无障碍用户指南（草稿）.docx`。
+1. **功能性跨平台 Flutter UI**：`submission/1. 功能性跨平台 Flutter UI.zip`，包含搜索、索引库、设置、状态反馈、键盘快捷键和无障碍语义。
+2. **无障碍合规性验证报告（符合 WCAG 2.1 AA 标准）**：`submission/2. 无障碍合规性验证报告（符合 WCAG 2.1 AA 标准）.docx`。
+3. **UI 可用性测试报告**：`submission/3. UI 可用性测试报告.docx`。该报告如实说明真实参与者测试尚未完成。
+4. **起草无障碍用户指南**：`submission/4. 起草无障碍用户指南.docx`。
 5. **验收证据**：`evidence/manifest.json` 及其引用的构建、WAVE、E2E、设置持久化和桌面无障碍附件。
-6. **整合提交包**：`submission/第五周四项最终交付物.zip`。压缩包顶层严格对应上述四项交付物。
+6. **最终提交目录**：`submission/`。Flutter UI 单独压缩，三份 DOCX 作为独立文件提交，不放入 UI 压缩包。
 
 ## 已通过的严格门禁（10）
 
