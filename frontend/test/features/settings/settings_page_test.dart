@@ -5,6 +5,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('settings uses tonal sections instead of elevated cards', (
+    tester,
+  ) async {
+    final controller = SettingsController(
+      SettingsRepository(_PageSettingsStore()),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+
+    await tester.pumpWidget(_app(controller));
+
+    expect(find.text('偏好设置只保存在这台设备上'), findsOneWidget);
+    expect(
+      find.byKey(const Key('settings-connection-section')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('settings-accessibility-section')),
+      findsOneWidget,
+    );
+    expect(find.byType(Card), findsNothing);
+  });
+
   testWidgets('edits and persists every Week 5 preference', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));

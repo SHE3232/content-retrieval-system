@@ -1,4 +1,5 @@
 import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_header.dart';
 import 'package:content_retrieval_app/features/settings/domain/app_settings.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_controller.dart';
 import 'package:flutter/material.dart';
@@ -51,17 +52,9 @@ final class _SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        '设置',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '偏好设置保存在本机，不会上传。',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    const WorkspaceHeader(
+                      title: '设置',
+                      description: '偏好设置只保存在这台设备上',
                     ),
                     const SizedBox(height: 20),
                     if (controller.recoveryWarning != null)
@@ -79,6 +72,7 @@ final class _SettingsPageState extends State<SettingsPage> {
                         onAction: () => setState(() => _successMessage = null),
                       ),
                     _SettingsSection(
+                      sectionKey: const Key('settings-connection-section'),
                       title: '后端连接',
                       children: [
                         TextField(
@@ -102,6 +96,7 @@ final class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 16),
                     _SettingsSection(
+                      sectionKey: const Key('settings-accessibility-section'),
                       title: '外观与无障碍',
                       children: [
                         const Text('主题'),
@@ -128,14 +123,17 @@ final class _SettingsPageState extends State<SettingsPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('高对比度'),
-                          subtitle: const Text('增强边框和文字与背景的区分度'),
-                          value: controller.draft.highContrast,
-                          onChanged: controller.isBusy
-                              ? null
-                              : controller.setHighContrast,
+                        Material(
+                          type: MaterialType.transparency,
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('高对比度'),
+                            subtitle: const Text('增强边框和文字与背景的区分度'),
+                            value: controller.draft.highContrast,
+                            onChanged: controller.isBusy
+                                ? null
+                                : controller.setHighContrast,
+                          ),
                         ),
                         const Divider(),
                         const Text('文字大小'),
@@ -155,14 +153,17 @@ final class _SettingsPageState extends State<SettingsPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('减少动态效果'),
-                          subtitle: const Text('关闭非必要动画和过渡效果'),
-                          value: controller.draft.reduceMotion,
-                          onChanged: controller.isBusy
-                              ? null
-                              : controller.setReduceMotion,
+                        Material(
+                          type: MaterialType.transparency,
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('减少动态效果'),
+                            subtitle: const Text('关闭非必要动画和过渡效果'),
+                            value: controller.draft.reduceMotion,
+                            onChanged: controller.isBusy
+                                ? null
+                                : controller.setReduceMotion,
+                          ),
                         ),
                       ],
                     ),
@@ -228,14 +229,24 @@ final class _SettingsPageState extends State<SettingsPage> {
 }
 
 final class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({required this.title, required this.children});
+  const _SettingsSection({
+    required this.sectionKey,
+    required this.title,
+    required this.children,
+  });
 
+  final Key sectionKey;
   final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return DecoratedBox(
+      key: sectionKey,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
