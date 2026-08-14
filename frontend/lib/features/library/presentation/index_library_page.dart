@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_header.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_controller.dart';
 import 'package:content_retrieval_app/features/library/presentation/widgets/index_job_panel.dart';
@@ -43,68 +44,56 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
         final controller = widget.controller;
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            '索引库',
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          ),
-                        ),
-                        Text('共 ${controller.total} 个文件'),
-                        if (!controller.directoryPicker.isSupported)
-                          const Text('当前验证平台不支持桌面路径，请使用桌面版管理索引。'),
-                      ],
+            WorkspaceHeader(
+              title: '索引库',
+              description: '管理可搜索的本地资料',
+              actions: [
+                Semantics(
+                  label: '刷新索引库',
+                  button: true,
+                  enabled: !controller.isRefreshing,
+                  child: ExcludeSemantics(
+                    child: IconButton(
+                      tooltip: '刷新索引库',
+                      onPressed: controller.isRefreshing
+                          ? null
+                          : controller.refresh,
+                      icon: const Icon(Icons.refresh),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      Semantics(
-                        label: '刷新索引库',
-                        button: true,
-                        enabled: !controller.isRefreshing,
-                        child: ExcludeSemantics(
-                          child: IconButton(
-                            tooltip: '刷新索引库',
-                            onPressed: controller.isRefreshing
-                                ? null
-                                : controller.refresh,
-                            icon: const Icon(Icons.refresh),
-                          ),
-                        ),
-                      ),
-                      Semantics(
-                        label: '添加文件夹',
-                        button: true,
-                        enabled:
-                            controller.directoryPicker.isSupported &&
-                            !controller.isMutationInProgress,
-                        child: ExcludeSemantics(
-                          child: FilledButton.icon(
-                            onPressed:
-                                controller.directoryPicker.isSupported &&
-                                    !controller.isMutationInProgress
-                                ? controller.selectDirectoryAndStart
-                                : null,
-                            icon: const Icon(Icons.create_new_folder_outlined),
-                            label: const Text('添加文件夹'),
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+                Semantics(
+                  label: '添加文件夹',
+                  button: true,
+                  enabled:
+                      controller.directoryPicker.isSupported &&
+                      !controller.isMutationInProgress,
+                  child: ExcludeSemantics(
+                    child: FilledButton.icon(
+                      onPressed:
+                          controller.directoryPicker.isSupported &&
+                              !controller.isMutationInProgress
+                          ? controller.selectDirectoryAndStart
+                          : null,
+                      icon: const Icon(Icons.create_new_folder_outlined),
+                      label: const Text('添加文件夹'),
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('共 ${controller.total} 个文件'),
+                    if (!controller.directoryPicker.isSupported)
+                      const Text('当前验证平台不支持桌面路径，请使用桌面版管理索引。'),
+                  ],
+                ),
               ),
             ),
             if (controller.activeJob != null)
@@ -206,9 +195,10 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
       );
     }
     return ListView.separated(
+      key: const Key('library-file-list'),
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       itemCount: controller.files.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const Divider(),
       itemBuilder: (context, index) {
         final file = controller.files[index];
         return IndexedFileTile(

@@ -35,9 +35,11 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
   @override
   Widget build(BuildContext context) {
     final file = widget.file;
-    return Card(
+    return Material(
+      key: Key('indexed-file-row-${file.fileId}'),
+      color: Colors.transparent,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

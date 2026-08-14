@@ -11,6 +11,26 @@ const _sourceKey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
+  testWidgets('library uses a workspace header and continuous catalog', (
+    tester,
+  ) async {
+    final service = _PageService()..pages.add(_page());
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+
+    await tester.pumpWidget(_app(controller));
+
+    expect(find.text('管理可搜索的本地资料'), findsOneWidget);
+    expect(find.byKey(const Key('library-file-list')), findsOneWidget);
+    final row = find.byKey(const Key('indexed-file-row-file-1'));
+    expect(row, findsOneWidget);
+    expect(find.descendant(of: row, matching: find.byType(Card)), findsNothing);
+  });
+
   testWidgets('renders catalog metadata and opens or copies a file', (
     tester,
   ) async {

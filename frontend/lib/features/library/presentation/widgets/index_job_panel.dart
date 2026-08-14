@@ -30,50 +30,57 @@ final class IndexJobPanel extends StatelessWidget {
     return LiveRegionMessage(
       message: announcement,
       excludeChildSemantics: false,
-      child: Card(
-        margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    job.status == IndexJobStatus.failed
-                        ? Icons.error_outline
-                        : Icons.sync,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: Theme.of(context).textTheme.titleMedium,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        child: DecoratedBox(
+          key: const Key('index-job-panel'),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      job.status == IndexJobStatus.failed
+                          ? Icons.error_outline
+                          : Icons.sync,
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
+                ),
+                if (job.status == IndexJobStatus.queued ||
+                    job.status == IndexJobStatus.running) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                ],
+                if (result != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '成功 ${result.indexedFiles}，失败 ${result.failedFiles}，'
+                    '生成 ${result.indexedRecords} 条记录',
                   ),
                 ],
-              ),
-              if (job.status == IndexJobStatus.queued ||
-                  job.status == IndexJobStatus.running) ...[
-                const SizedBox(height: 12),
-                const LinearProgressIndicator(),
+                if (failureDetails != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: onShowFailures,
+                    icon: const Icon(Icons.rule_folder_outlined),
+                    label: const Text('查看失败详情'),
+                  ),
+                ],
               ],
-              if (result != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '成功 ${result.indexedFiles}，失败 ${result.failedFiles}，'
-                  '生成 ${result.indexedRecords} 条记录',
-                ),
-              ],
-              if (failureDetails != null) ...[
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: onShowFailures,
-                  icon: const Icon(Icons.rule_folder_outlined),
-                  label: const Text('查看失败详情'),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
