@@ -283,6 +283,7 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
     tika_hash.write_text("hash\n", encoding="utf-8")
     commit = _init_repo(tmp_path)
     output = tmp_path / "output" / "week6" / "portable.zip"
+    staging = tmp_path / "output" / "week6" / ".staging"
 
     result = _run(
         [
@@ -314,6 +315,8 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
             str(integrated),
             "-OutputZip",
             str(output),
+            "-StagingRoot",
+            str(staging),
         ],
         tmp_path,
     )
@@ -327,6 +330,7 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
         assert "app/runtime/python/Lib/site-packages/example_dependency/__init__.py" in names
         assert "app/runtime/python/pyvenv.cfg" not in names
         assert archive.read("app/runtime/python/python.exe") == b"portable-python"
+    assert not staging.exists() or not any(staging.iterdir())
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

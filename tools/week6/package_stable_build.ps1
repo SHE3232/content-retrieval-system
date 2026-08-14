@@ -12,6 +12,7 @@ param(
     [string]$IntegratedLauncher,
     [string]$OutputZip,
     [string]$ThirdPartySourceDir,
+    [string]$StagingRoot,
     [switch]$ReplaceExactTarget
 )
 
@@ -170,10 +171,25 @@ if (Test-Path -LiteralPath $absoluteOutput) {
 $outputDirectory = Split-Path -Parent $absoluteOutput
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 
-$stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('week6-package-' + [Guid]::NewGuid().ToString('N'))
+$stagingBase = if ([string]::IsNullOrWhiteSpace($StagingRoot)) {
+    Join-Path $allowedRoot '.staging'
+} else {
+    [System.IO.Path]::GetFullPath($StagingRoot)
+}
+$stagingBase = [System.IO.Path]::GetFullPath($stagingBase)
+if (-not $stagingBase.StartsWith(
+    $allowedRoot + [System.IO.Path]::DirectorySeparatorChar,
+    [System.StringComparison]::OrdinalIgnoreCase
+)) {
+    throw "StagingRoot must be inside output/week6 on the repository drive: $stagingBase"
+}
+New-Item -ItemType Directory -Force -Path $stagingBase | Out-Null
+$stageRoot = Join-Path $stagingBase ('week6-package-' + [Guid]::NewGuid().ToString('N'))
 $stageRoot = [System.IO.Path]::GetFullPath($stageRoot)
-$tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
-if (-not $stageRoot.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+if (-not $stageRoot.StartsWith(
+    $stagingBase + [System.IO.Path]::DirectorySeparatorChar,
+    [System.StringComparison]::OrdinalIgnoreCase
+)) {
     throw "Refusing unsafe staging path: $stageRoot"
 }
 $appRoot = Join-Path $stageRoot 'app'
@@ -227,6 +243,9 @@ try {
     }
     if (Test-Path -LiteralPath $stageRoot -PathType Container) {
         Remove-Item -LiteralPath $stageRoot -Recurse -Force
+    }
+    if ((Test-Path -LiteralPath $stagingBase -PathType Container) -and -not (Get-ChildItem -LiteralPath $stagingBase -Force | Select-Object -First 1)) {
+        Remove-Item -LiteralPath $stagingBase -Force
     }
 }
 
