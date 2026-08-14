@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -51,7 +52,9 @@ def _write_cmd(path: Path, output: str) -> None:
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
-def test_capture_candidate_records_clean_commit_and_preflight(tmp_path: Path) -> None:
+def test_capture_candidate_records_clean_commit_and_preflight(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     commit = _init_repo(tmp_path)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -61,10 +64,14 @@ def test_capture_candidate_records_clean_commit_and_preflight(tmp_path: Path) ->
     _write_cmd(flutter, "Flutter 3.44.6")
     _write_cmd(dart, "Dart SDK version: 3.12.2")
     _write_cmd(java, 'openjdk version "21"')
+    monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ["PATH"])
     preflight = tmp_path / "preflight.ps1"
     preflight.write_text(
         "param($PythonExecutable,$JavaExecutable,$ModelRoot,$ManifestPath,"
         "$TikaJar,$TikaChecksumFile,$DataDir,[switch]$CheckOnly)\n"
+        "if (-not [IO.Path]::IsPathRooted($JavaExecutable) -or "
+        "-not (Test-Path -LiteralPath $JavaExecutable -PathType Leaf)) "
+        "{ throw 'Java executable must be absolute' }\n"
         "Write-Output 'MVP preflight passed'\n",
         encoding="utf-8",
     )
@@ -102,7 +109,7 @@ def test_capture_candidate_records_clean_commit_and_preflight(tmp_path: Path) ->
             "-DartExecutable",
             str(dart),
             "-JavaExecutable",
-            str(java),
+            "java",
             "-PreflightScript",
             str(preflight),
             "-ModelRoot",

@@ -33,6 +33,18 @@ function Resolve-RequiredDirectory {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
+function Resolve-ExecutableCommand {
+    param([string]$Executable, [string]$Label)
+    if (-not [string]::IsNullOrWhiteSpace($Executable) -and (Test-Path -LiteralPath $Executable -PathType Leaf)) {
+        return (Resolve-Path -LiteralPath $Executable).Path
+    }
+    $command = Get-Command $Executable -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $command) {
+        throw "$Label not found: $Executable"
+    }
+    return $command.Source
+}
+
 function Invoke-Version {
     param([string]$Executable, [string[]]$Arguments)
     if ([string]::IsNullOrWhiteSpace($Executable)) {
@@ -90,6 +102,9 @@ if ([string]::IsNullOrWhiteSpace($DataDir)) {
 }
 
 $python = Resolve-RequiredFile -Path $PythonExecutable -Label 'Python executable'
+$flutterCommand = Resolve-ExecutableCommand -Executable $FlutterExecutable -Label 'Flutter executable'
+$dartCommand = Resolve-ExecutableCommand -Executable $DartExecutable -Label 'Dart executable'
+$javaCommand = Resolve-ExecutableCommand -Executable $JavaExecutable -Label 'Java executable'
 $preflight = Resolve-RequiredFile -Path $PreflightScript -Label 'Preflight script'
 $models = Resolve-RequiredDirectory -Path $ModelRoot -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path $ManifestPath -Label 'Model manifest'
@@ -99,7 +114,7 @@ $runtimeData = Resolve-RequiredDirectory -Path $DataDir -Label 'Data directory'
 
 $preflightOutput = & $preflight `
     -PythonExecutable $python `
-    -JavaExecutable $JavaExecutable `
+    -JavaExecutable $javaCommand `
     -ModelRoot $models `
     -ManifestPath $modelManifest `
     -TikaJar $tikaPath `
@@ -121,9 +136,9 @@ $record = [ordered]@{
     generated_at = [DateTimeOffset]::Now.ToString('o')
     versions = [ordered]@{
         python = Invoke-Version -Executable $python -Arguments @('--version')
-        flutter = Invoke-Version -Executable $FlutterExecutable -Arguments @('--version')
-        dart = Invoke-Version -Executable $DartExecutable -Arguments @('--version')
-        java = Invoke-Version -Executable $JavaExecutable -Arguments @('-version')
+        flutter = Invoke-Version -Executable $flutterCommand -Arguments @('--version')
+        dart = Invoke-Version -Executable $dartCommand -Arguments @('--version')
+        java = Invoke-Version -Executable $javaCommand -Arguments @('-version')
     }
     system = [ordered]@{
         computer_name = $env:COMPUTERNAME
