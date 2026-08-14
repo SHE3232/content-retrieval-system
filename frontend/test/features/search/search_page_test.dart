@@ -201,6 +201,24 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('search workbench has no overflow at 200 percent text scale', (
+    tester,
+  ) async {
+    final harness =
+        await _SearchHarness.create(
+            tester,
+            surfaceSize: const Size(900, 900),
+            textScaler: const TextScaler.linear(2),
+          )
+          ..searchService.results.add(
+            _response(names: const ['large-text.pdf']),
+          );
+    await harness.search('large text');
+
+    expect(find.text('large-text.pdf'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('compact filter entry reports active restrictions', (
     tester,
   ) async {
