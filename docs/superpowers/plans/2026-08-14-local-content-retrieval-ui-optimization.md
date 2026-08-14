@@ -1058,7 +1058,7 @@ git commit -m "test: harden redesigned UI accessibility"
 - Verify: all files changed in Tasks 1-6
 - Do not commit generated `build/`, `.dart_tool/`, screenshots, or local runtime data
 
-- [ ] **Step 1: Produce release-capable desktop and web builds**
+- [ ] **Step 1: Produce the Windows desktop build and Web release-mode visual/accessibility artifact**
 
 Run:
 
@@ -1068,7 +1068,7 @@ flutter build windows --debug
 flutter build web --release
 ```
 
-Expected: both commands exit 0 and produce the standard ignored build outputs.
+Expected: both commands exit 0 and produce the standard ignored build outputs. The Windows build remains the desktop runtime accepted in Step 2. The Web release build is an artifact for release-mode visual and accessibility verification, not evidence of functional cross-origin backend support. Functional Web retrieval remains out of scope until the app and backend are hosted same-origin or an explicitly scoped allowed-origin or proxy configuration is provided.
 
 - [ ] **Step 2: Launch the real Windows application**
 
