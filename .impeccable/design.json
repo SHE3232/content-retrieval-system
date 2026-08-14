@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-14T02:27:28+08:00",
+  "title": "Design System: 本地内容检索",
+  "extensions": {
+    "colorMeta": {
+      "research-cobalt": {
+        "role": "primary",
+        "displayName": "研究钴蓝",
+        "canonical": "#3659AD",
+        "tonalRamp": ["#111B34", "#1E3262", "#2B478B", "#3659AD", "#607BC5", "#8FA4D9", "#C0CCEA", "#EEF1FA"]
+      },
+      "hc-light-surface": {
+        "role": "neutral",
+        "displayName": "高对比亮色表面",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#101114", "#303238", "#52545B", "#777980", "#9FA1A7", "#C7C8CC", "#E7E7E9", "#FFFFFF"]
+      },
+      "hc-dark-surface": {
+        "role": "neutral",
+        "displayName": "高对比暗色表面",
+        "canonical": "#0C0E12",
+        "tonalRamp": ["#0C0E12", "#25282D", "#41444A", "#606369", "#83858A", "#AAABB0", "#D0D1D4", "#F4F4F5"]
+      }
+    },
+    "typographyMeta": {
+      "headline": {"displayName": "页面标题", "purpose": "页面一级标题和关键状态。"},
+      "title": {"displayName": "区块标题", "purpose": "重要区块和结果组标题。"},
+      "body": {"displayName": "正文", "purpose": "说明、命中片段和辅助信息。"},
+      "label": {"displayName": "操作标签", "purpose": "按钮、导航、筛选与状态。"}
+    },
+    "shadows": [
+      {"name": "focus-only", "value": "0 4px 8px rgba(54, 89, 173, 0.12)", "purpose": "仅用于聚焦搜索与临时抬升状态。"}
+    ],
+    "motion": [
+      {"name": "state-fast", "value": "150ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "悬停、按压与选择反馈。"},
+      {"name": "state-standard", "value": "220ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "面板和状态切换；减少动态效果时为 0ms。"}
+    ],
+    "breakpoints": [
+      {"name": "navigation-extended", "value": "1000px"},
+      {"name": "persistent-filters", "value": "1100px"}
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "用于搜索、保存等页面主操作。",
+      "html": "<button class=\"ds-btn-primary\">搜索资料</button>",
+      "css": ".ds-btn-primary{min-height:48px;padding:12px 20px;border:0;border-radius:12px;background:#3659AD;color:#fff;font:600 14px/1.4 system-ui,sans-serif;transition:background 150ms cubic-bezier(.16,1,.3,1),transform 150ms cubic-bezier(.16,1,.3,1)}.ds-btn-primary:hover{background:#2B478B}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:focus-visible{outline:3px solid #ADC6FF;outline-offset:2px}"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "工作台中央的主要搜索入口。",
+      "html": "<label class=\"ds-field\"><span>搜索内容</span><input class=\"ds-search-input\" placeholder=\"描述你记得的内容\"></label>",
+      "css": ".ds-field{display:grid;gap:8px;color:#101114;font:600 14px/1.4 system-ui,sans-serif}.ds-search-input{min-height:48px;padding:14px 16px;border:1px solid #5F636B;border-radius:12px;background:#F4F5FA;color:#101114;font:400 14px/1.4 system-ui,sans-serif;transition:border 150ms cubic-bezier(.16,1,.3,1),box-shadow 150ms cubic-bezier(.16,1,.3,1)}.ds-search-input::placeholder{color:#51545B}.ds-search-input:focus{outline:0;border:2px solid #3659AD;box-shadow:0 4px 8px rgba(54,89,173,.12)}"
+    },
+    {
+      "name": "Selected Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "表达当前检索模式或内容筛选。",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\">✓ 混合检索</button>",
+      "css": ".ds-chip{min-height:36px;padding:6px 12px;border:1px solid #3659AD;border-radius:12px;background:#D6E1FF;color:#001A42;font:600 14px/1.4 system-ui,sans-serif;transition:background 150ms cubic-bezier(.16,1,.3,1)}.ds-chip:hover{background:#C0CCEA}.ds-chip:focus-visible{outline:3px solid #ADC6FF;outline-offset:2px}"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "标记当前主任务，默认是搜索。",
+      "html": "<button class=\"ds-nav-active\" aria-current=\"page\">⌕ <span>搜索</span></button>",
+      "css": ".ds-nav-active{min-width:160px;min-height:48px;display:flex;align-items:center;gap:12px;padding:0 16px;border:0;border-radius:14px;background:#D6E1FF;color:#001A42;font:600 14px/1.4 system-ui,sans-serif}.ds-nav-active:hover{background:#C0CCEA}.ds-nav-active:focus-visible{outline:3px solid #3659AD;outline-offset:2px}"
+    },
+    {
+      "name": "Search Result",
+      "kind": "custom",
+      "description": "用来源、命中片段和命中依据建立信任。",
+      "html": "<article class=\"ds-result\"><div class=\"ds-file\">PDF</div><div><strong>Explainable AI Research.pdf</strong><p>…explanations increased perceived transparency…</p><small>研究资料 · 第 18 页 · 命中：prototype evaluation</small></div><button>打开</button></article>",
+      "css": ".ds-result{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start;padding:16px;border-bottom:1px solid #D6D8DE;background:#fff;color:#101114;font:400 14px/1.45 system-ui,sans-serif;transition:background 150ms cubic-bezier(.16,1,.3,1)}.ds-result:hover{background:#F5F7FC}.ds-result:focus-within{outline:2px solid #3659AD;outline-offset:-2px}.ds-result p{margin:6px 0;color:#363940}.ds-result small{color:#51545B}.ds-file{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#D6E1FF;color:#001A42;font-weight:700;font-size:11px}.ds-result button{min-height:40px;padding:8px 12px;border:1px solid #5F636B;border-radius:12px;background:#fff;color:#101114;font-weight:600}"
+    }
+  ],
+  "narrative": {
+    "northStar": "安静的研究案头",
+    "overview": "让搜索像打开桌上的一盏灯：用户只需说出还记得的内容，相关资料和依据便清晰浮现，而系统本身退到背景。界面以搜索为视觉中心，以可信的资料目录语言呈现结果来源、命中片段和命中原因；索引维护与技术状态保持可达，但不主导首屏。视觉上保持现代 Material 3 产品界面，不把案头做成木纹、纸张或台灯插画。层次来自克制的表面明度变化、稳定留白和清晰排版。",
+    "keyCharacteristics": ["搜索是首屏唯一视觉主角。", "轻量分层，默认表面安静，聚焦状态清晰。", "结果同时说明内容、来源与命中依据。", "系统字体、Material Icons 和一致的组件语法。", "WCAG 2.1 AA 与辅助技术支持均为基线。"],
+    "rules": [
+      {"name": "The One-Lamp Rule", "body": "研究钴蓝只用于主要操作、当前选择与焦点，不作为大面积装饰背景。", "section": "colors"},
+      {"name": "The Quiet Variation Rule", "body": "通过相邻表面的明度差和极低色度变化避免纯色单调。", "section": "colors"},
+      {"name": "The Read-First Rule", "body": "字体缩放到 200% 时允许布局重排，不允许截断关键操作、状态或命中说明。", "section": "typography"},
+      {"name": "The Flat-at-Rest Rule", "body": "静止内容默认无装饰阴影；只有焦点、悬停或临时浮层可以短暂抬升。", "section": "elevation"}
+    ],
+    "dos": ["Do 让搜索输入在启动后的阅读顺序、焦点顺序和视觉层级中都处于首位。", "Do 在结果中同时展示文件名、命中片段、来源位置和命中原因。", "Do 保持 48px 触控目标、可见焦点、屏幕阅读器语义和完整键盘路径。"],
+    "donts": ["Don't 做成完全单调的纯色界面。", "Don't 把产品塑造成需要用户理解技术基础设施的后台管理系统。", "Don't 以装饰或技术炫耀压过搜索任务。"]
+  }
+}
