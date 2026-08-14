@@ -110,6 +110,97 @@ void main() {
     expect(find.textContaining('ms'), findsNothing);
   });
 
+  testWidgets('decorative file type is excluded from result semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(_response(names: const ['report.pdf']));
+    await harness.search('report');
+
+    expect(find.text('PDF'), findsOneWidget);
+    final resultSemantics = tester
+        .getSemantics(find.text('report.pdf'))
+        .getSemanticsData();
+    expect(resultSemantics.label, contains('report.pdf'));
+    expect(resultSemantics.label.split('\n'), isNot(contains('PDF')));
+    semantics.dispose();
+  });
+
+  for (final entry in const {
+    'README': 'FILE',
+    'notes.': 'FILE',
+    '.env': 'ENV',
+    'archive.tar.gz': 'GZ',
+    'report.abcdef': 'FILE',
+  }.entries) {
+    testWidgets('${entry.key} uses the ${entry.value} file type badge', (
+      tester,
+    ) async {
+      final harness = await _SearchHarness.create(tester)
+        ..searchService.results.add(
+          _response(
+            hits: [_hit(fileId: 'file-type-case', name: entry.key)],
+          ),
+        );
+      await harness.search('type');
+
+      final row = find.byKey(const Key('search-result-row-file-type-case'));
+      expect(row, findsOneWidget);
+      expect(
+        find.descendant(of: row, matching: find.text(entry.value)),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('result actions remain usable at 200 percent text scaling', (
+    tester,
+  ) async {
+    final harness =
+        await _SearchHarness.create(
+            tester,
+            surfaceSize: const Size(640, 720),
+            textScaler: const TextScaler.linear(2),
+          )
+          ..searchService.results.add(
+            _response(
+              hits: [
+                _hit(
+                  fileId: 'large-text',
+                  name: 'accessible.pdf',
+                  path: r'C:\results\accessible.pdf',
+                ),
+              ],
+            ),
+          );
+    await harness.search('accessible');
+
+    final row = find.byKey(const Key('search-result-row-large-text'));
+    final open = find.byKey(const Key('open-large-text'));
+    final copy = find.byKey(const Key('copy-path-large-text'));
+    expect(row, findsOneWidget);
+    expect(open, findsOneWidget);
+    expect(copy, findsOneWidget);
+    expect(
+      tester.getTopLeft(open).dy,
+      greaterThan(tester.getBottomLeft(find.text('accessible.pdf')).dy),
+    );
+
+    await tester.ensureVisible(open);
+    await tester.pumpAndSettle();
+    await tester.tap(open);
+    await tester.pump();
+    await tester.ensureVisible(copy);
+    await tester.pumpAndSettle();
+    await tester.tap(copy);
+    await tester.pumpAndSettle();
+
+    expect(harness.fileLauncher.paths, [r'C:\results\accessible.pdf']);
+    expect(harness.pathClipboard.paths, [r'C:\results\accessible.pdf']);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('compact filter entry reports active restrictions', (
     tester,
   ) async {
@@ -1081,6 +1172,7 @@ final class _SearchHarness {
     BackendConnectionState backendState = BackendConnectionState.online,
     Size surfaceSize = const Size(1280, 720),
     ThemeMode themeMode = ThemeMode.light,
+    TextScaler textScaler = TextScaler.noScaling,
   }) async {
     await tester.binding.setSurfaceSize(surfaceSize);
     final searchService = FakeSearchService();
@@ -1111,6 +1203,10 @@ final class _SearchHarness {
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: themeMode,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: child!,
+        ),
         home: Scaffold(
           body: SearchPage(
             controller: searchController,
