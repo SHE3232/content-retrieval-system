@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "project": "Local Multimodal Content Retrieval System",
+  "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6",
+  "gates": [
+    {"gate_id": "G0", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G1", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G2", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G3", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G4", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G5", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G6", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G7", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G8", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []},
+    {"gate_id": "G9", "status": "NOT_RUN", "source_commit": "25f7cf232cbb87c21a32049e966ed3f9aad51cf6", "generated_at": "2026-08-14T20:00:00+08:00", "command": "not run", "exit_code": null, "evidence": []}
+  ],
+  "deliverables": []
+}
