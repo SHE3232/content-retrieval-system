@@ -75,6 +75,41 @@ void main() {
     expect(find.text('Ctrl K'), findsOneWidget);
   });
 
+  testWidgets('initial state teaches content-first searching', (tester) async {
+    await _SearchHarness.create(tester);
+
+    expect(find.text('说出你还记得的内容'), findsOneWidget);
+    expect(find.textContaining('哪个 PDF 讲过键盘导航'), findsOneWidget);
+  });
+
+  testWidgets('success uses a continuous explainable result list', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.add(
+        _response(
+          hits: [
+            _hit(
+              fileId: 'research-pdf',
+              name: 'research.pdf',
+              matchReasons: const [SearchChannel.textSemantic],
+            ),
+          ],
+        ),
+      );
+    await harness.search('research');
+
+    expect(find.byKey(const Key('search-result-list')), findsOneWidget);
+    expect(
+      find.byKey(const Key('search-result-row-research-pdf')),
+      findsOneWidget,
+    );
+    expect(find.text('PDF'), findsOneWidget);
+    expect(find.text('找到 1 条相关资料'), findsOneWidget);
+    expect(find.textContaining('候选'), findsNothing);
+    expect(find.textContaining('ms'), findsNothing);
+  });
+
   testWidgets('compact filter entry reports active restrictions', (
     tester,
   ) async {
@@ -483,9 +518,9 @@ void main() {
     expect(find.text('alpha appears in this paragraph'), findsOneWidget);
     expect(find.text('第 7 页'), findsOneWidget);
     expect(find.text(r'C:\资料\report.pdf'), findsOneWidget);
-    expect(find.text('关键词'), findsWidgets);
-    expect(find.text('文本语义'), findsWidgets);
-    expect(find.text('候选 31 个，用时 12.75 ms'), findsOneWidget);
+    expect(find.text('找到 1 条相关资料'), findsOneWidget);
+    expect(find.text('命中：关键词'), findsOneWidget);
+    expect(find.text('命中：文本语义'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '打开'), findsOneWidget);
     expect(find.byTooltip('复制完整路径'), findsOneWidget);
     expect(find.bySemanticsLabel('打开 report.pdf'), findsOneWidget);

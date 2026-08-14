@@ -27,8 +27,8 @@ final class SearchStateView extends StatelessWidget {
     SearchViewState.initial => _message(
       context,
       icon: Icons.manage_search,
-      title: '输入关键词开始搜索',
-      body: '可按文件类型和检索通道缩小结果范围',
+      title: '说出你还记得的内容',
+      body: '例如：“哪个 PDF 讲过键盘导航？”\n支持文档、文本文件和图片。',
     ),
     SearchViewState.loading => _loading(context),
     SearchViewState.success => _success(context),
@@ -40,46 +40,47 @@ final class SearchStateView extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return LiveRegionMessage(
       message: '正在搜索“${controller.query.trim()}”。',
-      child: ListView.separated(
-        padding: const EdgeInsets.only(bottom: 20),
-        itemCount: 3,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, _) => Container(
-          key: const Key('search-loading-skeleton'),
-          height: 132,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FractionallySizedBox(
-                widthFactor: 0.35,
-                child: Container(
-                  height: 14,
-                  color: scheme.surfaceContainerHigh,
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Material(
+          color: scheme.surface,
+          child: ListView.separated(
+            padding: const EdgeInsets.only(bottom: 20),
+            itemCount: 3,
+            separatorBuilder: (_, _) => const Divider(),
+            itemBuilder: (_, _) => Container(
+              key: const Key('search-loading-skeleton'),
+              height: 132,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FractionallySizedBox(
+                    widthFactor: 0.35,
+                    child: Container(
+                      height: 14,
+                      color: scheme.surfaceContainerHigh,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FractionallySizedBox(
+                    widthFactor: 0.82,
+                    child: Container(
+                      height: 10,
+                      color: scheme.surfaceContainerHigh,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  FractionallySizedBox(
+                    widthFactor: 0.58,
+                    child: Container(
+                      height: 10,
+                      color: scheme.surfaceContainerHigh,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 18),
-              FractionallySizedBox(
-                widthFactor: 0.82,
-                child: Container(
-                  height: 10,
-                  color: scheme.surfaceContainerHigh,
-                ),
-              ),
-              const SizedBox(height: 10),
-              FractionallySizedBox(
-                widthFactor: 0.58,
-                child: Container(
-                  height: 10,
-                  color: scheme.surfaceContainerHigh,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -95,24 +96,34 @@ final class SearchStateView extends StatelessWidget {
         LiveRegionMessage(
           message: '搜索完成，找到 ${response.hits.length} 条结果。',
           child: Text(
-            '候选 ${response.totalCandidates} 个，用时 ${response.elapsedMs.toStringAsFixed(2)} ms',
+            '找到 ${response.hits.length} 条相关资料',
             key: const Key('search-summary'),
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.only(bottom: 20),
-            itemCount: response.hits.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (_, index) => SearchResultTile(
-              key: ValueKey((response, response.hits[index].fileId)),
-              hit: response.hits[index],
-              fileLauncher: fileLauncher,
-              pathClipboard: pathClipboard,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Material(
+              key: const Key('search-result-list'),
+              color: theme.colorScheme.surface,
+              child: ListView.separated(
+                padding: const EdgeInsets.only(bottom: 20),
+                itemCount: response.hits.length,
+                separatorBuilder: (_, _) => const Divider(),
+                itemBuilder: (_, index) => SearchResultTile(
+                  key: ValueKey((response, response.hits[index].fileId)),
+                  rowKey: Key(
+                    'search-result-row-${response.hits[index].fileId}',
+                  ),
+                  hit: response.hits[index],
+                  fileLauncher: fileLauncher,
+                  pathClipboard: pathClipboard,
+                ),
+              ),
             ),
           ),
         ),
