@@ -160,6 +160,23 @@ void main() {
     expect(rail.selectedIndex, 0);
   });
 
+  testWidgets('announces the extended brand label exactly once', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.binding.setSurfaceSize(const Size(1280, 720));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_buildApp(const Text('SEARCH_PAGE')));
+
+      final brand = tester.getSemantics(find.byKey(const Key('app-brand')));
+      expect(brand.label, '本地内容检索');
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   testWidgets('opens the injected index library page', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));

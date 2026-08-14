@@ -194,6 +194,7 @@ final class _AppBrand extends StatelessWidget {
     return Semantics(
       key: const Key('app-brand'),
       container: true,
+      excludeSemantics: true,
       label: '本地内容检索',
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
