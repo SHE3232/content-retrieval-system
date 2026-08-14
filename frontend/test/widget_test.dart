@@ -153,6 +153,8 @@ void main() {
     expect(find.text('索引库'), findsOneWidget);
     expect(find.text('设置'), findsOneWidget);
     expect(find.text('SEARCH_PAGE'), findsOneWidget);
+    expect(find.byKey(const Key('app-brand')), findsOneWidget);
+    expect(find.text('本地内容检索'), findsOneWidget);
 
     final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
     expect(rail.selectedIndex, 0);
@@ -330,6 +332,24 @@ void main() {
     expect(dark.colorScheme.primary, expectedDarkScheme.primary);
     expect(light.colorScheme.primary, isNot(dark.colorScheme.primary));
 
+    final theme = AppTheme.light();
+    final scheme = theme.colorScheme;
+
+    expect(theme.scaffoldBackgroundColor, scheme.surfaceContainerLowest);
+    expect(
+      theme.navigationRailTheme.backgroundColor,
+      scheme.surfaceContainerLow,
+    );
+    expect(theme.cardTheme.elevation, 0);
+    expect(
+      theme.outlinedButtonTheme.style!.minimumSize!.resolve({}),
+      const Size(0, 48),
+    );
+    expect(
+      theme.iconButtonTheme.style!.minimumSize!.resolve({}),
+      const Size.square(48),
+    );
+
     for (final theme in [light, dark]) {
       final scheme = theme.colorScheme;
       expect(theme.inputDecorationTheme.filled, isTrue);
@@ -422,7 +442,10 @@ void main() {
         chipSide.resolve(const <WidgetState>{})!.color,
         scheme.outlineVariant,
       );
-      expect(theme.navigationRailTheme.backgroundColor, scheme.surface);
+      expect(
+        theme.navigationRailTheme.backgroundColor,
+        scheme.surfaceContainerLow,
+      );
       expect(
         theme.navigationRailTheme.indicatorColor,
         scheme.secondaryContainer,

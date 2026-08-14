@@ -59,6 +59,7 @@ final class _AppShellState extends State<AppShell> {
                       extended: extended,
                       scrollable: true,
                       minExtendedWidth: 214,
+                      leading: _AppBrand(extended: extended),
                       selectedIndex: _selectedIndex,
                       onDestinationSelected: _selectDestination,
                       destinations: [
@@ -178,6 +179,49 @@ final class _AppShellState extends State<AppShell> {
       message: label,
       excludeFromSemantics: true,
       child: destinationIcon,
+    );
+  }
+}
+
+final class _AppBrand extends StatelessWidget {
+  const _AppBrand({required this.extended});
+
+  final bool extended;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      key: const Key('app-brand'),
+      container: true,
+      label: '本地内容检索',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: SizedBox.square(
+                dimension: 36,
+                child: Icon(Icons.manage_search, color: scheme.onPrimary),
+              ),
+            ),
+            if (extended) ...[
+              const SizedBox(width: 10),
+              Text(
+                '本地内容检索',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
