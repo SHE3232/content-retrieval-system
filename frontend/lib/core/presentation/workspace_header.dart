@@ -14,21 +14,22 @@ final class WorkspaceHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Semantics(
-      header: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          container: true,
+          header: true,
+          child: Text(title, style: Theme.of(context).textTheme.headlineMedium),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-        ],
-      ),
+        ),
+      ],
     );
     return LayoutBuilder(
       builder: (context, constraints) {

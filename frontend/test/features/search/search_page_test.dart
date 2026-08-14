@@ -5,6 +5,7 @@ import 'package:content_retrieval_app/app/app_theme.dart';
 import 'package:content_retrieval_app/core/api/api_exception.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_header.dart';
 import 'package:content_retrieval_app/features/search/domain/search_models.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_page.dart';
@@ -17,6 +18,52 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fakes.dart';
 
 void main() {
+  testWidgets('workspace heading excludes its supporting description', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _SearchHarness.create(tester);
+
+    final workspaceHeader = find.byType(WorkspaceHeader);
+    final heading = find.descendant(
+      of: workspaceHeader,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.header == true,
+      ),
+    );
+    expect(heading, findsOneWidget);
+    final headingData = tester.getSemantics(heading).getSemanticsData();
+    expect(headingData.label, '搜索');
+    expect(headingData.flagsCollection.isHeader, isTrue);
+
+    final description = find.semantics.byLabel(RegExp('在本地资料中找回你记得的内容'));
+    expect(description, findsOneWidget);
+    expect(
+      description.evaluate().single.getSemanticsData().flagsCollection.isHeader,
+      isFalse,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('compact filter exposes one interactive restriction label', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final harness = await _SearchHarness.create(
+      tester,
+      surfaceSize: const Size(900, 720),
+    );
+    harness.searchController.toggleContentType(SearchContentType.images);
+    await tester.pump();
+
+    final filter = find.semantics.byLabel('筛选，1 个限制');
+    expect(filter, findsOneWidget);
+    final data = filter.evaluate().single.getSemanticsData();
+    expect(data.hasAction(SemanticsAction.tap), isTrue);
+    expect(data.flagsCollection.isButton, isTrue);
+    semantics.dispose();
+  });
+
   testWidgets('search stage leads with the approved task language', (
     tester,
   ) async {

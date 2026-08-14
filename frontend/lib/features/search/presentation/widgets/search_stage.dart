@@ -81,15 +81,23 @@ final class SearchStage extends StatelessWidget {
                   runSpacing: 10,
                   children: [
                     if (showFilterButton)
-                      Badge(
-                        key: const Key('search-filter-count'),
-                        isLabelVisible: activeFilterCount > 0,
-                        label: Text('$activeFilterCount'),
-                        child: OutlinedButton.icon(
-                          key: const Key('search-filter-button'),
-                          onPressed: onShowFilters,
-                          icon: const Icon(Icons.tune),
-                          label: const Text('筛选'),
+                      Semantics(
+                        label: activeFilterCount == 0
+                            ? '筛选'
+                            : '筛选，$activeFilterCount 个限制',
+                        button: true,
+                        onTap: onShowFilters,
+                        excludeSemantics: true,
+                        child: Badge(
+                          key: const Key('search-filter-count'),
+                          isLabelVisible: activeFilterCount > 0,
+                          label: Text('$activeFilterCount'),
+                          child: OutlinedButton.icon(
+                            key: const Key('search-filter-button'),
+                            onPressed: onShowFilters,
+                            icon: const Icon(Icons.tune),
+                            label: const Text('筛选'),
+                          ),
                         ),
                       ),
                     FilledButton.icon(
