@@ -17,6 +17,32 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fakes.dart';
 
 void main() {
+  testWidgets('search stage leads with the approved task language', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester);
+
+    expect(find.byKey(const Key('search-stage')), findsOneWidget);
+    expect(find.text('找回你记得的内容'), findsOneWidget);
+    expect(find.text('描述一个概念、一段话，或图片中的内容。'), findsOneWidget);
+    expect(find.text('Ctrl K'), findsOneWidget);
+  });
+
+  testWidgets('compact filter entry reports active restrictions', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(
+      tester,
+      surfaceSize: const Size(900, 720),
+    );
+    harness.searchController.toggleContentType(SearchContentType.images);
+    await tester.pump();
+
+    expect(find.byKey(const Key('search-filter-button')), findsOneWidget);
+    expect(find.byKey(const Key('search-filter-count')), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+  });
+
   testWidgets('online initial state exposes a labeled search control', (
     tester,
   ) async {

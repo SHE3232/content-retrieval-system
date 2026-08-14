@@ -2,6 +2,13 @@ import 'package:content_retrieval_app/features/search/domain/search_models.dart'
 import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
 import 'package:flutter/material.dart' hide SearchController;
 
+int activeSearchFilterCount(SearchController controller) {
+  var count = controller.mode == RetrievalMode.hybrid ? 0 : 1;
+  count += SearchChannel.values.length - controller.channels.length;
+  count += SearchContentType.values.length - controller.contentTypes.length;
+  return count;
+}
+
 final class SearchFilterPanel extends StatefulWidget {
   const SearchFilterPanel({
     super.key,
