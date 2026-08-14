@@ -50,8 +50,15 @@ function Invoke-Version {
     if ([string]::IsNullOrWhiteSpace($Executable)) {
         throw 'Version executable was not supplied'
     }
-    $output = & $Executable @Arguments 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & $Executable @Arguments 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($exitCode -ne 0) {
         throw "Version command failed: $Executable $($Arguments -join ' ')"
     }
     return $output.Trim()

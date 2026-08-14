@@ -47,8 +47,11 @@ def _init_repo(root: Path) -> str:
     return _git(root, "rev-parse", "HEAD")
 
 
-def _write_cmd(path: Path, output: str) -> None:
-    path.write_text(f"@echo off\r\necho {output}\r\n", encoding="utf-8")
+def _write_cmd(path: Path, output: str, *, stderr: bool = False) -> None:
+    redirect = " 1>&2" if stderr else ""
+    path.write_text(
+        f"@echo off\r\necho {output}{redirect}\r\n", encoding="utf-8"
+    )
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
@@ -63,7 +66,7 @@ def test_capture_candidate_records_clean_commit_and_preflight(
     java = bin_dir / "java.cmd"
     _write_cmd(flutter, "Flutter 3.44.6")
     _write_cmd(dart, "Dart SDK version: 3.12.2")
-    _write_cmd(java, 'openjdk version "21"')
+    _write_cmd(java, 'openjdk version "21"', stderr=True)
     monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ["PATH"])
     preflight = tmp_path / "preflight.ps1"
     preflight.write_text(
