@@ -149,7 +149,7 @@ Directory indexing is enabled only on Windows, macOS, and Linux because the back
 此验证版本不能把移动端或浏览器文件夹路径交给本地桌面后端；请在桌面版管理索引。
 ```
 
-On Android, search, results, settings, semantic navigation, contrast, and text scaling remain usable when Settings points to a backend reachable from the device. On Web, the UI, settings, semantic navigation, contrast, and text scaling remain usable for visual and accessibility verification. Backend health, search, and results require same-origin hosting or an explicitly scoped allowed-origin or proxy configuration; the current backend provides neither, so this validation must not claim functional Web retrieval. File-open action is disabled with a tooltip explaining the platform limitation; copy path remains available.
+On Android, search, results, settings, semantic navigation, contrast, and text scaling remain usable when Settings points to a backend reachable from the device. On Web, the UI, settings, semantic navigation, contrast, and text scaling remain usable for visual and accessibility verification. Backend health, search, and results require same-origin hosting or an explicitly scoped allowed-origin or proxy configuration; the current backend provides neither, so this validation must not claim functional Web retrieval. Library local file-open and folder actions are disabled where capability flags mark them unsupported. Search result Open remains visible, but reports an inline unsupported-platform message when the platform launcher cannot open the path; Copy path remains available.
 
 - [ ] **Step 3: Configure Android networking for local validation**
 
