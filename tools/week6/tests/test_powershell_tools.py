@@ -244,6 +244,92 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path) -> None:
+    release = tmp_path / "frontend-release"
+    release.mkdir()
+    (release / "content_retrieval_app.exe").write_bytes(b"app")
+    backend = tmp_path / "backend"
+    (backend / "src").mkdir(parents=True)
+    (backend / "src" / "app.py").write_text("print('backend')\n", encoding="utf-8")
+    (backend / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+    (backend / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+
+    base_runtime = tmp_path / "base-python"
+    (base_runtime / "Lib").mkdir(parents=True)
+    (base_runtime / "python.exe").write_bytes(b"portable-python")
+    (base_runtime / "python310.dll").write_bytes(b"runtime-dll")
+    (base_runtime / "Lib" / "os.py").write_text("# stdlib\n", encoding="utf-8")
+    venv = tmp_path / "venv"
+    site_packages = venv / "Lib" / "site-packages" / "example_dependency"
+    site_packages.mkdir(parents=True)
+    (site_packages / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (venv / "Scripts").mkdir()
+    (venv / "Scripts" / "python.exe").write_bytes(b"venv-redirector")
+    (venv / "pyvenv.cfg").write_text(f"home = {base_runtime}\n", encoding="utf-8")
+
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "weights.bin").write_bytes(b"weights")
+    manifest = models / "model-manifest.json"
+    manifest.write_text('{"models": []}\n', encoding="utf-8")
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "start-mvp.ps1").write_text("Write-Output ready\n", encoding="utf-8")
+    integrated = tools / "start-integrated.ps1"
+    integrated.write_text("Write-Output integrated\n", encoding="utf-8")
+    tika = tmp_path / "tika.jar"
+    tika.write_bytes(b"tika")
+    tika_hash = tmp_path / "tika.sha512"
+    tika_hash.write_text("hash\n", encoding="utf-8")
+    commit = _init_repo(tmp_path)
+    output = tmp_path / "output" / "week6" / "portable.zip"
+
+    result = _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(PACKAGE_SCRIPT),
+            "-RepositoryRoot",
+            str(tmp_path),
+            "-SourceCommit",
+            commit,
+            "-FrontendReleaseDir",
+            str(release),
+            "-PythonRuntimeDir",
+            str(venv),
+            "-ModelRoot",
+            str(models),
+            "-ModelManifestPath",
+            str(manifest),
+            "-TikaJar",
+            str(tika),
+            "-TikaChecksumFile",
+            str(tika_hash),
+            "-MvpLauncher",
+            str(tools / "start-mvp.ps1"),
+            "-IntegratedLauncher",
+            str(integrated),
+            "-OutputZip",
+            str(output),
+        ],
+        tmp_path,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    with ZipFile(output) as archive:
+        names = {name.replace("\\", "/") for name in archive.namelist()}
+        assert "app/runtime/python/python.exe" in names
+        assert "app/runtime/python/python310.dll" in names
+        assert "app/runtime/python/Lib/os.py" in names
+        assert "app/runtime/python/Lib/site-packages/example_dependency/__init__.py" in names
+        assert "app/runtime/python/pyvenv.cfg" not in names
+        assert archive.read("app/runtime/python/python.exe") == b"portable-python"
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 def test_package_stable_build_rejects_output_outside_week6(tmp_path: Path) -> None:
     commit = _init_repo(tmp_path)
 

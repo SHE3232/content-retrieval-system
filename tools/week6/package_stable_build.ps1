@@ -42,6 +42,34 @@ function Copy-DirectoryContents {
     }
 }
 
+function Copy-PythonRuntime {
+    param([string]$Source, [string]$Destination)
+
+    $venvConfig = Join-Path $Source 'pyvenv.cfg'
+    if (-not (Test-Path -LiteralPath $venvConfig -PathType Leaf)) {
+        Copy-DirectoryContents -Source $Source -Destination $Destination
+        return 'standalone'
+    }
+
+    $homeLine = Get-Content -LiteralPath $venvConfig | Where-Object {
+        $_ -match '^\s*home\s*='
+    } | Select-Object -First 1
+    if ([string]::IsNullOrWhiteSpace($homeLine)) {
+        throw "Virtual environment pyvenv.cfg does not define home: $venvConfig"
+    }
+    $baseHome = ($homeLine -split '=', 2)[1].Trim().Trim('"')
+    $baseRuntime = Resolve-RequiredDirectory -Path $baseHome -Label 'Base Python runtime from pyvenv.cfg'
+    $basePython = Join-Path $baseRuntime 'python.exe'
+    if (-not (Test-Path -LiteralPath $basePython -PathType Leaf)) {
+        throw "Base Python runtime is not portable: python.exe not found in $baseRuntime"
+    }
+    $sitePackages = Resolve-RequiredDirectory -Path (Join-Path $Source 'Lib/site-packages') -Label 'Virtual environment site-packages'
+
+    Copy-DirectoryContents -Source $baseRuntime -Destination $Destination
+    Copy-DirectoryContents -Source $sitePackages -Destination (Join-Path $Destination 'Lib/site-packages')
+    return 'expanded-venv'
+}
+
 function Get-Sha256 {
     param([string]$Path)
     $algorithm = [System.Security.Cryptography.SHA256]::Create()
@@ -157,7 +185,7 @@ try {
     Copy-DirectoryContents -Source (Join-Path $repository 'backend/src') -Destination (Join-Path $appRoot 'backend/src')
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/pyproject.toml') 'Backend pyproject') -Destination (Join-Path $appRoot 'backend/pyproject.toml')
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/uv.lock') 'Backend lockfile') -Destination (Join-Path $appRoot 'backend/uv.lock')
-    Copy-DirectoryContents -Source $pythonRuntime -Destination (Join-Path $appRoot 'runtime/python')
+    $pythonRuntimeMode = Copy-PythonRuntime -Source $pythonRuntime -Destination (Join-Path $appRoot 'runtime/python')
     Copy-DirectoryContents -Source $models -Destination (Join-Path $appRoot 'models')
     Copy-Item -LiteralPath $modelManifest -Destination (Join-Path $appRoot 'models/model-manifest.json') -Force
     New-Item -ItemType Directory -Force -Path (Join-Path $appRoot 'tools/tika') | Out-Null
@@ -175,6 +203,7 @@ try {
         generated_at = [DateTimeOffset]::Now.ToString('o')
         platform_claim = 'Windows complete integrated stable build'
         first_run_downloads = $false
+        python_runtime_mode = $pythonRuntimeMode
         excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings', 'logs', 'credentials')
         files = Get-RelativeFileManifest -Root $appRoot
     }
