@@ -166,6 +166,7 @@ async def test_mvp_app_builds_runtime_during_lifespan_and_closes_it(
                 "model_root": settings.model_root,
                 "manifest_path": settings.manifest_path,
                 "data_dir": settings.data_dir,
+                "tika_url": settings.tika_url,
             }
         ]
         assert app.state.runtime is runtime

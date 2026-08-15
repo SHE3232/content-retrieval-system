@@ -53,6 +53,7 @@ def build_local_runtime(
     model_root: Path | str,
     manifest_path: Path | str,
     data_dir: Path | str,
+    tika_url: str = "http://127.0.0.1:9998",
     text_batch_size: int = 16,
     image_batch_size: int = 8,
     max_file_size_bytes: int = DEFAULT_MAX_FILE_SIZE_BYTES,
@@ -71,6 +72,8 @@ def build_local_runtime(
         )
     if max_file_size_bytes <= 0:
         raise ValueError("max_file_size_bytes must be positive")
+    if not tika_url.strip():
+        raise ValueError("tika_url must not be blank")
 
     manifest = ModelManifest.load(manifest_file, model_root=root)
     text_entry = manifest.require(TEXT_MODEL_ID)
@@ -106,7 +109,7 @@ def build_local_runtime(
         mobileclip_engine=image_engine,
     )
     ingestion_service = BatchIngestionService(
-        create_default_registry(),
+        create_default_registry(tika_url=tika_url.rstrip("/")),
         max_file_size_bytes=max_file_size_bytes,
     )
     local_data.mkdir(parents=True, exist_ok=True)
