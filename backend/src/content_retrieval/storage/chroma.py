@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 import hashlib
@@ -19,6 +19,7 @@ from content_retrieval.domain.models import EmbeddingVector
 from content_retrieval.domain.retrieval import (
     IndexRecord,
     SearchFilters,
+    SearchRecord,
     VectorCandidate,
 )
 
@@ -28,14 +29,26 @@ class ChromaVectorRepository:
 
     schema_version = "1"
 
-    def __init__(self, database_path: Path | str) -> None:
+    def __init__(
+        self,
+        database_path: Path | str,
+        *,
+        query_cache_size: int = 16,
+    ) -> None:
+        if query_cache_size < 0:
+            raise ValueError("query_cache_size must be non-negative")
         self.database_path = Path(database_path).expanduser().resolve()
         self.database_path.mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(path=str(self.database_path))
         self._close_client = weakref.finalize(self, self._client.close)
+        self.query_cache_size = query_cache_size
+        self._query_cache: OrderedDict[
+            tuple[Any, ...], tuple[VectorCandidate, ...]
+        ] = OrderedDict()
 
     def close(self) -> None:
         """Release the persistent Chroma client and its local resources."""
+        self._query_cache.clear()
         self._close_client()
 
     def __enter__(self) -> ChromaVectorRepository:
@@ -84,6 +97,8 @@ class ChromaVectorRepository:
                     f"Chroma upsert failed for space {space_id}"
                 ) from error
             written += len(batch)
+        if written:
+            self._query_cache.clear()
         return written
 
     def get(self, record_id: str) -> IndexRecord | None:
@@ -133,6 +148,23 @@ class ChromaVectorRepository:
                 )
         return sorted(records, key=self._record_sort_key)
 
+    def list_search_records(self) -> list[SearchRecord]:
+        records: list[SearchRecord] = []
+        for collection in self._collections():
+            try:
+                result = collection.get(include=["documents", "metadatas"])
+            except Exception as error:
+                raise StorageError("Chroma search catalog listing failed") from error
+            for index, record_id in enumerate(result["ids"]):
+                records.append(
+                    self._search_record_from_result(
+                        record_id=record_id,
+                        document=self._required_item(result.get("documents"), index),
+                        metadata=self._required_item(result.get("metadatas"), index),
+                    )
+                )
+        return sorted(records, key=self._record_sort_key)
+
     def query(
         self,
         vector: EmbeddingVector,
@@ -144,6 +176,18 @@ class ChromaVectorRepository:
             raise ValueError("limit must be positive")
         if not vector.normalized:
             raise StorageError("query vector must be normalized")
+        active_filters = filters or SearchFilters()
+        cache_key = (
+            vector.space_id,
+            vector.model_id,
+            tuple(vector.values),
+            limit,
+            active_filters,
+        )
+        cached = self._query_cache.get(cache_key)
+        if cached is not None:
+            self._query_cache.move_to_end(cache_key)
+            return list(cached)
         collection = self._collection_for_vector(vector, create=False)
         if collection is None:
             return []
@@ -151,7 +195,6 @@ class ChromaVectorRepository:
         if count == 0:
             return []
 
-        active_filters = filters or SearchFilters()
         where = self._where_from_filters(active_filters)
         n_results = count if active_filters.path_prefix is not None else min(
             count,
@@ -165,7 +208,6 @@ class ChromaVectorRepository:
                 include=[
                     "documents",
                     "metadatas",
-                    "embeddings",
                     "distances",
                 ],
             )
@@ -177,22 +219,19 @@ class ChromaVectorRepository:
         ids = self._required_item(result.get("ids"), 0)
         documents = self._required_item(result.get("documents"), 0)
         metadatas = self._required_item(result.get("metadatas"), 0)
-        embeddings = self._required_item(result.get("embeddings"), 0)
         distances = self._required_item(result.get("distances"), 0)
         candidates: list[VectorCandidate] = []
-        for record_id, document, metadata, embedding, distance in zip(
+        for record_id, document, metadata, distance in zip(
             ids,
             documents,
             metadatas,
-            embeddings,
             distances,
             strict=True,
         ):
-            record = self._record_from_result(
+            record = self._search_record_from_result(
                 record_id=record_id,
                 document=document,
                 metadata=metadata,
-                embedding=embedding,
             )
             if not self._matches_filters(record, active_filters):
                 continue
@@ -205,7 +244,13 @@ class ChromaVectorRepository:
                 *self._record_sort_key(candidate.record),
             )
         )
-        return candidates[:limit]
+        limited = candidates[:limit]
+        if self.query_cache_size:
+            self._query_cache[cache_key] = tuple(limited)
+            self._query_cache.move_to_end(cache_key)
+            while len(self._query_cache) > self.query_cache_size:
+                self._query_cache.popitem(last=False)
+        return limited
 
     def delete_source(self, source_key: str) -> int:
         deleted = 0
@@ -223,6 +268,8 @@ class ChromaVectorRepository:
                 raise StorageError(
                     "Chroma source deletion failed"
                 ) from error
+        if deleted:
+            self._query_cache.clear()
         return deleted
 
     def delete_records(self, records: Iterable[IndexRecord]) -> int:
@@ -250,6 +297,8 @@ class ChromaVectorRepository:
                 raise StorageError(
                     "Chroma record deletion failed"
                 ) from error
+        if deleted:
+            self._query_cache.clear()
         return deleted
 
     def clear(self) -> int:
@@ -260,6 +309,7 @@ class ChromaVectorRepository:
                 self._client.delete_collection(collection.name)
             except Exception as error:
                 raise StorageError("Chroma index clearing failed") from error
+        self._query_cache.clear()
         return deleted
 
     def count(self) -> int:
@@ -417,6 +467,41 @@ class ChromaVectorRepository:
             )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
             raise StorageError("stored Chroma metadata is invalid") from error
+
+    @staticmethod
+    def _search_record_from_result(
+        *,
+        record_id: str,
+        document: Any,
+        metadata: Any,
+    ) -> SearchRecord:
+        if not isinstance(document, str) or not isinstance(metadata, Mapping):
+            raise StorageError("stored Chroma search record is incomplete")
+        try:
+            return SearchRecord(
+                record_id=record_id,
+                source_id=str(metadata["source_id"]),
+                file_id=str(metadata["file_id"]),
+                source_key=str(metadata["source_key"]),
+                path=Path(str(metadata["source_path"])),
+                name=str(metadata["source_name"]),
+                mime_type=str(metadata["mime_type"]),
+                modality=str(metadata["modality"]),
+                document=document,
+                modified_at=datetime.fromtimestamp(
+                    float(metadata["modified_at"]), tz=timezone.utc
+                ),
+                size_bytes=int(metadata["size_bytes"]),
+                page_number=ChromaVectorRepository._optional_int(
+                    metadata.get("page_number")
+                ),
+                paragraph_number=ChromaVectorRepository._optional_int(
+                    metadata.get("paragraph_number")
+                ),
+                sequence_number=int(metadata["sequence_number"]),
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            raise StorageError("stored Chroma search metadata is invalid") from error
 
     @staticmethod
     def _where_from_filters(

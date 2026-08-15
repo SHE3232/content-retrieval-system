@@ -104,6 +104,21 @@ def test_mobileclip_query_ids_are_stable_and_model_specific() -> None:
     assert first.file_id == first.source_id
     assert first.source_id != different.source_id
     assert len(first.source_id) == 64
+    assert backend.text_calls == [["a cat"], ["a dog"]]
+
+
+def test_mobileclip_query_cache_is_bounded() -> None:
+    from content_retrieval.embeddings.mobileclip import MobileClipEmbeddingEngine
+
+    backend = RecordingMobileClipBackend()
+    engine = MobileClipEmbeddingEngine(backend, query_cache_size=1)
+
+    engine.embed_queries(["a cat"])
+    engine.embed_queries(["a cat"])
+    engine.embed_queries(["a dog"])
+    engine.embed_queries(["a cat"])
+
+    assert backend.text_calls == [["a cat"], ["a dog"], ["a cat"]]
 
 
 def test_mobileclip_engine_isolates_one_bad_image() -> None:

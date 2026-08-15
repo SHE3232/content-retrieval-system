@@ -20,8 +20,16 @@ import time
 from typing import Any, Iterable
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_SOURCE = REPOSITORY_ROOT / "backend" / "src"
+DEFAULT_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = Path(
+    os.environ.get("WEEK6_SOURCE_REPOSITORY", DEFAULT_REPOSITORY_ROOT)
+).resolve()
+BACKEND_SOURCE = Path(
+    os.environ.get(
+        "WEEK6_BACKEND_SOURCE",
+        REPOSITORY_ROOT / "backend" / "src",
+    )
+).resolve()
 if str(BACKEND_SOURCE) not in sys.path:
     sys.path.insert(0, str(BACKEND_SOURCE))
 
@@ -67,6 +75,53 @@ def current_process_rss() -> int:
         if not succeeded:
             raise OSError(ctypes.get_last_error(), "GetProcessMemoryInfo failed")
         return int(counters.WorkingSetSize)
+
+    import resource
+
+    maximum = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    return maximum if os.uname().sysname == "Darwin" else maximum * 1024
+
+
+def current_process_peak_rss() -> int:
+    """Return the process peak resident working set in bytes."""
+    if os.name == "nt":
+        from ctypes import wintypes
+
+        size_t = ctypes.c_size_t
+
+        class ProcessMemoryCounters(ctypes.Structure):
+            _fields_ = [
+                ("cb", wintypes.DWORD),
+                ("PageFaultCount", wintypes.DWORD),
+                ("PeakWorkingSetSize", size_t),
+                ("WorkingSetSize", size_t),
+                ("QuotaPeakPagedPoolUsage", size_t),
+                ("QuotaPagedPoolUsage", size_t),
+                ("QuotaPeakNonPagedPoolUsage", size_t),
+                ("QuotaNonPagedPoolUsage", size_t),
+                ("PagefileUsage", size_t),
+                ("PeakPagefileUsage", size_t),
+            ]
+
+        counters = ProcessMemoryCounters()
+        counters.cb = ctypes.sizeof(counters)
+        get_current_process = ctypes.windll.kernel32.GetCurrentProcess
+        get_current_process.restype = wintypes.HANDLE
+        get_memory_info = ctypes.windll.psapi.GetProcessMemoryInfo
+        get_memory_info.argtypes = [
+            wintypes.HANDLE,
+            ctypes.POINTER(ProcessMemoryCounters),
+            wintypes.DWORD,
+        ]
+        get_memory_info.restype = wintypes.BOOL
+        succeeded = get_memory_info(
+            get_current_process(),
+            ctypes.byref(counters),
+            counters.cb,
+        )
+        if not succeeded:
+            raise OSError(ctypes.get_last_error(), "GetProcessMemoryInfo failed")
+        return int(counters.PeakWorkingSetSize)
 
     import resource
 

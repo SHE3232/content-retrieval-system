@@ -49,7 +49,6 @@ def test_text_queries_are_normalized_batched_and_deterministic() -> None:
     assert backend.calls == [
         ["local search", "notes"],
         ["third"],
-        ["local search"],
     ]
     assert [item.space_id for item in first.items] == [
         "text-semantic-v1",
@@ -63,6 +62,20 @@ def test_text_queries_are_normalized_batched_and_deterministic() -> None:
         "input_index": 0,
         "source_kind": "query",
     }
+    assert first.items[0] is not second.items[0]
+
+
+def test_text_query_cache_is_bounded_and_refreshes_recent_entries() -> None:
+    backend = RecordingTextBackend()
+    engine = TextEmbeddingEngine(backend, query_cache_size=2)
+
+    engine.embed_queries(["first"])
+    engine.embed_queries(["second"])
+    engine.embed_queries(["first"])
+    engine.embed_queries(["third"])
+    engine.embed_queries(["second"])
+
+    assert backend.calls == [["first"], ["second"], ["third"], ["second"]]
 
 
 def test_text_queries_isolate_blank_and_backend_failures() -> None:

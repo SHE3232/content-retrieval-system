@@ -16,8 +16,11 @@ import sys
 import time
 from typing import Any, Callable
 
-ROOT = Path(__file__).resolve().parents[2]
-BACKEND_SOURCE = ROOT / "backend" / "src"
+DEFAULT_ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("WEEK6_SOURCE_REPOSITORY", DEFAULT_ROOT)).resolve()
+BACKEND_SOURCE = Path(
+    os.environ.get("WEEK6_BACKEND_SOURCE", ROOT / "backend" / "src")
+).resolve()
 for path in (ROOT, BACKEND_SOURCE):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
@@ -25,7 +28,7 @@ for path in (ROOT, BACKEND_SOURCE):
 from tools.week6.run_stress import (  # noqa: E402
     _normalized_vector,
     _sha,
-    current_process_rss,
+    current_process_peak_rss,
     dataset_manifest_hash,
     percentile,
     write_json_atomic,
@@ -128,7 +131,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "vector_query_p95_ms": percentile(vector, 95),
                             "full_search_p50_ms": statistics.median(full),
                             "full_search_p95_ms": percentile(full, 95),
-                            "peak_rss_bytes": current_process_rss(),
+                            "peak_rss_bytes": current_process_peak_rss(),
                         },
                     }
                 )
