@@ -38,6 +38,7 @@ def _git(repo: Path, *args: str) -> str:
 
 def _init_repo(root: Path) -> str:
     _git(root, "init")
+    _git(root, "config", "core.longpaths", "true")
     _git(root, "config", "user.email", "week6@example.invalid")
     _git(root, "config", "user.name", "Week 6 Test")
     (root / ".gitignore").write_text("output/\n", encoding="utf-8")
@@ -272,6 +273,18 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
     site_packages = venv / "Lib" / "site-packages" / "example_dependency"
     site_packages.mkdir(parents=True)
     (site_packages / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+    deep_runtime_file = (
+        venv
+        / "Lib"
+        / "site-packages"
+        / ("deep_dependency_" + "a" * 55)
+        / ("generated_resources_" + "b" * 55)
+        / ("runtime_payload_" + "c" * 55 + ".bin")
+    )
+    deep_runtime_file_extended = "\\\\?\\" + str(deep_runtime_file)
+    os.makedirs(os.path.dirname(deep_runtime_file_extended), exist_ok=True)
+    with open(deep_runtime_file_extended, "wb") as stream:
+        stream.write(b"deep-runtime")
     (venv / "Scripts").mkdir()
     (venv / "Scripts" / "python.exe").write_bytes(b"venv-redirector")
     (venv / "pyvenv.cfg").write_text(f"home = {base_runtime}\n", encoding="utf-8")
@@ -342,6 +355,7 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
         assert "app/runtime/python/python310.dll" in names
         assert "app/runtime/python/Lib/os.py" in names
         assert "app/runtime/python/Lib/site-packages/example_dependency/__init__.py" in names
+        assert any(name.endswith("runtime_payload_" + "c" * 55 + ".bin") for name in names)
         assert "app/runtime/python/pyvenv.cfg" not in names
         assert archive.read("app/runtime/python/python.exe") == b"portable-python"
     assert not staging.exists() or not any(staging.iterdir())
