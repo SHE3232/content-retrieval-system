@@ -73,10 +73,12 @@ namespace ContentRetrievalLauncher
             Directory.CreateDirectory(dataDirectory);
             string logPath = Path.Combine(dataDirectory, "launcher.log");
             StringBuilder log = new StringBuilder();
+            string command = "& " + PowerShellLiteral(script) + " -PackageRoot " + PowerShellLiteral(packageRoot);
+            string encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -ExecutionPolicy Bypass -File " + Quote(script) + " -PackageRoot " + Quote(packageRoot),
+                Arguments = "-NoProfile -ExecutionPolicy Bypass -EncodedCommand " + encodedCommand,
                 WorkingDirectory = packageRoot,
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -103,9 +105,9 @@ namespace ContentRetrievalLauncher
             }
         }
 
-        private static string Quote(string value)
+        private static string PowerShellLiteral(string value)
         {
-            return "\"" + value.Replace("\"", "\\\"") + "\"";
+            return "'" + value.Replace("'", "''") + "'";
         }
     }
 }

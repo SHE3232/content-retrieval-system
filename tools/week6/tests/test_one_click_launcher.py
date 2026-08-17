@@ -129,6 +129,17 @@ def test_one_click_launcher_invokes_integrated_script_headlessly(tmp_path: Path)
     assert launched_by_double_click_path.returncode == 0
     assert (package / "launcher-invoked.txt").is_file()
 
+    (package / "launcher-invoked.txt").unlink()
+    launcher_in_package = package / "内容检索系统.exe"
+    shutil.copy2(launcher, launcher_in_package)
+    launched_with_default_package_root = _run(
+        [str(launcher_in_package), "--headless"],
+        package,
+    )
+    assert launched_with_default_package_root.returncode == 0
+    default_root = (package / "launcher-invoked.txt").read_text(encoding="utf-8")
+    assert Path(default_root).resolve() == package.resolve()
+
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 def test_portable_java_builder_uses_jlink_and_verifies_java(tmp_path: Path) -> None:
