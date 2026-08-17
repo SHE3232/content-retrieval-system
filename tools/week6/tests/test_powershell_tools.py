@@ -175,6 +175,9 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
     runtime = tmp_path / "python-runtime"
     runtime.mkdir()
     (runtime / "python.exe").write_bytes(b"python")
+    java_runtime = tmp_path / "java-runtime"
+    (java_runtime / "bin").mkdir(parents=True)
+    (java_runtime / "bin" / "java.exe").write_bytes(b"java")
     models = tmp_path / "models"
     models.mkdir()
     (models / "weights.bin").write_bytes(b"weights")
@@ -211,6 +214,8 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
             str(release),
             "-PythonRuntimeDir",
             str(runtime),
+            "-JavaRuntimeDir",
+            str(java_runtime),
             "-ModelRoot",
             str(models),
             "-ModelManifestPath",
@@ -235,12 +240,16 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
         assert "app/frontend/content_retrieval_app.exe" in names
         assert "app/backend/src/app.py" in names
         assert "app/runtime/python/python.exe" in names
+        assert "app/runtime/java/bin/java.exe" in names
+        assert "app/内容检索系统.exe" in names
         assert "app/models/weights.bin" in names
         assert "app/PACKAGE_MANIFEST.json" in names
         assert not any("private-index" in name for name in names)
         assert not any(name.endswith("user.log") for name in names)
         package_manifest = json.loads(archive.read("app/PACKAGE_MANIFEST.json"))
         assert package_manifest["source_commit"] == commit
+        assert package_manifest["one_click_launcher"] == "内容检索系统.exe"
+        assert package_manifest["java_runtime_mode"] == "bundled"
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
@@ -266,6 +275,9 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
     (venv / "Scripts").mkdir()
     (venv / "Scripts" / "python.exe").write_bytes(b"venv-redirector")
     (venv / "pyvenv.cfg").write_text(f"home = {base_runtime}\n", encoding="utf-8")
+    java_runtime = tmp_path / "java-runtime"
+    (java_runtime / "bin").mkdir(parents=True)
+    (java_runtime / "bin" / "java.exe").write_bytes(b"java")
 
     models = tmp_path / "models"
     models.mkdir()
@@ -301,6 +313,8 @@ def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path)
             str(release),
             "-PythonRuntimeDir",
             str(venv),
+            "-JavaRuntimeDir",
+            str(java_runtime),
             "-ModelRoot",
             str(models),
             "-ModelManifestPath",
@@ -367,6 +381,9 @@ def test_integrated_launcher_check_only_validates_packaged_resources(tmp_path: P
     runtime = tmp_path / "runtime" / "python" / "Scripts"
     runtime.mkdir(parents=True)
     (runtime / "python.exe").write_bytes(b"python")
+    java = tmp_path / "runtime" / "java" / "bin"
+    java.mkdir(parents=True)
+    (java / "java.exe").write_bytes(b"java")
     models = tmp_path / "models"
     models.mkdir()
     (models / "model-manifest.json").write_text('{"models": []}\n', encoding="utf-8")
@@ -397,3 +414,4 @@ def test_integrated_launcher_check_only_validates_packaged_resources(tmp_path: P
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "integrated package preflight passed" in result.stdout.lower()
+    assert str(java / "java.exe") in result.stdout

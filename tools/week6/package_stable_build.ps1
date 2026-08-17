@@ -4,6 +4,7 @@ param(
     [string]$SourceCommit,
     [string]$FrontendReleaseDir,
     [string]$PythonRuntimeDir,
+    [string]$JavaRuntimeDir,
     [string]$ModelRoot,
     [string]$ModelManifestPath,
     [string]$TikaJar,
@@ -18,6 +19,12 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$oneClickLauncherName = [Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String('5YaF5a655qOA57Si57O757ufLmV4ZQ==')
+)
+$integratedLauncherName = [Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String('5ZCv5Yqo5bqU55SoLnBzMQ==')
+)
 
 function Resolve-RequiredFile {
     param([string]$Path, [string]$Label)
@@ -131,6 +138,10 @@ if ([string]::IsNullOrWhiteSpace($FrontendReleaseDir)) {
 if ([string]::IsNullOrWhiteSpace($PythonRuntimeDir)) {
     $PythonRuntimeDir = Join-Path $repository 'backend/.venv'
 }
+if ([string]::IsNullOrWhiteSpace($JavaRuntimeDir)) {
+    $javaCommand = Get-Command java -CommandType Application -ErrorAction Stop | Select-Object -First 1
+    $JavaRuntimeDir = Split-Path -Parent (Split-Path -Parent $javaCommand.Source)
+}
 if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
     $ModelRoot = Join-Path $repository 'models'
 }
@@ -155,6 +166,8 @@ if ([string]::IsNullOrWhiteSpace($ThirdPartySourceDir)) {
 
 $frontend = Resolve-RequiredDirectory -Path $FrontendReleaseDir -Label 'Flutter release directory'
 $pythonRuntime = Resolve-RequiredDirectory -Path $PythonRuntimeDir -Label 'Python runtime directory'
+$javaRuntime = Resolve-RequiredDirectory -Path $JavaRuntimeDir -Label 'Java runtime directory'
+$javaExecutable = Resolve-RequiredFile -Path (Join-Path $javaRuntime 'bin/java.exe') -Label 'Java runtime executable'
 $models = Resolve-RequiredDirectory -Path $ModelRoot -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path $ModelManifestPath -Label 'Model manifest'
 $tikaPath = Resolve-RequiredFile -Path $TikaJar -Label 'Tika JAR'
@@ -202,13 +215,19 @@ try {
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/pyproject.toml') 'Backend pyproject') -Destination (Join-Path $appRoot 'backend/pyproject.toml')
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/uv.lock') 'Backend lockfile') -Destination (Join-Path $appRoot 'backend/uv.lock')
     $pythonRuntimeMode = Copy-PythonRuntime -Source $pythonRuntime -Destination (Join-Path $appRoot 'runtime/python')
+    Copy-DirectoryContents -Source $javaRuntime -Destination (Join-Path $appRoot 'runtime/java')
     Copy-DirectoryContents -Source $models -Destination (Join-Path $appRoot 'models')
     Copy-Item -LiteralPath $modelManifest -Destination (Join-Path $appRoot 'models/model-manifest.json') -Force
     New-Item -ItemType Directory -Force -Path (Join-Path $appRoot 'tools/tika') | Out-Null
     Copy-Item -LiteralPath $tikaPath -Destination (Join-Path $appRoot 'tools/tika/tika-server-standard-3.3.1.jar')
     Copy-Item -LiteralPath $tikaChecksum -Destination (Join-Path $appRoot 'tools/tika/tika-server-standard-3.3.1.jar.sha512')
     Copy-Item -LiteralPath $mvpScript -Destination (Join-Path $appRoot 'tools/start-mvp.ps1')
-    Copy-Item -LiteralPath $integratedScript -Destination (Join-Path $appRoot '启动应用.ps1')
+    Copy-Item -LiteralPath $integratedScript -Destination (Join-Path $appRoot $integratedLauncherName)
+    $oneClickLauncherPath = Join-Path $appRoot $oneClickLauncherName
+    & (Join-Path $PSScriptRoot 'build_one_click_launcher.ps1') -OutputPath $oneClickLauncherPath
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $oneClickLauncherPath -PathType Leaf)) {
+        throw 'One-click launcher build failed during stable package creation'
+    }
     if (Test-Path -LiteralPath $ThirdPartySourceDir -PathType Container) {
         Copy-DirectoryContents -Source $ThirdPartySourceDir -Destination (Join-Path $appRoot 'third_party/mobileclip-src')
     }
@@ -220,6 +239,8 @@ try {
         platform_claim = 'Windows complete integrated stable build'
         first_run_downloads = $false
         python_runtime_mode = $pythonRuntimeMode
+        java_runtime_mode = 'bundled'
+        one_click_launcher = $oneClickLauncherName
         excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings', 'logs', 'credentials')
         files = Get-RelativeFileManifest -Root $appRoot
     }

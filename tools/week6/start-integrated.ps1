@@ -76,6 +76,7 @@ $pythonExecutable = $pythonCandidates | Where-Object {
     Test-Path -LiteralPath $_ -PathType Leaf
 } | Select-Object -First 1
 $pythonExecutable = Resolve-RequiredFile -Path $pythonExecutable -Label 'Packaged Python executable'
+$javaExecutable = Resolve-RequiredFile -Path (Join-Path $root 'runtime/java/bin/java.exe') -Label 'Packaged Java executable'
 $mvpLauncher = Resolve-RequiredFile -Path (Join-Path $root 'tools/start-mvp.ps1') -Label 'MVP launcher'
 $modelRoot = Resolve-RequiredDirectory -Path (Join-Path $root 'models') -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path (Join-Path $modelRoot 'model-manifest.json') -Label 'Model manifest'
@@ -88,6 +89,7 @@ if ($CheckOnly) {
     Write-Output 'Integrated package preflight passed'
     Write-Output "Frontend: $frontendExecutable"
     Write-Output "Python: $pythonExecutable"
+    Write-Output "Java: $javaExecutable"
     Write-Output "Models: $modelRoot"
     exit 0
 }
@@ -101,6 +103,7 @@ try {
         '-ExecutionPolicy', 'Bypass',
         '-File', ('"' + $mvpLauncher + '"'),
         '-PythonExecutable', ('"' + $pythonExecutable + '"'),
+        '-JavaExecutable', ('"' + $javaExecutable + '"'),
         '-ModelRoot', ('"' + $modelRoot + '"'),
         '-ManifestPath', ('"' + $modelManifest + '"'),
         '-DataDir', ('"' + $dataDir + '"'),
