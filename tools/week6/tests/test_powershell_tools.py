@@ -55,6 +55,17 @@ def _write_cmd(path: Path, output: str, *, stderr: bool = False) -> None:
     )
 
 
+def test_integrated_launcher_allows_cold_model_startup() -> None:
+    script = INTEGRATED_SCRIPT.read_text(encoding="utf-8")
+    assert "[int]$ReadyTimeoutSeconds = 600" in script
+
+
+def test_integrated_launcher_cleans_backend_process_tree() -> None:
+    script = INTEGRATED_SCRIPT.read_text(encoding="utf-8")
+    assert "function Stop-OwnedProcessTree" in script
+    assert "Stop-OwnedProcessTree -RootProcess $backendProcess" in script
+
+
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 def test_capture_candidate_records_clean_commit_and_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
