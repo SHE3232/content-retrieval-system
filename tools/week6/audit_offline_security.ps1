@@ -67,8 +67,8 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead($package)
 try {
     foreach ($entry in $archive.Entries) {
         $name = $entry.FullName.Replace("\", "/")
-        if ($name -match '(^|/)(\.git|\.venv|data|mvp-input|logs?)(/|$)' -or
-            $name -match '(?i)(credentials?|secrets?|\.env|\.pem|\.key)$') {
+        if ($name -match '(?i)(^|/)(\.git|\.venv|data|mvp-input|logs?|xcuserdata|[^/]+\.xcuserdatad|\.idea|\.vscode)(/|$)' -or
+            $name -match '(?i)(credentials?|secrets?|\.env|\.pem|\.key|\.xcuserstate|\.DS_Store)$') {
             $forbiddenEntries.Add($name)
         }
         if ($entry.Length -gt 0 -and $entry.Length -le 10MB -and

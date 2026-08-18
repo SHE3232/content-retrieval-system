@@ -190,6 +190,56 @@ def test_security_audit_emits_gate_ready_full_security_evidence(tmp_path: Path) 
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_security_audit_rejects_packaged_user_state(tmp_path: Path) -> None:
+    package, offline, security_tests, network_probe = _security_audit_fixtures(tmp_path)
+    with ZipFile(package, "a") as archive:
+        archive.writestr(
+            "app/third_party/example.xcodeproj/xcuserdata/user.xcuserdatad/"
+            "UserInterfaceState.xcuserstate",
+            b"user state",
+        )
+    output = tmp_path / "security.json"
+    result = _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(SECURITY_AUDIT_SCRIPT),
+            "-ProcessIds",
+            "999999",
+            "-PackagePath",
+            str(package),
+            "-OfflineE2EJson",
+            str(offline),
+            "-SecurityTestJson",
+            str(security_tests),
+            "-NetworkProbeJson",
+            str(network_probe),
+            "-OutputPath",
+            str(output),
+            "-IsolationMethod",
+            "process-network-deny",
+            "-NetworkIsolationEnforced",
+            "-SampleSeconds",
+            "1",
+            "-MinimumSampleSeconds",
+            "1",
+        ],
+        tmp_path,
+    )
+
+    assert result.returncode != 0
+    record = json.loads(output.read_text(encoding="utf-8-sig"))
+    assert record["checks"]["package_audit"] == "FAIL"
+    forbidden = next(
+        item for item in record["check_details"] if item["id"] == "forbidden_package_entries"
+    )
+    assert any("xcuserdata" in item for item in forbidden["actual"])
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 def test_capture_candidate_records_clean_commit_and_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -330,6 +380,18 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
     (tmp_path / "data").mkdir()
     (tmp_path / "data" / "private-index.bin").write_bytes(b"private")
     (tmp_path / "user.log").write_text("secret log\n", encoding="utf-8")
+    third_party = tmp_path / "third-party-source"
+    (third_party / "safe").mkdir(parents=True)
+    (third_party / "safe" / "LICENSE").write_text("license\n", encoding="utf-8")
+    user_state = (
+        third_party
+        / "ios_app"
+        / "Example.xcodeproj"
+        / "xcuserdata"
+        / "developer.xcuserdatad"
+    )
+    user_state.mkdir(parents=True)
+    (user_state / "UserInterfaceState.xcuserstate").write_bytes(b"private UI state")
     commit = _init_repo(tmp_path)
     output = tmp_path / "output" / "week6" / "stable.zip"
 
@@ -363,6 +425,8 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
             str(tools / "start-mvp.ps1"),
             "-IntegratedLauncher",
             str(integrated),
+            "-ThirdPartySourceDir",
+            str(third_party),
             "-OutputZip",
             str(output),
         ],
@@ -385,6 +449,9 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
         assert package_manifest["source_commit"] == commit
         assert package_manifest["one_click_launcher"] == "内容检索系统.exe"
         assert package_manifest["java_runtime_mode"] == "bundled"
+        assert "app/third_party/mobileclip-src/safe/LICENSE" in names
+        assert not any("xcuserdata" in name.lower() for name in names)
+        assert not any(name.lower().endswith(".xcuserstate") for name in names)
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

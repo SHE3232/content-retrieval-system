@@ -52,6 +52,18 @@ function Copy-DirectoryContents {
     }
 }
 
+function Copy-ThirdPartySource {
+    param([string]$Source, [string]$Destination)
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    & robocopy.exe $Source $Destination /E /COPY:DAT /DCOPY:DAT /R:2 /W:1 /XJ `
+        /XD .git .venv __pycache__ xcuserdata *.xcuserdatad .idea .vscode `
+        /XF *.xcuserstate .DS_Store /NFL /NDL /NJH /NJS /NP | Out-Null
+    $robocopyExitCode = $LASTEXITCODE
+    if ($robocopyExitCode -gt 7) {
+        throw "Robocopy failed with exit code $robocopyExitCode while copying curated third-party source $Source"
+    }
+}
+
 function Copy-PythonRuntime {
     param([string]$Source, [string]$Destination)
 
@@ -319,7 +331,7 @@ try {
         throw 'One-click launcher build failed during stable package creation'
     }
     if (Test-Path -LiteralPath $ThirdPartySourceDir -PathType Container) {
-        Copy-DirectoryContents -Source $ThirdPartySourceDir -Destination (Join-Path $appRoot 'third_party/mobileclip-src')
+        Copy-ThirdPartySource -Source $ThirdPartySourceDir -Destination (Join-Path $appRoot 'third_party/mobileclip-src')
     }
 
     $manifest = [ordered]@{
@@ -331,7 +343,7 @@ try {
         python_runtime_mode = $pythonRuntimeMode
         java_runtime_mode = 'bundled'
         one_click_launcher = $oneClickLauncherName
-        excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings', 'logs', 'credentials')
+        excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings including Xcode xcuserdata', 'logs', 'credentials')
         files = Get-RelativeFileManifest -Root $appRoot
     }
     [System.IO.File]::WriteAllText(
