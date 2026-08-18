@@ -12,10 +12,16 @@ from typing import Any
 REQUIRED_METRICS = (
     "embedding_combined_p95_ms",
     "vector_query_p95_ms",
+    "embedding_hot_p95_ms",
+    "vector_query_hot_p95_ms",
     "peak_rss_bytes",
     "full_search_p95_ms",
 )
-IMPROVEMENT_METRICS = REQUIRED_METRICS[:3]
+IMPROVEMENT_METRICS = (
+    "embedding_hot_p95_ms",
+    "vector_query_hot_p95_ms",
+    "peak_rss_bytes",
+)
 ACCURACY_METRICS = (
     "nq_recall_at_10",
     "nq_mrr_at_10",
@@ -48,9 +54,37 @@ def _require_comparable(baseline: dict[str, Any], candidate: dict[str, Any]) -> 
     candidate_hardware = candidate.get("hardware")
     if not isinstance(baseline_hardware, dict) or not isinstance(candidate_hardware, dict):
         raise ValueError("hardware evidence is required for comparable runs")
+    baseline_power = baseline_hardware.get("power_mode")
+    candidate_power = candidate_hardware.get("power_mode")
+    if not isinstance(baseline_power, str) or not baseline_power.strip() or "unknown" in baseline_power.lower():
+        raise ValueError("recorded non-unknown power mode is required")
+    if not isinstance(candidate_power, str) or not candidate_power.strip() or "unknown" in candidate_power.lower():
+        raise ValueError("recorded non-unknown power mode is required")
+
+    baseline_configuration = baseline.get("configuration")
+    candidate_configuration = candidate.get("configuration")
+    if not isinstance(baseline_configuration, dict) or not isinstance(candidate_configuration, dict):
+        raise ValueError("comparable workload configuration is required")
+    workload_fields = (
+        "workload_sha256",
+        "workload_mode",
+        "unique_queries",
+        "target_cache_hit_ratio",
+        "warmup_inputs_disjoint",
+    )
+    if any(
+        baseline_configuration.get(field) != candidate_configuration.get(field)
+        for field in workload_fields
+    ):
+        raise ValueError("baseline and candidate workload are not comparable")
+    if baseline_configuration.get("workload_mode") != "mixed-cold-and-cache-hit":
+        raise ValueError("mixed cold and cache-hit workload is required")
+    if baseline_configuration.get("warmup_inputs_disjoint") is not True:
+        raise ValueError("workload warmup inputs must be disjoint")
+
     comparable = (
         baseline_hardware.get("fingerprint") == candidate_hardware.get("fingerprint")
-        and baseline_hardware.get("power_mode") == candidate_hardware.get("power_mode")
+        and baseline_power == candidate_power
         and baseline.get("dataset_sha256") == candidate.get("dataset_sha256")
         and baseline.get("models_sha256") == candidate.get("models_sha256")
     )
@@ -82,6 +116,22 @@ def compare_performance(baseline: dict[str, Any], candidate: dict[str, Any]) -> 
             "status": "PASS" if candidate_medians["vector_query_p95_ms"] <= 2000 else "FAIL",
             "actual_ms": candidate_medians["vector_query_p95_ms"],
             "expected": "<= 2000 ms",
+        }
+    )
+    checks.append(
+        {
+            "id": "mixed_embedding_no_regression",
+            "status": "PASS" if improvements["embedding_combined_p95_ms"] >= -5.0 else "FAIL",
+            "actual_percent": improvements["embedding_combined_p95_ms"],
+            "expected": ">= -5.0%",
+        }
+    )
+    checks.append(
+        {
+            "id": "mixed_vector_no_regression",
+            "status": "PASS" if improvements["vector_query_p95_ms"] >= -5.0 else "FAIL",
+            "actual_percent": improvements["vector_query_p95_ms"],
+            "expected": ">= -5.0%",
         }
     )
     checks.append(
@@ -120,6 +170,16 @@ def compare_performance(baseline: dict[str, Any], candidate: dict[str, Any]) -> 
         "baseline_medians": baseline_medians,
         "candidate_medians": candidate_medians,
         "improvements_percent": improvements,
+        "workload": {
+            field: baseline["configuration"].get(field)
+            for field in (
+                "workload_sha256",
+                "workload_mode",
+                "unique_queries",
+                "target_cache_hit_ratio",
+                "warmup_inputs_disjoint",
+            )
+        },
         "accuracy_checks": accuracy_checks,
         "checks": checks,
     }

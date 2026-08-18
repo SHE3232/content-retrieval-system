@@ -16,6 +16,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CAPTURE_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "capture_candidate.ps1"
 PACKAGE_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "package_stable_build.ps1"
 INTEGRATED_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "start-integrated.ps1"
+SECURITY_AUDIT_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "audit_offline_security.ps1"
 
 
 def _run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -64,6 +65,128 @@ def test_integrated_launcher_cleans_backend_process_tree() -> None:
     script = INTEGRATED_SCRIPT.read_text(encoding="utf-8")
     assert "function Stop-OwnedProcessTree" in script
     assert "Stop-OwnedProcessTree -RootProcess $backendProcess" in script
+
+
+def _security_audit_fixtures(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
+    package = tmp_path / "stable.zip"
+    with ZipFile(package, "w") as archive:
+        archive.writestr("app/PACKAGE_MANIFEST.json", '{"source_commit":"' + "a" * 40 + '"}\n')
+    offline = tmp_path / "offline.json"
+    offline.write_text('{"status":"PASS"}\n', encoding="utf-8")
+    security_tests = tmp_path / "security-tests.json"
+    security_tests.write_text(
+        json.dumps(
+            {
+                "status": "PASS",
+                "checks": {
+                    "path_traversal": "PASS",
+                    "reparse_point_escape": "PASS",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    network_probe = tmp_path / "network-probe.json"
+    network_probe.write_text(
+        json.dumps(
+            {
+                "status": "PASS",
+                "blocked": True,
+                "target": "https://example.invalid/week6-egress-probe",
+            }
+        ),
+        encoding="utf-8",
+    )
+    return package, offline, security_tests, network_probe
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_security_audit_rejects_unenforced_network_isolation(tmp_path: Path) -> None:
+    package, offline, security_tests, network_probe = _security_audit_fixtures(tmp_path)
+    output = tmp_path / "security.json"
+    result = _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(SECURITY_AUDIT_SCRIPT),
+            "-ProcessIds",
+            "999999",
+            "-PackagePath",
+            str(package),
+            "-OfflineE2EJson",
+            str(offline),
+            "-SecurityTestJson",
+            str(security_tests),
+            "-NetworkProbeJson",
+            str(network_probe),
+            "-OutputPath",
+            str(output),
+            "-SampleSeconds",
+            "1",
+            "-MinimumSampleSeconds",
+            "1",
+        ],
+        tmp_path,
+    )
+
+    assert result.returncode != 0
+    record = json.loads(output.read_text(encoding="utf-8-sig"))
+    assert record["network_isolation"]["enforced"] is False
+    assert record["checks"]["network_isolation"] == "FAIL"
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_security_audit_emits_gate_ready_full_security_evidence(tmp_path: Path) -> None:
+    package, offline, security_tests, network_probe = _security_audit_fixtures(tmp_path)
+    output = tmp_path / "security.json"
+    result = _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(SECURITY_AUDIT_SCRIPT),
+            "-ProcessIds",
+            "999999",
+            "-PackagePath",
+            str(package),
+            "-OfflineE2EJson",
+            str(offline),
+            "-SecurityTestJson",
+            str(security_tests),
+            "-NetworkProbeJson",
+            str(network_probe),
+            "-OutputPath",
+            str(output),
+            "-IsolationMethod",
+            "process-network-deny",
+            "-NetworkIsolationEnforced",
+            "-SampleSeconds",
+            "1",
+            "-MinimumSampleSeconds",
+            "1",
+        ],
+        tmp_path,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = json.loads(output.read_text(encoding="utf-8-sig"))
+    assert record["status"] == "PASS"
+    assert record["network_isolation"] == {
+        "enforced": True,
+        "method": "process-network-deny",
+        "sample_seconds": 1,
+        "probe_blocked": True,
+    }
+    assert record["checks"]["offline_e2e"] == "PASS"
+    assert record["checks"]["non_loopback_connections"] == "PASS"
+    assert record["checks"]["path_traversal"] == "PASS"
+    assert record["checks"]["reparse_point_escape"] == "PASS"
+    assert record["checks"]["package_audit"] == "PASS"
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

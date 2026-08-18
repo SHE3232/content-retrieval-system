@@ -23,3 +23,29 @@ def test_benchmark_can_target_an_explicit_source_checkout(
 
     assert module.ROOT == repository.resolve()
     assert module.BACKEND_SOURCE == backend_source.resolve()
+
+
+def test_benchmark_builds_a_disclosed_mixed_workload(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository = tmp_path / "candidate"
+    backend_source = repository / "backend" / "src"
+    backend_source.mkdir(parents=True)
+    monkeypatch.setenv("WEEK6_SOURCE_REPOSITORY", str(repository))
+    monkeypatch.setenv("WEEK6_BACKEND_SOURCE", str(backend_source))
+    spec = importlib.util.spec_from_file_location("week6_benchmark_workload_test", MODULE_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert hasattr(module, "build_workload")
+    workload = module.build_workload(iterations=100, warmups=10, seed=20260814)
+
+    assert workload["mode"] == "mixed-cold-and-cache-hit"
+    assert workload["unique_queries"] >= 10
+    assert 0.50 <= workload["target_cache_hit_ratio"] <= 0.90
+    assert len(workload["text_queries"]) == 100
+    assert len(set(workload["text_queries"])) == workload["unique_queries"]
+    assert set(workload["warmup_text_queries"]).isdisjoint(workload["text_queries"])
+    assert len(workload["vector_seeds"]) == 100

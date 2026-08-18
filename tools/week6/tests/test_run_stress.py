@@ -40,7 +40,9 @@ def test_current_process_rss_is_positive() -> None:
 
 
 def test_current_process_peak_rss_is_at_least_current_rss() -> None:
-    assert current_process_peak_rss() >= current_process_rss()
+    current = current_process_rss()
+    peak = current_process_peak_rss()
+    assert peak >= current
 
 
 def test_percentile_uses_linear_interpolation() -> None:

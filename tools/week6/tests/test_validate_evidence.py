@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,27 +22,48 @@ def _sha256(path: Path) -> str:
 
 
 def _performance_metrics() -> dict[str, object]:
-    accuracy = {
-        "nq_recall_at_10": 0.60,
-        "nq_mrr_at_10": 0.30,
-        "nq_ndcg_at_10": 0.36,
-        "coco_recall_at_10": 1.0,
-        "coco_mrr_at_10": 0.95,
-        "coco_ndcg_at_10": 0.96,
+    baseline_medians = {
+        "embedding_combined_p95_ms": 100.0,
+        "vector_query_p95_ms": 100.0,
+        "embedding_hot_p95_ms": 100.0,
+        "vector_query_hot_p95_ms": 100.0,
+        "peak_rss_bytes": 1_000_000_000.0,
+        "full_search_p95_ms": 200.0,
+    }
+    candidate_medians = {key: value * 0.94 for key, value in baseline_medians.items()}
+    accuracy_checks = {
+        key: {
+            "status": "PASS",
+            "baseline": value,
+            "candidate": value,
+            "drop": 0.0,
+            "maximum_drop": 0.01,
+        }
+        for key, value in {
+            "nq_recall_at_10": 0.60,
+            "nq_mrr_at_10": 0.30,
+            "nq_ndcg_at_10": 0.36,
+            "coco_recall_at_10": 1.0,
+            "coco_mrr_at_10": 0.95,
+            "coco_ndcg_at_10": 0.96,
+        }.items()
     }
     return {
-        "baseline": {
-            "embedding_p95_ms": 100.0,
-            "vector_search_p95_ms": 100.0,
-            "peak_rss_mb": 1000.0,
-            "accuracy": accuracy,
+        "status": "PASS",
+        "baseline_commit": "b" * 40,
+        "candidate_commit": SOURCE_COMMIT,
+        "baseline_medians": baseline_medians,
+        "candidate_medians": candidate_medians,
+        "improvements_percent": {key: 6.0 for key in baseline_medians},
+        "workload": {
+            "workload_sha256": "c" * 64,
+            "workload_mode": "mixed-cold-and-cache-hit",
+            "unique_queries": 20,
+            "target_cache_hit_ratio": 0.8,
+            "warmup_inputs_disjoint": True,
         },
-        "candidate": {
-            "embedding_p95_ms": 94.0,
-            "vector_search_p95_ms": 94.0,
-            "peak_rss_mb": 940.0,
-            "accuracy": accuracy,
-        },
+        "accuracy_checks": accuracy_checks,
+        "checks": [{"id": "comparison", "status": "PASS"}],
     }
 
 
@@ -70,6 +93,21 @@ def _write_complete_tree(root: Path) -> Path:
             gate["metrics"] = {"statement_coverage": 90.0}
         if gate_id == "G6":
             gate["metrics"] = _performance_metrics()
+        if gate_id == "G8":
+            gate["metrics"] = {
+                "network_isolation": {
+                    "enforced": True,
+                    "method": "process-network-deny",
+                    "sample_seconds": 1800,
+                },
+                "checks": {
+                    "offline_e2e": "PASS",
+                    "non_loopback_connections": "PASS",
+                    "path_traversal": "PASS",
+                    "reparse_point_escape": "PASS",
+                    "package_audit": "PASS",
+                },
+            }
         gates.append(gate)
 
     deliverables = []
@@ -85,6 +123,19 @@ def _write_complete_tree(root: Path) -> Path:
                 "source_commit": SOURCE_COMMIT,
             }
         )
+
+    sums = root / "deliverables" / "SHA256SUMS.txt"
+    sums.write_text(
+        "".join(
+            f"{item['sha256']}  {Path(item['path']).name}\n" for item in deliverables
+        ),
+        encoding="utf-8",
+    )
+    stable = next(item for item in deliverables if item["deliverable_id"] == "stable_build")
+    (root / "deliverables" / "SOURCE_VERSION.txt").write_text(
+        f"source_commit={SOURCE_COMMIT}\npackage_sha256={stable['sha256']}\n",
+        encoding="utf-8",
+    )
 
     manifest_path = root / "manifest.json"
     manifest_path.write_text(
@@ -216,15 +267,78 @@ def test_coverage_uses_unrounded_value(tmp_path: Path) -> None:
     assert any("statement coverage 89.99 is below 90.00" in error for error in result.errors)
 
 
-def test_performance_requires_baseline_and_candidate(tmp_path: Path) -> None:
+def test_performance_requires_comparison_output_and_mixed_workload(tmp_path: Path) -> None:
     manifest_path = _write_complete_tree(tmp_path)
     manifest = _load(manifest_path)
     metrics = _performance_metrics()
-    metrics.pop("baseline")
+    metrics.pop("candidate_medians")
+    workload = metrics["workload"]
+    assert isinstance(workload, dict)
+    workload["workload_mode"] = "single-query-cache-hit"
     _gate(manifest, "G6")["metrics"] = metrics
     _save(manifest_path, manifest)
 
     result = validate_evidence(tmp_path)
 
     assert result.exit_code == 1
-    assert any("performance metrics require baseline and candidate" in error for error in result.errors)
+    assert any("baseline_medians and candidate_medians" in error for error in result.errors)
+    assert any("mixed cold and cache-hit workload" in error for error in result.errors)
+
+
+def test_stale_sha256sums_and_source_version_fail(tmp_path: Path) -> None:
+    _write_complete_tree(tmp_path)
+    (tmp_path / "deliverables" / "SHA256SUMS.txt").write_text(
+        f"{'0' * 64}  stable_build.bin\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "deliverables" / "SOURCE_VERSION.txt").write_text(
+        f"source_commit={'b' * 40}\npackage_sha256={'0' * 64}\n",
+        encoding="utf-8",
+    )
+
+    result = validate_evidence(tmp_path)
+
+    assert result.exit_code == 1
+    assert any("SHA256SUMS" in error for error in result.errors)
+    assert any("SOURCE_VERSION source_commit differs" in error for error in result.errors)
+    assert any("SOURCE_VERSION package_sha256 differs" in error for error in result.errors)
+
+
+def test_submission_directory_must_match_manifest_deliverables(tmp_path: Path) -> None:
+    _write_complete_tree(tmp_path)
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    for artifact in (tmp_path / "deliverables").iterdir():
+        if artifact.suffix == ".bin":
+            shutil.copy2(artifact, submission / artifact.name)
+    (submission / "stable_build.bin").write_bytes(b"newer package from another commit")
+
+    assert "submission_root" in inspect.signature(validate_evidence).parameters
+    result = validate_evidence(tmp_path, submission_root=submission)
+
+    assert result.exit_code == 1
+    assert any("submission stable_build hash mismatch" in error for error in result.errors)
+
+
+def test_g8_requires_enforced_isolation_full_sample_and_security_checks(
+    tmp_path: Path,
+) -> None:
+    manifest_path = _write_complete_tree(tmp_path)
+    manifest = _load(manifest_path)
+    metrics = _gate(manifest, "G8")["metrics"]
+    assert isinstance(metrics, dict)
+    isolation = metrics["network_isolation"]
+    assert isinstance(isolation, dict)
+    isolation["enforced"] = False
+    isolation["sample_seconds"] = 60
+    checks = metrics["checks"]
+    assert isinstance(checks, dict)
+    checks.pop("reparse_point_escape")
+    _save(manifest_path, manifest)
+
+    result = validate_evidence(tmp_path)
+
+    assert result.exit_code == 1
+    assert any("G8: network isolation was not enforced" in error for error in result.errors)
+    assert any("G8: connection sample 60s is below 1800s" in error for error in result.errors)
+    assert any("G8: missing PASS security check reparse_point_escape" in error for error in result.errors)
