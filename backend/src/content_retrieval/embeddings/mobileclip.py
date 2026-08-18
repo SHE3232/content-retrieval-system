@@ -62,8 +62,17 @@ class LocalMobileClipBackend:
 
         model, _, preprocess = mobileclip.create_model_and_transforms(
             "mobileclip_s0",
-            pretrained=str(path),
+            pretrained=None,
+            reparameterize=False,
         )
+        state = torch.load(
+            str(path),
+            map_location="cpu",
+            mmap=True,
+            weights_only=True,
+        )
+        model.load_state_dict(state, assign=True)
+        model = mobileclip.reparameterize_model(model)
         model.eval()
         self.model_id = model_id
         self.space_id = space_id

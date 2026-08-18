@@ -18,8 +18,8 @@ REQUIRED_METRICS = (
     "full_search_p95_ms",
 )
 IMPROVEMENT_METRICS = (
-    "embedding_hot_p95_ms",
-    "vector_query_hot_p95_ms",
+    "embedding_combined_p95_ms",
+    "vector_query_p95_ms",
     "peak_rss_bytes",
 )
 ACCURACY_METRICS = (

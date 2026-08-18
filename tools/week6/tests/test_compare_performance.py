@@ -52,7 +52,7 @@ def test_three_round_medians_pass_at_five_percent_improvement() -> None:
     assert result["improvements_percent"]["vector_query_hot_p95_ms"] == pytest.approx(5.0)
 
 
-def test_hot_cache_improvement_is_separate_from_cold_mixed_latency() -> None:
+def test_hot_cache_improvement_does_not_replace_mixed_workload_gate() -> None:
     baseline = _result()
     candidate = _result()
     for item in candidate["rounds"]:
@@ -62,7 +62,7 @@ def test_hot_cache_improvement_is_separate_from_cold_mixed_latency() -> None:
 
     result = compare_performance(baseline, candidate)
 
-    assert result["status"] == "PASS"
+    assert result["status"] == "FAIL"
     assert result["improvements_percent"]["embedding_combined_p95_ms"] == 0.0
     assert result["improvements_percent"]["vector_query_p95_ms"] == 0.0
 

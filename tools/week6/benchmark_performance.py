@@ -111,6 +111,20 @@ def _hardware() -> dict[str, str]:
     }
 
 
+def measure_full_catalog_peak_rss(repository: Any) -> int:
+    """Measure materializing the searchable 10k-record catalog."""
+    record_count = repository.count()
+    list_records = getattr(repository, "list_search_records", None)
+    if list_records is None:
+        list_records = repository.list_records
+    records = list_records()
+    if len(records) != record_count:
+        raise ValueError(
+            f"full-catalog memory probe returned {len(records)} of {record_count} records"
+        )
+    return current_process_peak_rss()
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     os.environ.update(
         {
@@ -196,6 +210,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     warmup_inputs=warmup_full,
                     inputs=full_inputs,
                 )
+                full_index_peak_rss = measure_full_catalog_peak_rss(stress_repository)
                 rounds.append(
                     {
                         "round": round_index + 1,
@@ -213,7 +228,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "vector_query_hot_p95_ms": percentile(vector["hot"], 95),
                             "full_search_p50_ms": statistics.median(full["all"]),
                             "full_search_p95_ms": percentile(full["all"], 95),
-                            "peak_rss_bytes": current_process_peak_rss(),
+                            "peak_rss_bytes": full_index_peak_rss,
                         },
                     }
                 )
