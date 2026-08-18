@@ -298,6 +298,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 [
                     str(args.flutter),
                     "test",
+                    "--no-pub",
                     "integration_test/week6_real_backend_ui_test.dart",
                     "-d",
                     "windows",
