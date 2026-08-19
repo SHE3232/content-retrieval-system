@@ -17,6 +17,8 @@ CAPTURE_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "capture_candidate.ps1"
 PACKAGE_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "package_stable_build.ps1"
 INTEGRATED_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "start-integrated.ps1"
 SECURITY_AUDIT_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "audit_offline_security.ps1"
+LIGHTWEIGHT_PROFILE_PATH = REPOSITORY_ROOT / "tools" / "week6" / "lightweight_package_profile.json"
+LIGHTWEIGHT_PROFILE = json.loads(LIGHTWEIGHT_PROFILE_PATH.read_text(encoding="utf-8"))
 
 
 def _run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -57,38 +59,49 @@ def _write_cmd(path: Path, output: str, *, stderr: bool = False) -> None:
 
 
 def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
+    profile = LIGHTWEIGHT_PROFILE
     site_packages = runtime / "Lib" / "site-packages"
     sentence_transformers = site_packages / "sentence_transformers"
     sentence_transformers.mkdir(parents=True)
     (sentence_transformers / "__init__.py").write_text("\n", encoding="utf-8")
-    (sentence_transformers / "__pycache__").mkdir()
+    for directory_name in profile["python_remove_directory_names"]:
+        marker_dir = sentence_transformers / directory_name
+        marker_dir.mkdir()
+        (marker_dir / f"{directory_name}-marker.txt").write_text(
+            "remove directory\n", encoding="utf-8"
+        )
     (sentence_transformers / "__pycache__" / "cached.pyc").write_bytes(b"cache")
-    (sentence_transformers / "tests").mkdir()
     (sentence_transformers / "tests" / "test_model.py").write_text(
         "# test\n", encoding="utf-8"
     )
+
+    for extension in profile["python_remove_file_extensions"]:
+        (sentence_transformers / f"extension-marker{extension}").write_bytes(
+            b"remove extension"
+        )
+
+    for relative_tree in profile["python_remove_relative_trees"]:
+        marker = runtime / relative_tree / "relative-tree-marker.txt"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("remove tree\n", encoding="utf-8")
 
     torch = site_packages / "torch"
     (torch / "lib").mkdir(parents=True)
     (torch / "lib" / "torch_cpu.dll").write_bytes(b"torch")
     (torch / "lib" / "torch_cpu.lib").write_bytes(b"symbols")
-    (torch / "include").mkdir()
+    (torch / "include").mkdir(exist_ok=True)
     (torch / "include" / "torch.h").write_text("// header\n", encoding="utf-8")
 
-    for package in [
-        "pycocoevalcap",
-        "clip_benchmark",
-        "datasets",
-        "pyarrow",
-        "pandas",
-    ]:
+    for package in profile["python_remove_packages"]:
         component = site_packages / package
         component.mkdir()
-        (component / "__init__.py").write_text("\n", encoding="utf-8")
+        (component / "package-marker.txt").write_text("remove package\n", encoding="utf-8")
         license_file = site_packages / f"{package}-1.0.dist-info" / "licenses" / "LICENSE"
         license_file.parent.mkdir(parents=True)
         license_file.write_text(f"{package} license\n", encoding="utf-8")
 
+    expected_module_path = str(java_runtime / "jmods")
+    expected_java_modules = ",".join(profile["java_modules"])
     jlink = java_runtime / "bin" / "jlink.ps1"
     jlink.parent.mkdir(parents=True)
     jlink.write_text(
@@ -96,11 +109,28 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         "  [Parameter(ValueFromRemainingArguments = $true)]\n"
         "  [string[]]$Arguments\n"
         ")\n"
-        "$outputIndex = [Array]::IndexOf($Arguments, '--output')\n"
-        "if ($outputIndex -lt 0) { throw 'jlink output argument is required' }\n"
-        "$output = $Arguments[$outputIndex + 1]\n"
+        "function Require-ArgumentValue([string]$Name) {\n"
+        "  $index = [Array]::IndexOf($Arguments, $Name)\n"
+        "  if ($index -lt 0 -or $index + 1 -ge $Arguments.Count) {\n"
+        "    throw \"jlink $Name argument is required\"\n"
+        "  }\n"
+        "  return $Arguments[$index + 1]\n"
+        "}\n"
+        "$modulePath = Require-ArgumentValue '--module-path'\n"
+        "$addModules = Require-ArgumentValue '--add-modules'\n"
+        "$output = Require-ArgumentValue '--output'\n"
+        f"$expectedModulePath = '{expected_module_path}'\n"
+        f"$expectedModules = '{expected_java_modules}'\n"
+        "if ([IO.Path]::GetFullPath($modulePath) -ne [IO.Path]::GetFullPath($expectedModulePath)) {\n"
+        "  throw 'jlink module path does not match the lightweight JDK jmods directory'\n"
+        "}\n"
+        "if ($addModules -ne $expectedModules) {\n"
+        "  throw 'jlink module list does not match lightweight package policy'\n"
+        "}\n"
         "New-Item -ItemType Directory -Force -Path (Join-Path $output 'bin') | Out-Null\n"
-        "[IO.File]::WriteAllBytes((Join-Path $output 'bin/java.exe'), [byte[]](106, 97, 118, 97))\n",
+        "[IO.File]::WriteAllBytes((Join-Path $output 'bin/java.exe'), [byte[]](106, 97, 118, 97))\n"
+        "[IO.File]::WriteAllText((Join-Path $output 'bin/jlink-arguments.txt'), "
+        "\"module_path=$modulePath`nadd_modules=$addModules\")\n",
         encoding="utf-8",
     )
     (java_runtime / "jmods").mkdir(parents=True)
@@ -430,7 +460,11 @@ def test_capture_candidate_rejects_dirty_worktree(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
-@pytest.mark.parametrize("package_profile", ["complete", "lightweight"])
+@pytest.mark.parametrize(
+    "package_profile",
+    ["complete", "lightweight"],
+    ids=["complete_profile", "lightweight_profile"],
+)
 def test_package_stable_build_uses_whitelist_and_records_commit(
     tmp_path: Path, package_profile: str
 ) -> None:
@@ -552,31 +586,50 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
             assert not any("xcuserdata" in name.lower() for name in names)
             assert not any(name.lower().endswith(".xcuserstate") for name in names)
         else:
+            profile = LIGHTWEIGHT_PROFILE
             assert (
                 "app/runtime/python/Lib/site-packages/"
                 "sentence_transformers/__init__.py"
             ) in names
             assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.dll" in names
             assert "app/runtime/java/bin/java.exe" in names
-            for package in [
-                "pycocoevalcap",
-                "clip_benchmark",
-                "datasets",
-                "pyarrow",
-                "pandas",
-            ]:
-                assert not any(f"/site-packages/{package}" in name for name in names)
-            assert not any("/__pycache__/" in name for name in names)
-            assert not any("/tests/" in name for name in names)
-            assert not any(name.endswith(".lib") for name in names)
+            for package in profile["python_remove_packages"]:
+                assert not any(f"/site-packages/{package}/" in name for name in names)
+                assert (
+                    f"app/runtime/python/Lib/site-packages/{package}-1.0.dist-info/"
+                    "licenses/LICENSE"
+                ) not in names
+                assert (
+                    f"app/licenses/excluded-python-components/{package}/LICENSE"
+                ) in names
+            for directory_name in profile["python_remove_directory_names"]:
+                assert (
+                    "app/runtime/python/Lib/site-packages/sentence_transformers/"
+                    f"{directory_name}/{directory_name}-marker.txt"
+                ) not in names
+            for extension in profile["python_remove_file_extensions"]:
+                assert (
+                    "app/runtime/python/Lib/site-packages/sentence_transformers/"
+                    f"extension-marker{extension}"
+                ) not in names
+            for relative_tree in profile["python_remove_relative_trees"]:
+                assert f"app/runtime/python/{relative_tree}/relative-tree-marker.txt" not in names
+            assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.lib" not in names
             assert "app/runtime/python/Lib/site-packages/torch/include/torch.h" not in names
-            assert (
-                "app/licenses/excluded-python-components/pycocoevalcap/LICENSE"
-            ) in names
+            assert "app/runtime/java/bin/jlink-arguments.txt" in names
+            assert archive.read("app/runtime/java/bin/jlink-arguments.txt").decode(
+                "utf-8"
+            ) == (
+                f"module_path={java_runtime / 'jmods'}\n"
+                f"add_modules={','.join(profile['java_modules'])}"
+            )
             assert package_manifest["package_profile"] == "lightweight"
             assert package_manifest["archive_size_limit_bytes"] == 1000000000
             assert package_manifest["pruning_policy_version"] == "1"
             assert package_manifest["java_runtime_mode"] == "jlink"
+            assert package_manifest["excluded_runtime_components"] == profile[
+                "python_remove_packages"
+            ]
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

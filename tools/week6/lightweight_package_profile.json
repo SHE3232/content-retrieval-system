@@ -3,9 +3,52 @@
   "profile": "lightweight",
   "pruning_policy_version": "1",
   "archive_size_limit_bytes": 1000000000,
-  "python_remove_packages": ["pycocoevalcap", "clip_benchmark", "datasets", "pandas", "pyarrow", "pytest", "_pytest", "pytest_cov", "coverage", "pip", "setuptools", "reportlab", "pygments", "hf_xet", "onnxruntime", "kubernetes", "sympy", "torchgen"],
-  "python_remove_directory_names": ["__pycache__", "tests", "test", "testing"],
-  "python_remove_file_extensions": [".pyc", ".pyo", ".lib"],
-  "python_remove_relative_trees": ["Lib/test", "Lib/ensurepip", "Lib/site-packages/torch/include"],
-  "java_modules": ["java.base", "java.desktop", "java.logging", "java.management", "java.naming", "java.net.http", "java.sql", "java.xml", "jdk.crypto.ec", "jdk.unsupported"]
+  "python_remove_packages": [
+    "pycocoevalcap",
+    "clip_benchmark",
+    "datasets",
+    "pandas",
+    "pyarrow",
+    "pytest",
+    "_pytest",
+    "pytest_cov",
+    "coverage",
+    "pip",
+    "setuptools",
+    "reportlab",
+    "pygments",
+    "hf_xet",
+    "onnxruntime",
+    "kubernetes",
+    "sympy",
+    "torchgen"
+  ],
+  "python_remove_directory_names": [
+    "__pycache__",
+    "tests",
+    "test",
+    "testing"
+  ],
+  "python_remove_file_extensions": [
+    ".pyc",
+    ".pyo",
+    ".lib"
+  ],
+  "python_remove_relative_trees": [
+    "Lib/test",
+    "Lib/ensurepip",
+    "Lib/site-packages/torch/include"
+  ],
+  "java_modules": [
+    "java.base",
+    "java.desktop",
+    "java.logging",
+    "java.management",
+    "java.naming",
+    "java.net.http",
+    "java.sql",
+    "java.xml",
+    "jdk.crypto.ec",
+    "jdk.unsupported"
+  ]
 }
