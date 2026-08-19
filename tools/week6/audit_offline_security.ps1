@@ -67,8 +67,9 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead($package)
 try {
     foreach ($entry in $archive.Entries) {
         $name = $entry.FullName.Replace("\", "/")
-        if ($name -match '(?i)(^|/)(\.git|\.venv|data|mvp-input|logs?|xcuserdata|[^/]+\.xcuserdatad|\.idea|\.vscode)(/|$)' -or
-            $name -match '(?i)(credentials?|secrets?|\.env|\.pem|\.key|\.xcuserstate|\.DS_Store)$') {
+        if ($name -match '(?i)(^|/)(\.git|\.venv|logs?|xcuserdata|[^/]+\.xcuserdatad|\.idea|\.vscode)(/|$)' -or
+            $name -match '(?i)^app/(data|mvp-input)(/|$)' -or
+            $name -match '(?i)(credentials?|secrets?|\.env|\.key|\.xcuserstate|\.DS_Store)$') {
             $forbiddenEntries.Add($name)
         }
         if ($entry.Length -gt 0 -and $entry.Length -le 10MB -and
@@ -77,6 +78,7 @@ try {
             try {
                 $text = $reader.ReadToEnd()
                 if ($text -match '(?i)[A-Z]:\\contentretrivalsystem\\\.worktrees\\' -or
+                    $text -match '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' -or
                     $text -match '(?i)(api[_-]?key|access[_-]?token|secret[_-]?key)\s*[:=]\s*["''][^"'']+["'']') {
                     $absolutePathMatches.Add($name)
                 }

@@ -71,6 +71,15 @@ def _security_audit_fixtures(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
     package = tmp_path / "stable.zip"
     with ZipFile(package, "w") as archive:
         archive.writestr("app/PACKAGE_MANIFEST.json", '{"source_commit":"' + "a" * 40 + '"}\n')
+        archive.writestr("app/frontend/data/flutter_assets/AssetManifest.bin", b"asset")
+        archive.writestr(
+            "app/runtime/python/Lib/site-packages/timm/data/config.py",
+            b"runtime library data",
+        )
+        archive.writestr(
+            "app/runtime/python/Lib/site-packages/certifi/cacert.pem",
+            b"-----BEGIN CERTIFICATE-----\npublic trust anchor\n",
+        )
     offline = tmp_path / "offline.json"
     offline.write_text('{"status":"PASS"}\n', encoding="utf-8")
     security_tests = tmp_path / "security-tests.json"
@@ -198,6 +207,7 @@ def test_security_audit_rejects_packaged_user_state(tmp_path: Path) -> None:
             "UserInterfaceState.xcuserstate",
             b"user state",
         )
+        archive.writestr("app/data/index.sqlite", b"user index")
     output = tmp_path / "security.json"
     result = _run(
         [
@@ -237,6 +247,7 @@ def test_security_audit_rejects_packaged_user_state(tmp_path: Path) -> None:
         item for item in record["check_details"] if item["id"] == "forbidden_package_entries"
     )
     assert any("xcuserdata" in item for item in forbidden["actual"])
+    assert "app/data/index.sqlite" in forbidden["actual"]
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
