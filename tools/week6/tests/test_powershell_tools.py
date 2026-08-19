@@ -98,7 +98,7 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         (component / "package-marker.txt").write_text("remove package\n", encoding="utf-8")
         license_file = site_packages / f"{package}-1.0.dist-info" / "licenses" / "LICENSE"
         license_file.parent.mkdir(parents=True)
-        license_file.write_text(f"{package} license\n", encoding="utf-8")
+        license_file.write_bytes(f"{package} license\n".encode("utf-8"))
 
     expected_module_path = str(java_runtime / "jmods")
     escaped_module_path = expected_module_path.replace("'", "''")
