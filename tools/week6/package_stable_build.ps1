@@ -411,6 +411,12 @@ try {
     )
 
     New-ZipFromDirectory -SourceDirectory $stageRoot -DestinationArchive $temporaryZip
+    if ($PackageProfile -eq 'lightweight') {
+        $temporaryArchive = Get-Item -LiteralPath $temporaryZip -Force
+        if ($temporaryArchive.Length -ge $ArchiveSizeLimitBytes) {
+            throw "Lightweight archive size limit exceeded: $($temporaryArchive.Length) bytes >= $ArchiveSizeLimitBytes bytes"
+        }
+    }
     Move-Item -LiteralPath $temporaryZip -Destination $absoluteOutput
 } finally {
     if (Test-Path -LiteralPath $temporaryZip -PathType Leaf) {
@@ -425,5 +431,7 @@ try {
 }
 
 $hash = Get-Sha256 -Path $absoluteOutput
+$archiveBytes = (Get-Item -LiteralPath $absoluteOutput -Force).Length
 Write-Output "Stable package created: $absoluteOutput"
 Write-Output "SHA256: $hash"
+Write-Output "Archive bytes: $archiveBytes"

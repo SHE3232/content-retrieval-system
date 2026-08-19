@@ -737,6 +737,90 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_lightweight_package_rejects_archive_at_or_above_limit(tmp_path: Path) -> None:
+    release = tmp_path / "frontend-release"
+    release.mkdir()
+    (release / "content_retrieval_app.exe").write_bytes(b"app")
+    backend = tmp_path / "backend"
+    (backend / "src").mkdir(parents=True)
+    (backend / "src" / "app.py").write_text("print('backend')\n", encoding="utf-8")
+    (backend / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+    (backend / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    runtime = tmp_path / "python-runtime"
+    runtime.mkdir()
+    (runtime / "python.exe").write_bytes(b"python")
+    java_runtime = tmp_path / "java-runtime"
+    _add_lightweight_runtime_fixture(runtime, java_runtime)
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "weights.bin").write_bytes(b"weights")
+    manifest = models / "model-manifest.json"
+    manifest.write_text('{"models": []}\n', encoding="utf-8")
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    mvp_launcher = tools / "start-mvp.ps1"
+    mvp_launcher.write_text("Write-Output ready\n", encoding="utf-8")
+    integrated_launcher = tools / "start-integrated.ps1"
+    integrated_launcher.write_text("Write-Output integrated\n", encoding="utf-8")
+    tika = tmp_path / "tika.jar"
+    tika.write_bytes(b"tika")
+    tika_hash = tmp_path / "tika.sha512"
+    tika_hash.write_text("hash\n", encoding="utf-8")
+    commit = _init_repo(tmp_path)
+    output = tmp_path / "output" / "week6" / "lightweight.zip"
+    staging = tmp_path / "output" / "week6" / ".staging"
+
+    result = _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(PACKAGE_SCRIPT),
+            "-RepositoryRoot",
+            str(tmp_path),
+            "-SourceCommit",
+            commit,
+            "-FrontendReleaseDir",
+            str(release),
+            "-PythonRuntimeDir",
+            str(runtime),
+            "-JavaRuntimeDir",
+            str(java_runtime),
+            "-ModelRoot",
+            str(models),
+            "-ModelManifestPath",
+            str(manifest),
+            "-TikaJar",
+            str(tika),
+            "-TikaChecksumFile",
+            str(tika_hash),
+            "-MvpLauncher",
+            str(mvp_launcher),
+            "-IntegratedLauncher",
+            str(integrated_launcher),
+            "-OutputZip",
+            str(output),
+            "-StagingRoot",
+            str(staging),
+            "-PackageProfile",
+            "lightweight",
+            "-JlinkExecutable",
+            str(java_runtime / "bin" / "jlink.ps1"),
+            "-ArchiveSizeLimitBytes",
+            "128",
+        ],
+        tmp_path,
+    )
+
+    assert result.returncode != 0
+    assert "archive size limit" in (result.stdout + result.stderr).lower()
+    assert not output.exists()
+    assert not staging.exists() or not any(staging.iterdir())
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 def test_package_stable_build_expands_venv_into_portable_runtime(tmp_path: Path) -> None:
     release = tmp_path / "frontend-release"
     release.mkdir()
