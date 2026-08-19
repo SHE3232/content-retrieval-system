@@ -101,9 +101,11 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         license_file.write_text(f"{package} license\n", encoding="utf-8")
 
     expected_module_path = str(java_runtime / "jmods")
+    escaped_module_path = expected_module_path.replace("'", "''")
     expected_java_modules = ",".join(profile["java_modules"])
     jlink = java_runtime / "bin" / "jlink.ps1"
     jlink.parent.mkdir(parents=True)
+    (jlink.parent / "java.exe").write_bytes(b"source-java")
     jlink.write_text(
         "param(\n"
         "  [Parameter(ValueFromRemainingArguments = $true)]\n"
@@ -119,7 +121,7 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         "$modulePath = Require-ArgumentValue '--module-path'\n"
         "$addModules = Require-ArgumentValue '--add-modules'\n"
         "$output = Require-ArgumentValue '--output'\n"
-        f"$expectedModulePath = '{expected_module_path}'\n"
+        f"$expectedModulePath = '{escaped_module_path}'\n"
         f"$expectedModules = '{expected_java_modules}'\n"
         "if ([IO.Path]::GetFullPath($modulePath) -ne [IO.Path]::GetFullPath($expectedModulePath)) {\n"
         "  throw 'jlink module path does not match the lightweight JDK jmods directory'\n"
@@ -133,8 +135,10 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         "\"module_path=$modulePath`nadd_modules=$addModules\")\n",
         encoding="utf-8",
     )
-    (java_runtime / "jmods").mkdir(parents=True)
-    (java_runtime / "jmods" / "java.base.jmod").write_bytes(b"jmod")
+    jmods = java_runtime / "jmods"
+    jmods.mkdir(parents=True)
+    for module in profile["java_modules"]:
+        (jmods / f"{module}.jmod").write_bytes(b"jmod")
 
 
 def test_integrated_launcher_allows_cold_model_startup() -> None:
@@ -599,9 +603,11 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                     f"app/runtime/python/Lib/site-packages/{package}-1.0.dist-info/"
                     "licenses/LICENSE"
                 ) not in names
-                assert (
+                excluded_license = (
                     f"app/licenses/excluded-python-components/{package}/LICENSE"
-                ) in names
+                )
+                assert excluded_license in names
+                assert archive.read(excluded_license) == f"{package} license\n".encode()
             for directory_name in profile["python_remove_directory_names"]:
                 assert (
                     "app/runtime/python/Lib/site-packages/sentence_transformers/"
