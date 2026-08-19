@@ -108,7 +108,7 @@ function Copy-ExcludedPackageLicenses {
         Join-Path $AppRoot 'licenses/excluded-python-components'
     )
     $licenseDestination = Resolve-StagingChildPath -Root $licenseRoot -Candidate (Join-Path $licenseRoot $PackageName)
-    $licenseNames = @('LICENSE', 'COPYING', 'NOTICE')
+    $licenseFilePattern = '^(LICENSE|COPYING|NOTICE)(\..+)?$'
     foreach ($metadataDirectory in (Get-PackageMetadataDirectories -SitePackages $safeSitePackages -PackageName $PackageName)) {
         $safeMetadataDirectory = Resolve-StagingChildPath -Root $AppRoot -Candidate $metadataDirectory
         foreach ($file in [System.IO.Directory]::EnumerateFiles(
@@ -117,7 +117,7 @@ function Copy-ExcludedPackageLicenses {
             [System.IO.SearchOption]::AllDirectories
         )) {
             $fileName = [System.IO.Path]::GetFileName($file)
-            if (-not ($licenseNames -contains $fileName.ToUpperInvariant())) {
+            if ($fileName -notmatch $licenseFilePattern) {
                 continue
             }
             $safeFile = Resolve-StagingChildPath -Root $AppRoot -Candidate $file

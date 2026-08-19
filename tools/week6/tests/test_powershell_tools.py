@@ -19,6 +19,10 @@ INTEGRATED_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "start-integrated.ps1"
 SECURITY_AUDIT_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "audit_offline_security.ps1"
 LIGHTWEIGHT_PROFILE_PATH = REPOSITORY_ROOT / "tools" / "week6" / "lightweight_package_profile.json"
 LIGHTWEIGHT_PROFILE = json.loads(LIGHTWEIGHT_PROFILE_PATH.read_text(encoding="utf-8"))
+LIGHTWEIGHT_LICENSE_FILENAMES = {
+    "pyarrow": "LICENSE.txt",
+    "coverage": "NOTICE.txt",
+}
 
 
 def _run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -96,7 +100,13 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         component = site_packages / package
         component.mkdir()
         (component / "package-marker.txt").write_text("remove package\n", encoding="utf-8")
-        license_file = site_packages / f"{package}-1.0.dist-info" / "licenses" / "LICENSE"
+        license_filename = LIGHTWEIGHT_LICENSE_FILENAMES.get(package, "LICENSE")
+        license_file = (
+            site_packages
+            / f"{package}-1.0.dist-info"
+            / "licenses"
+            / license_filename
+        )
         license_file.parent.mkdir(parents=True)
         license_file.write_bytes(f"{package} license\n".encode("utf-8"))
 
@@ -598,13 +608,15 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
             assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.dll" in names
             assert "app/runtime/java/bin/java.exe" in names
             for package in profile["python_remove_packages"]:
+                license_filename = LIGHTWEIGHT_LICENSE_FILENAMES.get(package, "LICENSE")
                 assert not any(f"/site-packages/{package}/" in name for name in names)
                 assert (
                     f"app/runtime/python/Lib/site-packages/{package}-1.0.dist-info/"
-                    "licenses/LICENSE"
+                    f"licenses/{license_filename}"
                 ) not in names
                 excluded_license = (
-                    f"app/licenses/excluded-python-components/{package}/LICENSE"
+                    "app/licenses/excluded-python-components/"
+                    f"{package}/{license_filename}"
                 )
                 assert excluded_license in names
                 assert archive.read(excluded_license) == f"{package} license\n".encode()
