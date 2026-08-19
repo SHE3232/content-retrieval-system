@@ -80,6 +80,18 @@ def _security_audit_fixtures(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
             "app/runtime/python/Lib/site-packages/certifi/cacert.pem",
             b"-----BEGIN CERTIFICATE-----\npublic trust anchor\n",
         )
+        archive.writestr(
+            "app/runtime/python/Lib/site-packages/opentelemetry/proto/logs/v1/logs_pb2.py",
+            b"generated protocol source",
+        )
+        archive.writestr(
+            "app/runtime/python/Lib/site-packages/huggingface_hub/constants.py",
+            b'HUGGINGFACE_HEADER_X_XET_ACCESS_TOKEN = "X-Xet-Access-Token"\n',
+        )
+        archive.writestr(
+            "app/runtime/python/Lib/site-packages/chromadb/test/test_client.py",
+            b'api_key="incorrect_api_key"\n',
+        )
     offline = tmp_path / "offline.json"
     offline.write_text('{"status":"PASS"}\n', encoding="utf-8")
     security_tests = tmp_path / "security-tests.json"
@@ -208,6 +220,10 @@ def test_security_audit_rejects_packaged_user_state(tmp_path: Path) -> None:
             b"user state",
         )
         archive.writestr("app/data/index.sqlite", b"user index")
+        archive.writestr(
+            "app/backend/src/content_retrieval/settings.py",
+            b'api_key = "sk-live-week6-secret-value"\n',
+        )
     output = tmp_path / "security.json"
     result = _run(
         [
@@ -248,6 +264,10 @@ def test_security_audit_rejects_packaged_user_state(tmp_path: Path) -> None:
     )
     assert any("xcuserdata" in item for item in forbidden["actual"])
     assert "app/data/index.sqlite" in forbidden["actual"]
+    sensitive = next(
+        item for item in record["check_details"] if item["id"] == "package_sensitive_content"
+    )
+    assert "app/backend/src/content_retrieval/settings.py" in sensitive["actual"]
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

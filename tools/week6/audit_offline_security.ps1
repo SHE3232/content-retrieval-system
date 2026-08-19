@@ -67,8 +67,8 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead($package)
 try {
     foreach ($entry in $archive.Entries) {
         $name = $entry.FullName.Replace("\", "/")
-        if ($name -match '(?i)(^|/)(\.git|\.venv|logs?|xcuserdata|[^/]+\.xcuserdatad|\.idea|\.vscode)(/|$)' -or
-            $name -match '(?i)^app/(data|mvp-input)(/|$)' -or
+        if ($name -match '(?i)(^|/)(\.git|\.venv|xcuserdata|[^/]+\.xcuserdatad|\.idea|\.vscode)(/|$)' -or
+            $name -match '(?i)^app/(data|mvp-input|logs?)(/|$)' -or
             $name -match '(?i)(credentials?|secrets?|\.env|\.key|\.xcuserstate|\.DS_Store)$') {
             $forbiddenEntries.Add($name)
         }
@@ -79,7 +79,8 @@ try {
                 $text = $reader.ReadToEnd()
                 if ($text -match '(?i)[A-Z]:\\contentretrivalsystem\\\.worktrees\\' -or
                     $text -match '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' -or
-                    $text -match '(?i)(api[_-]?key|access[_-]?token|secret[_-]?key)\s*[:=]\s*["''][^"'']+["'']') {
+                    ($name -notmatch '(?i)^app/runtime/python/Lib/site-packages/' -and
+                        $text -match '(?i)(api[_-]?key|access[_-]?token|secret[_-]?key)\s*[:=]\s*["''][^"'']+["'']')) {
                     $absolutePathMatches.Add($name)
                 }
             }
