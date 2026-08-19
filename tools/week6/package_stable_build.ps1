@@ -14,6 +14,11 @@ param(
     [string]$OutputZip,
     [string]$ThirdPartySourceDir,
     [string]$StagingRoot,
+    [ValidateSet('complete', 'lightweight')]
+    [string]$PackageProfile = 'complete',
+    [long]$ArchiveSizeLimitBytes = 0,
+    [string]$LightweightProfilePath,
+    [string]$JlinkExecutable,
     [switch]$ReplaceExactTarget
 )
 
@@ -132,8 +137,32 @@ function Get-RelativeFileManifest {
 }
 
 $repository = Resolve-RequiredDirectory -Path $RepositoryRoot -Label 'Repository root'
+$lightweightPolicy = $null
+if ($PackageProfile -eq 'lightweight') {
+    if ([string]::IsNullOrWhiteSpace($LightweightProfilePath)) {
+        $LightweightProfilePath = Join-Path $PSScriptRoot 'lightweight_package_profile.json'
+    }
+    $resolvedLightweightProfile = Resolve-RequiredFile -Path $LightweightProfilePath -Label 'Lightweight package profile'
+    $lightweightPolicy = Get-Content -LiteralPath $resolvedLightweightProfile -Raw | ConvertFrom-Json
+    if ($ArchiveSizeLimitBytes -eq 0) {
+        $ArchiveSizeLimitBytes = [long]$lightweightPolicy.archive_size_limit_bytes
+    }
+    if ($ArchiveSizeLimitBytes -le 0) {
+        throw 'ArchiveSizeLimitBytes must be positive for the lightweight package profile'
+    }
+    . (Join-Path $PSScriptRoot 'lightweight_package.ps1')
+}
 if ([string]::IsNullOrWhiteSpace($OutputZip)) {
-    $OutputZip = Join-Path $repository 'output/week6/第六周最终提交_请上传这4项/01_Windows完整集成稳定版.zip'
+    $defaultZipNameBase64 = if ($PackageProfile -eq 'lightweight') {
+        'MDFfV2luZG93c+i9u+mHj+mbhuaIkOeos+WumueJiC56aXA='
+    } else {
+        'MDFfV2luZG93c+WujOaVtOmbhuaIkOeos+WumueJiC56aXA='
+    }
+    $defaultZipName = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($defaultZipNameBase64))
+    $defaultOutputDirectory = [Text.Encoding]::UTF8.GetString(
+        [Convert]::FromBase64String('b3V0cHV0L3dlZWs2L+esrOWFreWRqOacgOe7iOaPkOS6pF/or7fkuIrkvKDov5k06aG5')
+    )
+    $OutputZip = Join-Path $repository (Join-Path $defaultOutputDirectory $defaultZipName)
 }
 $absoluteOutput = [System.IO.Path]::GetFullPath($OutputZip)
 $allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $repository 'output/week6'))
@@ -269,7 +298,15 @@ if ([string]::IsNullOrWhiteSpace($ThirdPartySourceDir)) {
 $frontend = Resolve-RequiredDirectory -Path $FrontendReleaseDir -Label 'Flutter release directory'
 $pythonRuntime = Resolve-RequiredDirectory -Path $PythonRuntimeDir -Label 'Python runtime directory'
 $javaRuntime = Resolve-RequiredDirectory -Path $JavaRuntimeDir -Label 'Java runtime directory'
-$javaExecutable = Resolve-RequiredFile -Path (Join-Path $javaRuntime 'bin/java.exe') -Label 'Java runtime executable'
+$resolvedJlink = $null
+if ($PackageProfile -eq 'lightweight') {
+    if ([string]::IsNullOrWhiteSpace($JlinkExecutable)) {
+        $JlinkExecutable = Join-Path $javaRuntime 'bin/jlink.exe'
+    }
+    $resolvedJlink = Resolve-RequiredFile -Path $JlinkExecutable -Label 'jlink executable'
+} else {
+    $javaExecutable = Resolve-RequiredFile -Path (Join-Path $javaRuntime 'bin/java.exe') -Label 'Java runtime executable'
+}
 $models = Resolve-RequiredDirectory -Path $ModelRoot -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path $ModelManifestPath -Label 'Model manifest'
 $tikaPath = Resolve-RequiredFile -Path $TikaJar -Label 'Tika JAR'
@@ -317,7 +354,18 @@ try {
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/pyproject.toml') 'Backend pyproject') -Destination (Join-Path $appRoot 'backend/pyproject.toml')
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/uv.lock') 'Backend lockfile') -Destination (Join-Path $appRoot 'backend/uv.lock')
     $pythonRuntimeMode = Copy-PythonRuntime -Source $pythonRuntime -Destination (Join-Path $appRoot 'runtime/python')
-    Copy-DirectoryContents -Source $javaRuntime -Destination (Join-Path $appRoot 'runtime/java')
+    if ($PackageProfile -eq 'lightweight') {
+        & (Join-Path $PSScriptRoot 'build_portable_java.ps1') `
+            -OutputDirectory (Join-Path $appRoot 'runtime/java') `
+            -JavaHome $javaRuntime `
+            -JlinkExecutable $resolvedJlink `
+            -Modules @($lightweightPolicy.java_modules)
+        if (-not (Test-Path -LiteralPath (Join-Path $appRoot 'runtime/java/bin/java.exe') -PathType Leaf)) {
+            throw 'Portable Java runtime build did not create bin/java.exe'
+        }
+    } else {
+        Copy-DirectoryContents -Source $javaRuntime -Destination (Join-Path $appRoot 'runtime/java')
+    }
     Copy-DirectoryContents -Source $models -Destination (Join-Path $appRoot 'models')
     Copy-Item -LiteralPath $modelManifest -Destination (Join-Path $appRoot 'models/model-manifest.json') -Force
     New-Item -ItemType Directory -Force -Path (Join-Path $appRoot 'tools/tika') | Out-Null
@@ -334,17 +382,27 @@ try {
         Copy-ThirdPartySource -Source $ThirdPartySourceDir -Destination (Join-Path $appRoot 'third_party/mobileclip-src')
     }
 
+    if ($PackageProfile -eq 'lightweight') {
+        Invoke-LightweightPythonPruning -AppRoot $appRoot -Policy $lightweightPolicy
+    }
+
     $manifest = [ordered]@{
         schema_version = 1
         source_commit = $SourceCommit
         generated_at = [DateTimeOffset]::Now.ToString('o')
-        platform_claim = 'Windows complete integrated stable build'
+        platform_claim = if ($PackageProfile -eq 'lightweight') { 'Windows lightweight integrated stable build' } else { 'Windows complete integrated stable build' }
         first_run_downloads = $false
+        package_profile = $PackageProfile
         python_runtime_mode = $pythonRuntimeMode
-        java_runtime_mode = 'bundled'
+        java_runtime_mode = if ($PackageProfile -eq 'lightweight') { 'jlink' } else { 'bundled' }
         one_click_launcher = $oneClickLauncherName
         excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings including Xcode xcuserdata', 'logs', 'credentials')
         files = Get-RelativeFileManifest -Root $appRoot
+    }
+    if ($PackageProfile -eq 'lightweight') {
+        $manifest.archive_size_limit_bytes = $ArchiveSizeLimitBytes
+        $manifest.pruning_policy_version = [string]$lightweightPolicy.pruning_policy_version
+        $manifest.excluded_runtime_components = @($lightweightPolicy.python_remove_packages)
     }
     [System.IO.File]::WriteAllText(
         (Join-Path $appRoot 'PACKAGE_MANIFEST.json'),

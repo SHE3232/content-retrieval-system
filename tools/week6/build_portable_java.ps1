@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
     [string]$JavaHome,
-    [string]$JlinkExecutable
+    [string]$JlinkExecutable,
+    [string[]]$Modules = @('ALL-MODULE-PATH')
 )
 
 Set-StrictMode -Version Latest
@@ -23,6 +24,13 @@ if ([string]::IsNullOrWhiteSpace($JlinkExecutable)) {
     $JlinkExecutable = Join-Path $javaRoot 'bin\jlink.exe'
 }
 $jlink = (Resolve-Path -LiteralPath $JlinkExecutable).Path
+$selectedModules = @(
+    $Modules | ForEach-Object { ([string]$_).Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+)
+if ($selectedModules.Count -eq 0) {
+    throw 'At least one Java module is required'
+}
+$moduleList = [string]::Join(',', $selectedModules)
 $output = [System.IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) {
     throw "Portable Java output already exists: $output"
@@ -32,13 +40,14 @@ New-Item -ItemType Directory -Force -Path $parent | Out-Null
 
 $arguments = @(
     '--module-path', $jmods,
-    '--add-modules', 'ALL-MODULE-PATH',
+    '--add-modules', $moduleList,
     '--strip-debug',
     '--no-header-files',
     '--no-man-pages',
     '--compress=2',
     '--output', $output
 )
+$global:LASTEXITCODE = 0
 & $jlink @arguments
 $jlinkExitCode = if (Test-Path -LiteralPath variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
 if ($jlinkExitCode -ne 0) {
