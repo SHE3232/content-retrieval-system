@@ -56,6 +56,57 @@ def _write_cmd(path: Path, output: str, *, stderr: bool = False) -> None:
     )
 
 
+def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
+    site_packages = runtime / "Lib" / "site-packages"
+    sentence_transformers = site_packages / "sentence_transformers"
+    sentence_transformers.mkdir(parents=True)
+    (sentence_transformers / "__init__.py").write_text("\n", encoding="utf-8")
+    (sentence_transformers / "__pycache__").mkdir()
+    (sentence_transformers / "__pycache__" / "cached.pyc").write_bytes(b"cache")
+    (sentence_transformers / "tests").mkdir()
+    (sentence_transformers / "tests" / "test_model.py").write_text(
+        "# test\n", encoding="utf-8"
+    )
+
+    torch = site_packages / "torch"
+    (torch / "lib").mkdir(parents=True)
+    (torch / "lib" / "torch_cpu.dll").write_bytes(b"torch")
+    (torch / "lib" / "torch_cpu.lib").write_bytes(b"symbols")
+    (torch / "include").mkdir()
+    (torch / "include" / "torch.h").write_text("// header\n", encoding="utf-8")
+
+    for package in [
+        "pycocoevalcap",
+        "clip_benchmark",
+        "datasets",
+        "pyarrow",
+        "pandas",
+    ]:
+        component = site_packages / package
+        component.mkdir()
+        (component / "__init__.py").write_text("\n", encoding="utf-8")
+        license_file = site_packages / f"{package}-1.0.dist-info" / "licenses" / "LICENSE"
+        license_file.parent.mkdir(parents=True)
+        license_file.write_text(f"{package} license\n", encoding="utf-8")
+
+    jlink = java_runtime / "bin" / "jlink.ps1"
+    jlink.parent.mkdir(parents=True)
+    jlink.write_text(
+        "param(\n"
+        "  [Parameter(ValueFromRemainingArguments = $true)]\n"
+        "  [string[]]$Arguments\n"
+        ")\n"
+        "$outputIndex = [Array]::IndexOf($Arguments, '--output')\n"
+        "if ($outputIndex -lt 0) { throw 'jlink output argument is required' }\n"
+        "$output = $Arguments[$outputIndex + 1]\n"
+        "New-Item -ItemType Directory -Force -Path (Join-Path $output 'bin') | Out-Null\n"
+        "[IO.File]::WriteAllBytes((Join-Path $output 'bin/java.exe'), [byte[]](106, 97, 118, 97))\n",
+        encoding="utf-8",
+    )
+    (java_runtime / "jmods").mkdir(parents=True)
+    (java_runtime / "jmods" / "java.base.jmod").write_bytes(b"jmod")
+
+
 def test_integrated_launcher_allows_cold_model_startup() -> None:
     script = INTEGRATED_SCRIPT.read_text(encoding="utf-8")
     assert "[int]$ReadyTimeoutSeconds = 600" in script
@@ -379,7 +430,10 @@ def test_capture_candidate_rejects_dirty_worktree(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
-def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) -> None:
+@pytest.mark.parametrize("package_profile", ["complete", "lightweight"])
+def test_package_stable_build_uses_whitelist_and_records_commit(
+    tmp_path: Path, package_profile: str
+) -> None:
     release = tmp_path / "frontend-release"
     release.mkdir()
     (release / "content_retrieval_app.exe").write_bytes(b"app")
@@ -392,8 +446,11 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
     runtime.mkdir()
     (runtime / "python.exe").write_bytes(b"python")
     java_runtime = tmp_path / "java-runtime"
-    (java_runtime / "bin").mkdir(parents=True)
-    (java_runtime / "bin" / "java.exe").write_bytes(b"java")
+    if package_profile == "complete":
+        (java_runtime / "bin").mkdir(parents=True)
+        (java_runtime / "bin" / "java.exe").write_bytes(b"java")
+    else:
+        _add_lightweight_runtime_fixture(runtime, java_runtime)
     models = tmp_path / "models"
     models.mkdir()
     (models / "weights.bin").write_bytes(b"weights")
@@ -425,6 +482,15 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
     (user_state / "UserInterfaceState.xcuserstate").write_bytes(b"private UI state")
     commit = _init_repo(tmp_path)
     output = tmp_path / "output" / "week6" / "stable.zip"
+
+    profile_arguments: list[str] = []
+    if package_profile == "lightweight":
+        profile_arguments = [
+            "-PackageProfile",
+            "lightweight",
+            "-JlinkExecutable",
+            str(java_runtime / "bin" / "jlink.ps1"),
+        ]
 
     result = _run(
         [
@@ -460,6 +526,7 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
             str(third_party),
             "-OutputZip",
             str(output),
+            *profile_arguments,
         ],
         tmp_path,
     )
@@ -479,10 +546,37 @@ def test_package_stable_build_uses_whitelist_and_records_commit(tmp_path: Path) 
         package_manifest = json.loads(archive.read("app/PACKAGE_MANIFEST.json"))
         assert package_manifest["source_commit"] == commit
         assert package_manifest["one_click_launcher"] == "内容检索系统.exe"
-        assert package_manifest["java_runtime_mode"] == "bundled"
-        assert "app/third_party/mobileclip-src/safe/LICENSE" in names
-        assert not any("xcuserdata" in name.lower() for name in names)
-        assert not any(name.lower().endswith(".xcuserstate") for name in names)
+        if package_profile == "complete":
+            assert package_manifest["java_runtime_mode"] == "bundled"
+            assert "app/third_party/mobileclip-src/safe/LICENSE" in names
+            assert not any("xcuserdata" in name.lower() for name in names)
+            assert not any(name.lower().endswith(".xcuserstate") for name in names)
+        else:
+            assert (
+                "app/runtime/python/Lib/site-packages/"
+                "sentence_transformers/__init__.py"
+            ) in names
+            assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.dll" in names
+            assert "app/runtime/java/bin/java.exe" in names
+            for package in [
+                "pycocoevalcap",
+                "clip_benchmark",
+                "datasets",
+                "pyarrow",
+                "pandas",
+            ]:
+                assert not any(f"/site-packages/{package}" in name for name in names)
+            assert not any("/__pycache__/" in name for name in names)
+            assert not any("/tests/" in name for name in names)
+            assert not any(name.endswith(".lib") for name in names)
+            assert "app/runtime/python/Lib/site-packages/torch/include/torch.h" not in names
+            assert (
+                "app/licenses/excluded-python-components/pycocoevalcap/LICENSE"
+            ) in names
+            assert package_manifest["package_profile"] == "lightweight"
+            assert package_manifest["archive_size_limit_bytes"] == 1000000000
+            assert package_manifest["pruning_policy_version"] == "1"
+            assert package_manifest["java_runtime_mode"] == "jlink"
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
