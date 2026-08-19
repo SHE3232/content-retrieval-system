@@ -68,6 +68,117 @@ function Remove-StagingDirectory {
     }
 }
 
+function Remove-StagingFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Root,
+        [Parameter(Mandatory = $true)][string]$Path
+    )
+
+    $safePath = Resolve-StagingChildPath -Root $Root -Candidate $Path
+    $extendedPath = ConvertTo-ExtendedPath -Path $safePath
+    if ([System.IO.Directory]::Exists($extendedPath)) {
+        throw "Expected a file but found a directory in the lightweight pruning policy: $safePath"
+    }
+    if ([System.IO.File]::Exists($extendedPath)) {
+        [System.IO.File]::Delete($extendedPath)
+    }
+}
+
+function Get-PreparedLazyImportPatch {
+    param(
+        [Parameter(Mandatory = $true)][string]$PythonRoot,
+        [Parameter(Mandatory = $true)]$Patch
+    )
+
+    $relativePath = [string]$Patch.relative_path
+    $topLevelImport = [string]$Patch.top_level_import
+    $callLine = [string]$Patch.call_line
+    $targetPath = Resolve-StagingChildPath -Root $PythonRoot -Candidate (
+        Join-Path $PythonRoot $relativePath
+    )
+    $extendedTarget = ConvertTo-ExtendedPath -Path $targetPath
+    if (-not [System.IO.File]::Exists($extendedTarget)) {
+        throw "Lazy import patch target file not found: $relativePath"
+    }
+
+    $utf8Strict = [System.Text.UTF8Encoding]::new($false, $true)
+    $content = [System.IO.File]::ReadAllText($extendedTarget, $utf8Strict)
+    $parts = [System.Text.RegularExpressions.Regex]::Split($content, '(\r\n|\n|\r)')
+    $topLevelCount = 0
+    $callCount = 0
+    for ($index = 0; $index -lt $parts.Length; $index += 2) {
+        if ($parts[$index] -ceq $topLevelImport) {
+            $topLevelCount++
+        }
+        if ($parts[$index] -ceq $callLine) {
+            $callCount++
+        }
+    }
+    if ($topLevelCount -ne 1 -or $callCount -ne 1) {
+        throw (
+            "Lazy import patch requires exactly one top-level import and one call line in " +
+            "${relativePath}; found import=$topLevelCount call=$callCount"
+        )
+    }
+
+    $indentMatch = [System.Text.RegularExpressions.Regex]::Match($callLine, '^(\s*)\S')
+    if (-not $indentMatch.Success) {
+        throw "Lazy import patch call line has no executable content: $relativePath"
+    }
+    $localImport = $indentMatch.Groups[1].Value + $topLevelImport
+    $newlineMatch = [System.Text.RegularExpressions.Regex]::Match($content, '\r\n|\n|\r')
+    $preferredNewline = if ($newlineMatch.Success) {
+        $newlineMatch.Value
+    } else {
+        [Environment]::NewLine
+    }
+    $builder = [System.Text.StringBuilder]::new()
+    for ($index = 0; $index -lt $parts.Length; $index += 2) {
+        $line = $parts[$index]
+        $lineDelimiter = if ($index + 1 -lt $parts.Length) { $parts[$index + 1] } else { '' }
+        if ($line -ceq $topLevelImport) {
+            continue
+        }
+        if ($line -ceq $callLine) {
+            $insertionNewline = if ([string]::IsNullOrEmpty($lineDelimiter)) {
+                $preferredNewline
+            } else {
+                $lineDelimiter
+            }
+            [void]$builder.Append($localImport)
+            [void]$builder.Append($insertionNewline)
+        }
+        [void]$builder.Append($line)
+        [void]$builder.Append($lineDelimiter)
+    }
+
+    return [pscustomobject]@{
+        Path = $targetPath
+        Content = $builder.ToString()
+    }
+}
+
+function Invoke-LightweightLazyImportPatches {
+    param(
+        [Parameter(Mandatory = $true)][string]$PythonRoot,
+        [Parameter(Mandatory = $true)]$Patches
+    )
+
+    $preparedPatches = @(
+        foreach ($patch in @($Patches)) {
+            Get-PreparedLazyImportPatch -PythonRoot $PythonRoot -Patch $patch
+        }
+    )
+    $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+    foreach ($preparedPatch in $preparedPatches) {
+        [System.IO.File]::WriteAllText(
+            (ConvertTo-ExtendedPath -Path $preparedPatch.Path),
+            $preparedPatch.Content,
+            $utf8WithoutBom
+        )
+    }
+}
+
 function Get-NormalizedPythonPackageName {
     param([Parameter(Mandatory = $true)][string]$Name)
     return ([System.Text.RegularExpressions.Regex]::Replace($Name, '[-_.]+', '-')).ToLowerInvariant()
@@ -182,6 +293,10 @@ function Invoke-LightweightPythonPruning {
     $pythonRoot = Resolve-StagingChildPath -Root $canonicalAppRoot -Candidate (Join-Path $canonicalAppRoot 'runtime/python')
     $sitePackages = Resolve-StagingChildPath -Root $canonicalAppRoot -Candidate (Join-Path $pythonRoot 'Lib/site-packages')
 
+    Invoke-LightweightLazyImportPatches `
+        -PythonRoot $pythonRoot `
+        -Patches @($Policy.python_lazy_import_patches)
+
     foreach ($packageNameValue in @($Policy.python_remove_packages)) {
         $packageName = [string]$packageNameValue
         Copy-ExcludedPackageLicenses -AppRoot $canonicalAppRoot -SitePackages $sitePackages -PackageName $packageName
@@ -196,6 +311,12 @@ function Invoke-LightweightPythonPruning {
         $relativeTree = [string]$relativeTreeValue
         $relativeTreePath = Resolve-StagingChildPath -Root $pythonRoot -Candidate (Join-Path $pythonRoot $relativeTree)
         Remove-StagingDirectory -Root $canonicalAppRoot -Path $relativeTreePath
+    }
+
+    foreach ($relativeFileValue in @($Policy.python_remove_relative_files)) {
+        $relativeFile = [string]$relativeFileValue
+        $relativeFilePath = Resolve-StagingChildPath -Root $pythonRoot -Candidate (Join-Path $pythonRoot $relativeFile)
+        Remove-StagingFile -Root $pythonRoot -Path $relativeFilePath
     }
 
     $directoryNames = @($Policy.python_remove_directory_names | ForEach-Object { ([string]$_).ToLowerInvariant() })

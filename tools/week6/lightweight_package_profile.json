@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "profile": "lightweight",
-  "pruning_policy_version": "1",
+  "pruning_policy_version": "2",
   "archive_size_limit_bytes": 1000000000,
   "python_remove_packages": [
     "pycocoevalcap",
@@ -21,7 +21,15 @@
     "onnxruntime",
     "kubernetes",
     "sympy",
-    "torchgen"
+    "torchgen",
+    "scikit-learn",
+    "joblib",
+    "threadpoolctl",
+    "lxml",
+    "python-docx",
+    "multiprocess",
+    "dill",
+    "pyreadline3"
   ],
   "python_remove_directory_names": [
     "__pycache__",
@@ -32,12 +40,43 @@
   "python_remove_file_extensions": [
     ".pyc",
     ".pyo",
-    ".lib"
+    ".lib",
+    ".a",
+    ".c",
+    ".cmake",
+    ".h",
+    ".hpp",
+    ".pxd",
+    ".pxi",
+    ".pyi",
+    ".pyx"
   ],
   "python_remove_relative_trees": [
     "Lib/test",
     "Lib/ensurepip",
-    "Lib/site-packages/torch/include"
+    "Lib/site-packages/torch/include",
+    "Lib/site-packages/sklearn",
+    "Lib/site-packages/docx",
+    "Lib/site-packages/pyarrow.libs",
+    "Lib/site-packages/pandas.libs",
+    "Lib/idlelib",
+    "Lib/tkinter",
+    "Lib/lib2to3",
+    "tcl",
+    "include"
+  ],
+  "python_remove_relative_files": [
+    "DLLs/_tkinter.pyd",
+    "DLLs/tcl86t.dll",
+    "DLLs/tk86t.dll",
+    "Lib/site-packages/threadpoolctl.py"
+  ],
+  "python_lazy_import_patches": [
+    {
+      "relative_path": "Lib/site-packages/sentence_transformers/util/similarity.py",
+      "top_level_import": "from sklearn.metrics import pairwise_distances",
+      "call_line": "        dist = pairwise_distances(a_coo, b_coo, metric=\"manhattan\")"
+    }
   ],
   "java_modules": [
     "java.base",

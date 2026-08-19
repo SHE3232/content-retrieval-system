@@ -27,6 +27,52 @@ LIGHTWEIGHT_LICENSE_FILENAMES = {
     "coverage": "NOTICE.txt",
 }
 
+V2_REMOVED_DISTRIBUTIONS = {
+    "scikit-learn",
+    "joblib",
+    "threadpoolctl",
+    "lxml",
+    "python-docx",
+    "multiprocess",
+    "dill",
+    "pyreadline3",
+}
+V2_REMOVED_RELATIVE_TREES = {
+    "Lib/site-packages/sklearn",
+    "Lib/site-packages/docx",
+    "Lib/site-packages/pyarrow.libs",
+    "Lib/site-packages/pandas.libs",
+    "Lib/idlelib",
+    "Lib/tkinter",
+    "Lib/lib2to3",
+    "tcl",
+    "include",
+}
+V2_REMOVED_RELATIVE_FILES = {
+    "DLLs/_tkinter.pyd",
+    "DLLs/tcl86t.dll",
+    "DLLs/tk86t.dll",
+    "Lib/site-packages/threadpoolctl.py",
+}
+V2_REMOVED_EXTENSIONS = {
+    ".a",
+    ".c",
+    ".cmake",
+    ".h",
+    ".hpp",
+    ".pxd",
+    ".pxi",
+    ".pyi",
+    ".pyx",
+}
+SIMILARITY_RELATIVE_PATH = (
+    "Lib/site-packages/sentence_transformers/util/similarity.py"
+)
+SIMILARITY_TOP_LEVEL_IMPORT = "from sklearn.metrics import pairwise_distances"
+SIMILARITY_CALL_LINE = (
+    '        dist = pairwise_distances(a_coo, b_coo, metric="manhattan")'
+)
+
 
 def _run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -71,6 +117,19 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
     sentence_transformers = site_packages / "sentence_transformers"
     sentence_transformers.mkdir(parents=True)
     (sentence_transformers / "__init__.py").write_text("\n", encoding="utf-8")
+    similarity = runtime / SIMILARITY_RELATIVE_PATH
+    similarity.parent.mkdir(parents=True)
+    similarity.write_bytes(
+        (
+            SIMILARITY_TOP_LEVEL_IMPORT
+            + "\r\n\r\ndef manhattan_sim(a_coo, b_coo):\r\n"
+            + SIMILARITY_CALL_LINE
+            + "\r\n        return dist\r\n"
+        ).encode("utf-8")
+    )
+    (sentence_transformers / "inference.py").write_text(
+        "def encode():\n    return 'ok'\n", encoding="utf-8"
+    )
     for directory_name in profile["python_remove_directory_names"]:
         marker_dir = sentence_transformers / directory_name
         marker_dir.mkdir()
@@ -91,6 +150,18 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         marker = runtime / relative_tree / "relative-tree-marker.txt"
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text("remove tree\n", encoding="utf-8")
+
+    for relative_file in profile.get("python_remove_relative_files", []):
+        marker = runtime / relative_file
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_bytes(b"remove file")
+
+    scipy = site_packages / "scipy"
+    scipy.mkdir(exist_ok=True)
+    (scipy / "_inference.py").write_text("# required runtime\n", encoding="utf-8")
+    scipy_libs = site_packages / "scipy.libs"
+    scipy_libs.mkdir(exist_ok=True)
+    (scipy_libs / "libopenblas.dll").write_bytes(b"scipy-runtime")
 
     torch = site_packages / "torch"
     (torch / "lib").mkdir(parents=True)
@@ -246,6 +317,269 @@ def _lightweight_package_fixture(
         output,
         staging,
     )
+
+
+def _invoke_lightweight_pruning(
+    tmp_path: Path, app_root: Path, policy: dict[str, object]
+) -> subprocess.CompletedProcess[str]:
+    policy_path = tmp_path / "lightweight-policy.json"
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+    helper_path = str(
+        REPOSITORY_ROOT / "tools" / "week6" / "lightweight_package.ps1"
+    ).replace("'", "''")
+    escaped_app_root = str(app_root).replace("'", "''")
+    escaped_policy = str(policy_path).replace("'", "''")
+    return _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            (
+                f"& {{ . '{helper_path}'; "
+                f"$policy = Get-Content -LiteralPath '{escaped_policy}' -Raw | ConvertFrom-Json; "
+                f"Invoke-LightweightPythonPruning -AppRoot '{escaped_app_root}' -Policy $policy }}"
+            ),
+        ],
+        tmp_path,
+    )
+
+
+def _minimal_v2_policy() -> dict[str, object]:
+    return {
+        "pruning_policy_version": "2",
+        "python_remove_packages": [],
+        "python_remove_directory_names": [],
+        "python_remove_file_extensions": [],
+        "python_remove_relative_trees": [],
+        "python_remove_relative_files": [],
+        "python_lazy_import_patches": [
+            {
+                "relative_path": SIMILARITY_RELATIVE_PATH,
+                "top_level_import": SIMILARITY_TOP_LEVEL_IMPORT,
+                "call_line": SIMILARITY_CALL_LINE,
+            }
+        ],
+    }
+
+
+def _write_similarity_fixture(app_root: Path, content: str) -> Path:
+    similarity = app_root / "runtime" / "python" / SIMILARITY_RELATIVE_PATH
+    similarity.parent.mkdir(parents=True)
+    similarity.write_bytes(content.encode("utf-8"))
+    return similarity
+
+
+def test_lightweight_profile_v2_declares_exact_inference_pruning() -> None:
+    profile = LIGHTWEIGHT_PROFILE
+
+    assert profile["pruning_policy_version"] == "2"
+    assert V2_REMOVED_DISTRIBUTIONS <= set(profile["python_remove_packages"])
+    assert V2_REMOVED_RELATIVE_TREES <= set(profile["python_remove_relative_trees"])
+    assert V2_REMOVED_RELATIVE_FILES == set(profile["python_remove_relative_files"])
+    assert V2_REMOVED_EXTENSIONS <= set(profile["python_remove_file_extensions"])
+    assert profile["python_lazy_import_patches"] == [
+        {
+            "relative_path": SIMILARITY_RELATIVE_PATH,
+            "top_level_import": SIMILARITY_TOP_LEVEL_IMPORT,
+            "call_line": SIMILARITY_CALL_LINE,
+        }
+    ]
+    serialized_removals = json.dumps(
+        {
+            "packages": profile["python_remove_packages"],
+            "trees": profile["python_remove_relative_trees"],
+            "files": profile["python_remove_relative_files"],
+        }
+    ).lower()
+    assert "scipy" not in serialized_removals
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_lightweight_pruning_v2_is_exact_and_preserves_runtime_boundaries(
+    tmp_path: Path,
+) -> None:
+    app_root = tmp_path / "app"
+    python_root = app_root / "runtime" / "python"
+    site_packages = python_root / "Lib" / "site-packages"
+    original_similarity = (
+        SIMILARITY_TOP_LEVEL_IMPORT
+        + "\r\n\r\ndef manhattan_sim(a_coo, b_coo):\r\n"
+        + SIMILARITY_CALL_LINE
+        + "\r\n        return dist\r\n"
+    )
+    similarity = _write_similarity_fixture(app_root, original_similarity)
+
+    import_names = {
+        "scikit-learn": "sklearn",
+        "joblib": "joblib",
+        "threadpoolctl": None,
+        "lxml": "lxml",
+        "python-docx": "docx",
+        "multiprocess": "multiprocess",
+        "dill": "dill",
+        "pyreadline3": "pyreadline3",
+    }
+    license_payloads: dict[str, bytes] = {}
+    for distribution, import_name in import_names.items():
+        if import_name is not None:
+            package_dir = site_packages / import_name
+            package_dir.mkdir(parents=True, exist_ok=True)
+            (package_dir / "runtime-marker.py").write_text(
+                "# removed distribution\n", encoding="utf-8"
+            )
+        metadata = site_packages / f"{distribution}-9.9.dist-info"
+        metadata.mkdir(parents=True)
+        (metadata / "METADATA").write_text(
+            f"Metadata-Version: 2.1\nName: {distribution}\nVersion: 9.9\n",
+            encoding="utf-8",
+        )
+        payload = b"\x00exact-" + distribution.encode("ascii") + b"-license\xff"
+        license_payloads[distribution] = payload
+        (metadata / "licenses").mkdir()
+        (metadata / "licenses" / "LICENSE.bin").write_bytes(payload)
+
+    for relative_tree in V2_REMOVED_RELATIVE_TREES:
+        marker = python_root / relative_tree / "remove-me.dat"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_bytes(b"remove tree")
+    for relative_file in V2_REMOVED_RELATIVE_FILES:
+        marker = python_root / relative_file
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_bytes(b"remove file")
+    for extension in V2_REMOVED_EXTENSIONS:
+        marker = site_packages / "sentence_transformers" / f"dev-only{extension}"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_bytes(b"remove extension")
+
+    preserved_files = {
+        site_packages / "scipy" / "stats.py": b"required scipy",
+        site_packages / "scipy.libs" / "openblas.dll": b"required scipy dll",
+        site_packages / "sentence_transformers" / "inference.py": b"required code",
+        site_packages / "torch" / "lib" / "torch_cpu.dll": b"required torch dll",
+        app_root / "models" / "weights.bin": b"required model",
+        app_root / "tools" / "tika" / "tika.jar": b"required tika",
+    }
+    for path, payload in preserved_files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+
+    policy = _minimal_v2_policy()
+    policy["python_remove_packages"] = sorted(V2_REMOVED_DISTRIBUTIONS)
+    policy["python_remove_relative_trees"] = sorted(V2_REMOVED_RELATIVE_TREES)
+    policy["python_remove_relative_files"] = sorted(V2_REMOVED_RELATIVE_FILES)
+    policy["python_remove_file_extensions"] = sorted(V2_REMOVED_EXTENSIONS)
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    patched = similarity.read_bytes()
+    assert not patched.startswith(SIMILARITY_TOP_LEVEL_IMPORT.encode())
+    assert (
+        (
+            "        "
+            + SIMILARITY_TOP_LEVEL_IMPORT
+            + "\r\n"
+            + SIMILARITY_CALL_LINE
+        ).encode()
+        in patched
+    )
+    assert not patched.startswith(b"\xef\xbb\xbf")
+    assert b"\n" not in patched.replace(b"\r\n", b"")
+
+    for distribution, import_name in import_names.items():
+        if import_name is not None:
+            assert not (site_packages / import_name).exists()
+        assert not (site_packages / f"{distribution}-9.9.dist-info").exists()
+        preserved_license = (
+            app_root
+            / "licenses"
+            / "excluded-python-components"
+            / distribution
+            / f"{distribution}-9.9.dist-info"
+            / "licenses"
+            / "LICENSE.bin"
+        )
+        assert preserved_license.read_bytes() == license_payloads[distribution]
+    for relative_tree in V2_REMOVED_RELATIVE_TREES:
+        assert not (python_root / relative_tree).exists()
+    for relative_file in V2_REMOVED_RELATIVE_FILES:
+        assert not (python_root / relative_file).exists()
+    for extension in V2_REMOVED_EXTENSIONS:
+        assert not (
+            site_packages / "sentence_transformers" / f"dev-only{extension}"
+        ).exists()
+    for path, payload in preserved_files.items():
+        assert path.read_bytes() == payload
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+@pytest.mark.parametrize(
+    "similarity_content",
+    [
+        None,
+        SIMILARITY_CALL_LINE + "\n",
+        SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_CALL_LINE + "\n",
+        SIMILARITY_TOP_LEVEL_IMPORT + "\n",
+        SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_CALL_LINE + "\n" + SIMILARITY_CALL_LINE + "\n",
+    ],
+    ids=["missing_target", "missing_import", "duplicate_import", "missing_call", "duplicate_call"],
+)
+def test_lightweight_lazy_import_patch_fails_closed_before_pruning(
+    tmp_path: Path, similarity_content: str | None
+) -> None:
+    app_root = tmp_path / "app"
+    sklearn = app_root / "runtime" / "python" / "Lib" / "site-packages" / "sklearn"
+    sklearn.mkdir(parents=True)
+    sentinel = sklearn / "keep-on-failure.py"
+    sentinel.write_bytes(b"not pruned")
+    similarity = None
+    if similarity_content is not None:
+        similarity = _write_similarity_fixture(app_root, similarity_content)
+        original = similarity.read_bytes()
+    policy = _minimal_v2_policy()
+    policy["python_remove_packages"] = ["scikit-learn"]
+    policy["python_remove_relative_trees"] = ["Lib/site-packages/sklearn"]
+
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode != 0
+    assert "lazy import patch" in (result.stdout + result.stderr).lower()
+    assert sentinel.read_bytes() == b"not pruned"
+    if similarity is not None:
+        assert similarity.read_bytes() == original
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+@pytest.mark.parametrize("unsafe_kind", ["traversal", "directory_as_file"])
+def test_lightweight_relative_file_removal_rejects_unsafe_targets(
+    tmp_path: Path, unsafe_kind: str
+) -> None:
+    app_root = tmp_path / "app"
+    _write_similarity_fixture(
+        app_root, SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_CALL_LINE + "\n"
+    )
+    policy = _minimal_v2_policy()
+    if unsafe_kind == "traversal":
+        outside = app_root / "outside.txt"
+        outside.write_bytes(b"keep outside")
+        policy["python_remove_relative_files"] = ["../../outside.txt"]
+    else:
+        outside = (
+            app_root
+            / "runtime"
+            / "python"
+            / "DLLs"
+            / "_tkinter.pyd"
+        )
+        outside.mkdir(parents=True)
+        (outside / "keep.txt").write_bytes(b"keep directory")
+        policy["python_remove_relative_files"] = ["DLLs/_tkinter.pyd"]
+
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode != 0
+    assert outside.exists()
 
 
 def test_integrated_launcher_allows_cold_model_startup() -> None:
@@ -647,6 +981,9 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
     if package_profile == "complete":
         (java_runtime / "bin").mkdir(parents=True)
         (java_runtime / "bin" / "java.exe").write_bytes(b"java")
+        complete_sentinel = runtime / "Lib" / "site-packages" / "sklearn" / "keep.py"
+        complete_sentinel.parent.mkdir(parents=True)
+        complete_sentinel.write_text("# complete profile keeps runtime\n", encoding="utf-8")
     else:
         _add_lightweight_runtime_fixture(runtime, java_runtime)
     models = tmp_path / "models"
@@ -747,6 +1084,7 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
         assert package_manifest["one_click_launcher"] == "内容检索系统.exe"
         if package_profile == "complete":
             assert package_manifest["java_runtime_mode"] == "bundled"
+            assert "app/runtime/python/Lib/site-packages/sklearn/keep.py" in names
             assert "app/third_party/mobileclip-src/safe/LICENSE" in names
             assert not any("xcuserdata" in name.lower() for name in names)
             assert not any(name.lower().endswith(".xcuserstate") for name in names)
@@ -756,6 +1094,32 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                 "app/runtime/python/Lib/site-packages/"
                 "sentence_transformers/__init__.py"
             ) in names
+            similarity_name = (
+                "app/runtime/python/Lib/site-packages/"
+                "sentence_transformers/util/similarity.py"
+            )
+            patched_similarity = archive.read(similarity_name)
+            assert not patched_similarity.startswith(
+                SIMILARITY_TOP_LEVEL_IMPORT.encode()
+            )
+            assert (
+                (
+                    "        "
+                    + SIMILARITY_TOP_LEVEL_IMPORT
+                    + "\r\n"
+                    + SIMILARITY_CALL_LINE
+                ).encode()
+                in patched_similarity
+            )
+            assert (
+                "app/runtime/python/Lib/site-packages/"
+                "sentence_transformers/inference.py"
+            ) in names
+            assert "app/runtime/python/Lib/site-packages/scipy/_inference.py" in names
+            assert (
+                "app/runtime/python/Lib/site-packages/scipy.libs/libopenblas.dll"
+                in names
+            )
             assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.dll" in names
             assert "app/runtime/java/bin/java.exe" in names
             for package in profile["python_remove_packages"]:
@@ -799,6 +1163,8 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                 ) not in names
             for relative_tree in profile["python_remove_relative_trees"]:
                 assert f"app/runtime/python/{relative_tree}/relative-tree-marker.txt" not in names
+            for relative_file in profile["python_remove_relative_files"]:
+                assert f"app/runtime/python/{relative_file}" not in names
             assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.lib" not in names
             assert "app/runtime/python/Lib/site-packages/torch/include/torch.h" not in names
             assert "app/runtime/java/bin/jlink-arguments.txt" in names
@@ -810,7 +1176,7 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
             )
             assert package_manifest["package_profile"] == "lightweight"
             assert package_manifest["archive_size_limit_bytes"] == 1000000000
-            assert package_manifest["pruning_policy_version"] == "1"
+            assert package_manifest["pruning_policy_version"] == "2"
             assert package_manifest["java_runtime_mode"] == "jlink"
             assert package_manifest["excluded_runtime_components"] == profile[
                 "python_remove_packages"
