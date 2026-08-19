@@ -318,7 +318,6 @@ if (Test-Path -LiteralPath $absoluteOutput) {
     if (-not $ReplaceExactTarget) {
         throw "Output ZIP already exists; pass -ReplaceExactTarget to replace this exact file: $absoluteOutput"
     }
-    Remove-Item -LiteralPath $absoluteOutput -Force
 }
 $outputDirectory = Split-Path -Parent $absoluteOutput
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
@@ -413,11 +412,13 @@ try {
     New-ZipFromDirectory -SourceDirectory $stageRoot -DestinationArchive $temporaryZip
     if ($PackageProfile -eq 'lightweight') {
         $temporaryArchive = Get-Item -LiteralPath $temporaryZip -Force
-        if ($temporaryArchive.Length -ge $ArchiveSizeLimitBytes) {
-            throw "Lightweight archive size limit exceeded: $($temporaryArchive.Length) bytes >= $ArchiveSizeLimitBytes bytes"
-        }
+        Assert-LightweightArchiveSize -ArchiveBytes $temporaryArchive.Length -LimitBytes $ArchiveSizeLimitBytes
     }
-    Move-Item -LiteralPath $temporaryZip -Destination $absoluteOutput
+    if (Test-Path -LiteralPath $absoluteOutput -PathType Leaf) {
+        [System.IO.File]::Replace($temporaryZip, $absoluteOutput, $null, $true)
+    } else {
+        Move-Item -LiteralPath $temporaryZip -Destination $absoluteOutput
+    }
 } finally {
     if (Test-Path -LiteralPath $temporaryZip -PathType Leaf) {
         Remove-Item -LiteralPath $temporaryZip -Force

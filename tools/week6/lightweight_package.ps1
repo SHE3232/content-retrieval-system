@@ -1,6 +1,17 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+function Assert-LightweightArchiveSize {
+    param(
+        [Parameter(Mandatory = $true)][long]$ArchiveBytes,
+        [Parameter(Mandatory = $true)][long]$LimitBytes
+    )
+
+    if ($ArchiveBytes -ge $LimitBytes) {
+        throw "Lightweight archive size limit exceeded: $ArchiveBytes bytes >= $LimitBytes bytes"
+    }
+}
+
 function ConvertTo-ExtendedPath {
     param([Parameter(Mandatory = $true)][string]$Path)
 

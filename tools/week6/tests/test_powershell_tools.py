@@ -168,6 +168,86 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         (jmods / f"{module}.jmod").write_bytes(b"jmod")
 
 
+def _lightweight_package_fixture(
+    tmp_path: Path, archive_size_limit_bytes: int = 128
+) -> tuple[list[str], Path, Path]:
+    release = tmp_path / "frontend-release"
+    release.mkdir()
+    (release / "content_retrieval_app.exe").write_bytes(b"app")
+    backend = tmp_path / "backend"
+    (backend / "src").mkdir(parents=True)
+    (backend / "src" / "app.py").write_text("print('backend')\n", encoding="utf-8")
+    (backend / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+    (backend / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    runtime = tmp_path / "python-runtime"
+    runtime.mkdir()
+    (runtime / "python.exe").write_bytes(b"python")
+    java_runtime = tmp_path / "java-runtime"
+    _add_lightweight_runtime_fixture(runtime, java_runtime)
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "weights.bin").write_bytes(b"weights")
+    manifest = models / "model-manifest.json"
+    manifest.write_text('{"models": []}\n', encoding="utf-8")
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    mvp_launcher = tools / "start-mvp.ps1"
+    mvp_launcher.write_text("Write-Output ready\n", encoding="utf-8")
+    integrated_launcher = tools / "start-integrated.ps1"
+    integrated_launcher.write_text("Write-Output integrated\n", encoding="utf-8")
+    tika = tmp_path / "tika.jar"
+    tika.write_bytes(b"tika")
+    tika_hash = tmp_path / "tika.sha512"
+    tika_hash.write_text("hash\n", encoding="utf-8")
+    commit = _init_repo(tmp_path)
+    output = tmp_path / "output" / "week6" / "lightweight.zip"
+    staging = tmp_path / "output" / "week6" / ".staging"
+    return (
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(PACKAGE_SCRIPT),
+            "-RepositoryRoot",
+            str(tmp_path),
+            "-SourceCommit",
+            commit,
+            "-FrontendReleaseDir",
+            str(release),
+            "-PythonRuntimeDir",
+            str(runtime),
+            "-JavaRuntimeDir",
+            str(java_runtime),
+            "-ModelRoot",
+            str(models),
+            "-ModelManifestPath",
+            str(manifest),
+            "-TikaJar",
+            str(tika),
+            "-TikaChecksumFile",
+            str(tika_hash),
+            "-MvpLauncher",
+            str(mvp_launcher),
+            "-IntegratedLauncher",
+            str(integrated_launcher),
+            "-OutputZip",
+            str(output),
+            "-StagingRoot",
+            str(staging),
+            "-PackageProfile",
+            "lightweight",
+            "-JlinkExecutable",
+            str(java_runtime / "bin" / "jlink.ps1"),
+            "-ArchiveSizeLimitBytes",
+            str(archive_size_limit_bytes),
+        ],
+        output,
+        staging,
+    )
+
+
 def test_integrated_launcher_allows_cold_model_startup() -> None:
     script = INTEGRATED_SCRIPT.read_text(encoding="utf-8")
     assert "[int]$ReadyTimeoutSeconds = 600" in script
@@ -650,6 +730,7 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
+    assert f"Archive bytes: {output.stat().st_size}" in result.stdout
     with ZipFile(output) as archive:
         names = {name.replace("\\", "/") for name in archive.namelist()}
         assert "app/frontend/content_retrieval_app.exe" in names
@@ -738,86 +819,69 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 def test_lightweight_package_rejects_archive_at_or_above_limit(tmp_path: Path) -> None:
-    release = tmp_path / "frontend-release"
-    release.mkdir()
-    (release / "content_retrieval_app.exe").write_bytes(b"app")
-    backend = tmp_path / "backend"
-    (backend / "src").mkdir(parents=True)
-    (backend / "src" / "app.py").write_text("print('backend')\n", encoding="utf-8")
-    (backend / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
-    (backend / "uv.lock").write_text("version = 1\n", encoding="utf-8")
-    runtime = tmp_path / "python-runtime"
-    runtime.mkdir()
-    (runtime / "python.exe").write_bytes(b"python")
-    java_runtime = tmp_path / "java-runtime"
-    _add_lightweight_runtime_fixture(runtime, java_runtime)
-    models = tmp_path / "models"
-    models.mkdir()
-    (models / "weights.bin").write_bytes(b"weights")
-    manifest = models / "model-manifest.json"
-    manifest.write_text('{"models": []}\n', encoding="utf-8")
-    tools = tmp_path / "tools"
-    tools.mkdir()
-    mvp_launcher = tools / "start-mvp.ps1"
-    mvp_launcher.write_text("Write-Output ready\n", encoding="utf-8")
-    integrated_launcher = tools / "start-integrated.ps1"
-    integrated_launcher.write_text("Write-Output integrated\n", encoding="utf-8")
-    tika = tmp_path / "tika.jar"
-    tika.write_bytes(b"tika")
-    tika_hash = tmp_path / "tika.sha512"
-    tika_hash.write_text("hash\n", encoding="utf-8")
-    commit = _init_repo(tmp_path)
-    output = tmp_path / "output" / "week6" / "lightweight.zip"
-    staging = tmp_path / "output" / "week6" / ".staging"
+    command, output, staging = _lightweight_package_fixture(tmp_path)
+    result = _run(command, tmp_path)
 
+    assert result.returncode != 0
+    assert "archive size limit" in (result.stdout + result.stderr).lower()
+    assert not output.exists()
+    assert not staging.exists() or not any(staging.iterdir())
+    assert not list(output.parent.glob(".week6-*.zip"))
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_lightweight_package_replacement_preserves_existing_output_on_size_failure(
+    tmp_path: Path,
+) -> None:
+    command, output, staging = _lightweight_package_fixture(tmp_path)
+    sentinel = b"existing stable package"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(sentinel)
+
+    result = _run([*command, "-ReplaceExactTarget"], tmp_path)
+
+    assert result.returncode != 0
+    assert "archive size limit" in (result.stdout + result.stderr).lower()
+    assert output.read_bytes() == sentinel
+    assert not list(output.parent.glob(".week6-*.zip"))
+    assert not staging.exists() or not any(staging.iterdir())
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+@pytest.mark.parametrize(
+    ("archive_bytes", "expected_success"),
+    [(127, True), (128, False), (129, False)],
+    ids=["below_limit", "at_limit", "above_limit"],
+)
+def test_lightweight_archive_size_limit_includes_exact_boundary(
+    tmp_path: Path, archive_bytes: int, expected_success: bool
+) -> None:
+    helper_path = str(REPOSITORY_ROOT / "tools" / "week6" / "lightweight_package.ps1").replace(
+        "'", "''"
+    )
     result = _run(
         [
             POWERSHELL,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
-            "-File",
-            str(PACKAGE_SCRIPT),
-            "-RepositoryRoot",
-            str(tmp_path),
-            "-SourceCommit",
-            commit,
-            "-FrontendReleaseDir",
-            str(release),
-            "-PythonRuntimeDir",
-            str(runtime),
-            "-JavaRuntimeDir",
-            str(java_runtime),
-            "-ModelRoot",
-            str(models),
-            "-ModelManifestPath",
-            str(manifest),
-            "-TikaJar",
-            str(tika),
-            "-TikaChecksumFile",
-            str(tika_hash),
-            "-MvpLauncher",
-            str(mvp_launcher),
-            "-IntegratedLauncher",
-            str(integrated_launcher),
-            "-OutputZip",
-            str(output),
-            "-StagingRoot",
-            str(staging),
-            "-PackageProfile",
-            "lightweight",
-            "-JlinkExecutable",
-            str(java_runtime / "bin" / "jlink.ps1"),
-            "-ArchiveSizeLimitBytes",
-            "128",
+            "-Command",
+            (
+                f"& {{ . '{helper_path}'; Assert-LightweightArchiveSize "
+                f"-ArchiveBytes {archive_bytes} -LimitBytes 128 }}"
+            ),
         ],
         tmp_path,
     )
 
-    assert result.returncode != 0
-    assert "archive size limit" in (result.stdout + result.stderr).lower()
-    assert not output.exists()
-    assert not staging.exists() or not any(staging.iterdir())
+    if expected_success:
+        assert result.returncode == 0, result.stdout + result.stderr
+    else:
+        assert result.returncode != 0
+        assert (
+            f"Lightweight archive size limit exceeded: {archive_bytes} bytes >= 128 bytes"
+            in result.stdout + result.stderr
+        )
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
