@@ -28,7 +28,7 @@
 
 原有 `01_Windows完整集成稳定版.zip` 必须保留，作为完整集成稳定版的权威交付物；轻量流程不得覆盖或改写它。新增轻量交付物的文件名必须精确为 `01_Windows轻量集成稳定版.zip`。本节是构建与验收约定，不表示该 ZIP 已经生成或已经通过验收。
 
-轻量包的严格体积门禁为十进制字节数 `< 1,000,000,000`，不能用 `< 1 GiB` 代替。包内仍须嵌入 `text-multilingual-v1` 与 `mobileclip-s0-v1`，不允许首次运行下载模型，断网运行能力保持不变。轻量化仅移除评测、开发、缓存和静态链接内容，并使用 `jlink` Java 运行时；不改变检索、模型或数据格式。`PACKAGE_MANIFEST.json` 必须记录应用源码提交；当前真实候选包应从 `b8180477ade5829f551e2c55922a54500f142c1` 构建。
+轻量包的严格体积门禁为十进制字节数 `< 1,000,000,000`，不能用 `< 1 GiB` 代替。包内仍须嵌入 `text-multilingual-v1` 与 `mobileclip-s0-v1`，不允许首次运行下载模型，断网运行能力保持不变。轻量化按策略裁剪 Python 运行时中评测、开发、缓存、静态链接等非运行必需内容；Tika JAR 及其校验文件必须保留，不得作为轻量化对象删除。轻量化使用 `jlink` Java 运行时，但不改变检索、模型或数据格式。`PACKAGE_MANIFEST.json` 必须记录应用源码提交；当前真实候选包应从 `b8180477ade5829f551e2c55922a54500f142c1e` 构建。
 
 候选包生成后，可在只读副本中执行以下 PowerShell 检查（将 `$zip` 改为实际路径）；检查失败即不得标记为通过：
 
@@ -42,5 +42,5 @@ $manifest = Get-Content -Raw -LiteralPath '.\PACKAGE_MANIFEST.json' | ConvertFro
 $manifest.package_profile
 $manifest.archive_size_limit_bytes
 $manifest.java_runtime_mode
-$manifest.application_source_commit
+$manifest.source_commit
 ```
