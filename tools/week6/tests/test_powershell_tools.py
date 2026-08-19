@@ -848,6 +848,74 @@ def test_lightweight_package_replacement_preserves_existing_output_on_size_failu
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_lightweight_package_replacement_promotes_valid_archive(tmp_path: Path) -> None:
+    command, output, staging = _lightweight_package_fixture(
+        tmp_path, archive_size_limit_bytes=1_000_000
+    )
+    sentinel = b"existing stable package"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(sentinel)
+
+    result = _run([*command, "-ReplaceExactTarget"], tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert output.read_bytes() != sentinel
+    with ZipFile(output) as archive:
+        assert archive.testzip() is None
+        assert "app/PACKAGE_MANIFEST.json" in archive.namelist()
+    assert not list(output.parent.glob(".week6-*.zip"))
+    assert not staging.exists() or not any(staging.iterdir())
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_lightweight_package_jlink_failure_preserves_existing_output(
+    tmp_path: Path,
+) -> None:
+    command, output, staging = _lightweight_package_fixture(tmp_path)
+    jlink = Path(command[command.index("-JlinkExecutable") + 1])
+    jlink.write_text("throw 'simulated jlink failure'\n", encoding="utf-8")
+    _git(tmp_path, "add", "java-runtime/bin/jlink.ps1")
+    _git(tmp_path, "commit", "-m", "simulate jlink failure")
+    command[command.index("-SourceCommit") + 1] = _git(tmp_path, "rev-parse", "HEAD")
+    sentinel = b"existing stable package"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(sentinel)
+
+    result = _run([*command, "-ReplaceExactTarget"], tmp_path)
+
+    assert result.returncode != 0
+    assert "simulated jlink failure" in (result.stdout + result.stderr).lower()
+    assert output.read_bytes() == sentinel
+    assert not list(output.parent.glob(".week6-*.zip"))
+    assert not staging.exists() or not any(staging.iterdir())
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_package_stable_build_rejects_output_zip_directory(tmp_path: Path) -> None:
+    command, output, staging = _lightweight_package_fixture(tmp_path)
+    output.mkdir(parents=True)
+    sentinel = output / "keep.txt"
+    sentinel.write_bytes(b"keep")
+
+    result = _run([*command, "-ReplaceExactTarget"], tmp_path)
+
+    assert result.returncode != 0
+    assert "output zip path is a directory" in (result.stdout + result.stderr).lower()
+    assert sentinel.read_bytes() == b"keep"
+    assert not staging.exists() or not any(staging.iterdir())
+
+
+def test_package_stable_build_freezes_replacement_authorization() -> None:
+    script = PACKAGE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "$targetExists = [System.IO.File]::Exists($absoluteOutput)" in script
+    assert "$targetIsDirectory = [System.IO.Directory]::Exists($absoluteOutput)" in script
+    assert "$replaceExistingTarget = $targetExists -and $ReplaceExactTarget.IsPresent" in script
+    assert "if ($replaceExistingTarget)" in script
+    assert "[System.IO.File]::Move($temporaryZip, $absoluteOutput)" in script
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 @pytest.mark.parametrize(
     ("archive_bytes", "expected_success"),
     [(127, True), (128, False), (129, False)],

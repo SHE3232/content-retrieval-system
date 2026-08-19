@@ -314,11 +314,15 @@ $tikaChecksum = Resolve-RequiredFile -Path $TikaChecksumFile -Label 'Tika checks
 $mvpScript = Resolve-RequiredFile -Path $MvpLauncher -Label 'MVP launcher'
 $integratedScript = Resolve-RequiredFile -Path $IntegratedLauncher -Label 'Integrated launcher'
 
-if (Test-Path -LiteralPath $absoluteOutput) {
-    if (-not $ReplaceExactTarget) {
-        throw "Output ZIP already exists; pass -ReplaceExactTarget to replace this exact file: $absoluteOutput"
-    }
+$targetIsDirectory = [System.IO.Directory]::Exists($absoluteOutput)
+if ($targetIsDirectory) {
+    throw "Output ZIP path is a directory: $absoluteOutput"
 }
+$targetExists = [System.IO.File]::Exists($absoluteOutput)
+if ($targetExists -and -not $ReplaceExactTarget) {
+    throw "Output ZIP already exists; pass -ReplaceExactTarget to replace this exact file: $absoluteOutput"
+}
+$replaceExistingTarget = $targetExists -and $ReplaceExactTarget.IsPresent
 $outputDirectory = Split-Path -Parent $absoluteOutput
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 
@@ -414,10 +418,15 @@ try {
         $temporaryArchive = Get-Item -LiteralPath $temporaryZip -Force
         Assert-LightweightArchiveSize -ArchiveBytes $temporaryArchive.Length -LimitBytes $ArchiveSizeLimitBytes
     }
-    if (Test-Path -LiteralPath $absoluteOutput -PathType Leaf) {
-        [System.IO.File]::Replace($temporaryZip, $absoluteOutput, $null, $true)
+    if ($replaceExistingTarget) {
+        [System.IO.File]::Replace(
+            $temporaryZip,
+            $absoluteOutput,
+            [System.Management.Automation.Language.NullString]::Value,
+            $true
+        )
     } else {
-        Move-Item -LiteralPath $temporaryZip -Destination $absoluteOutput
+        [System.IO.File]::Move($temporaryZip, $absoluteOutput)
     }
 } finally {
     if (Test-Path -LiteralPath $temporaryZip -PathType Leaf) {
