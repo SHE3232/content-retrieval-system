@@ -47,14 +47,31 @@ $arguments = @(
     '--compress=2',
     '--output', $output
 )
-$global:LASTEXITCODE = 0
-& $jlink @arguments
-$jlinkExitCode = if (Test-Path -LiteralPath variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
-if ($jlinkExitCode -ne 0) {
-    throw "jlink failed with exit code $jlinkExitCode"
-}
-$javaExecutable = Join-Path $output 'bin\java.exe'
-if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) {
-    throw "Portable Java executable was not created: $javaExecutable"
+$portableJavaCreated = $false
+try {
+    $global:LASTEXITCODE = 0
+    & $jlink @arguments
+    $jlinkExitCode = if (Test-Path -LiteralPath variable:LASTEXITCODE) { $LASTEXITCODE } else { 0 }
+    if ($jlinkExitCode -ne 0) {
+        throw "jlink failed with exit code $jlinkExitCode"
+    }
+    $javaExecutable = Join-Path $output 'bin\java.exe'
+    if (-not (Test-Path -LiteralPath $javaExecutable -PathType Leaf)) {
+        throw "Portable Java executable was not created: $javaExecutable"
+    }
+    $portableJavaCreated = $true
+} finally {
+    if (-not $portableJavaCreated) {
+        $extendedOutput = if ($output.StartsWith('\\')) {
+            '\\?\UNC\' + $output.Substring(2)
+        } else {
+            '\\?\' + $output
+        }
+        if ([System.IO.Directory]::Exists($extendedOutput)) {
+            [System.IO.Directory]::Delete($extendedOutput, $true)
+        } elseif ([System.IO.File]::Exists($extendedOutput)) {
+            [System.IO.File]::Delete($extendedOutput)
+        }
+    }
 }
 Write-Output "Portable Java runtime created: $output"

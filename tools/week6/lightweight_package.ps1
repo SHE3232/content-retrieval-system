@@ -78,20 +78,38 @@ function Get-PackageMetadataDirectories {
         [System.IO.Directory]::EnumerateDirectories($extendedSitePackages, '*', [System.IO.SearchOption]::TopDirectoryOnly) |
             Where-Object {
                 $directoryName = [System.IO.Path]::GetFileName($_)
-                $suffix = if ($directoryName.EndsWith('.dist-info', [System.StringComparison]::OrdinalIgnoreCase)) {
-                    '.dist-info'
-                } elseif ($directoryName.EndsWith('.egg-info', [System.StringComparison]::OrdinalIgnoreCase)) {
-                    '.egg-info'
-                } else {
-                    $null
-                }
-                if ($null -eq $suffix) {
+                if (-not (
+                    $directoryName.EndsWith('.dist-info', [System.StringComparison]::OrdinalIgnoreCase) -or
+                    $directoryName.EndsWith('.egg-info', [System.StringComparison]::OrdinalIgnoreCase)
+                )) {
                     return $false
                 }
-                $metadataStem = $directoryName.Substring(0, $directoryName.Length - $suffix.Length)
-                $normalizedStem = Get-NormalizedPythonPackageName -Name $metadataStem
-                return $normalizedStem -eq $normalizedPackage -or
-                    $normalizedStem -match ('^' + [System.Text.RegularExpressions.Regex]::Escape($normalizedPackage) + '-(?=\d)')
+
+                $metadataPackageName = $null
+                foreach ($metadataFileName in @('METADATA', 'PKG-INFO')) {
+                    $metadataFile = [System.IO.Path]::Combine($_, $metadataFileName)
+                    if (-not [System.IO.File]::Exists($metadataFile)) {
+                        continue
+                    }
+                    foreach ($line in [System.IO.File]::ReadAllLines($metadataFile)) {
+                        $nameHeader = [System.Text.RegularExpressions.Regex]::Match(
+                            $line,
+                            '^\s*Name\s*:\s*(.+?)\s*$',
+                            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+                        )
+                        if ($nameHeader.Success) {
+                            $metadataPackageName = $nameHeader.Groups[1].Value
+                            break
+                        }
+                    }
+                    if ($null -ne $metadataPackageName) {
+                        break
+                    }
+                }
+                if ($null -eq $metadataPackageName) {
+                    return $false
+                }
+                return (Get-NormalizedPythonPackageName -Name $metadataPackageName) -eq $normalizedPackage
             }
     )
 }
@@ -111,6 +129,9 @@ function Copy-ExcludedPackageLicenses {
     $licenseFilePattern = '^(LICENSE|COPYING|NOTICE)(\..+)?$'
     foreach ($metadataDirectory in (Get-PackageMetadataDirectories -SitePackages $safeSitePackages -PackageName $PackageName)) {
         $safeMetadataDirectory = Resolve-StagingChildPath -Root $AppRoot -Candidate $metadataDirectory
+        $metadataDestination = Resolve-StagingChildPath -Root $licenseDestination -Candidate (
+            Join-Path $licenseDestination ([System.IO.Path]::GetFileName($safeMetadataDirectory))
+        )
         foreach ($file in [System.IO.Directory]::EnumerateFiles(
             (ConvertTo-ExtendedPath -Path $safeMetadataDirectory),
             '*',
@@ -121,8 +142,13 @@ function Copy-ExcludedPackageLicenses {
                 continue
             }
             $safeFile = Resolve-StagingChildPath -Root $AppRoot -Candidate $file
-            [System.IO.Directory]::CreateDirectory((ConvertTo-ExtendedPath -Path $licenseDestination)) | Out-Null
-            $destinationFile = Resolve-StagingChildPath -Root $AppRoot -Candidate (Join-Path $licenseDestination $fileName)
+            $relativeFile = $safeFile.Substring($safeMetadataDirectory.Length + 1)
+            $destinationFile = Resolve-StagingChildPath -Root $metadataDestination -Candidate (
+                Join-Path $metadataDestination $relativeFile
+            )
+            [System.IO.Directory]::CreateDirectory(
+                (ConvertTo-ExtendedPath -Path ([System.IO.Path]::GetDirectoryName($destinationFile)))
+            ) | Out-Null
             [System.IO.File]::Copy(
                 (ConvertTo-ExtendedPath -Path $safeFile),
                 (ConvertTo-ExtendedPath -Path $destinationFile),

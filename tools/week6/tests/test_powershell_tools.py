@@ -15,6 +15,9 @@ POWERSHELL = shutil.which("powershell") or shutil.which("pwsh")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CAPTURE_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "capture_candidate.ps1"
 PACKAGE_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "package_stable_build.ps1"
+BUILD_PORTABLE_JAVA_SCRIPT = (
+    REPOSITORY_ROOT / "tools" / "week6" / "build_portable_java.ps1"
+)
 INTEGRATED_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "start-integrated.ps1"
 SECURITY_AUDIT_SCRIPT = REPOSITORY_ROOT / "tools" / "week6" / "audit_offline_security.ps1"
 LIGHTWEIGHT_PROFILE_PATH = REPOSITORY_ROOT / "tools" / "week6" / "lightweight_package_profile.json"
@@ -101,14 +104,28 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         component.mkdir()
         (component / "package-marker.txt").write_text("remove package\n", encoding="utf-8")
         license_filename = LIGHTWEIGHT_LICENSE_FILENAMES.get(package, "LICENSE")
-        license_file = (
-            site_packages
-            / f"{package}-1.0.dist-info"
-            / "licenses"
-            / license_filename
+        metadata_dir = site_packages / f"{package}-1.0.dist-info"
+        metadata_dir.mkdir()
+        (metadata_dir / "METADATA").write_text(
+            f"Metadata-Version: 2.1\nName: {package}\nVersion: 1.0\n",
+            encoding="utf-8",
         )
+        license_file = metadata_dir / "licenses" / license_filename
         license_file.parent.mkdir(parents=True)
         license_file.write_bytes(f"{package} license\n".encode("utf-8"))
+        if package == "pyarrow":
+            duplicate_license = metadata_dir / "vendor" / license_filename
+            duplicate_license.parent.mkdir(parents=True)
+            duplicate_license.write_bytes(b"pyarrow nested license\n")
+
+    collision_metadata = site_packages / "pandas_2fa-1.0.dist-info"
+    collision_metadata.mkdir()
+    (collision_metadata / "METADATA").write_text(
+        "Metadata-Version: 2.1\nName: pandas-2fa\nVersion: 1.0\n",
+        encoding="utf-8",
+    )
+    (collision_metadata / "collision-sentinel.txt").write_bytes(b"keep collision")
+    (collision_metadata / "LICENSE").write_bytes(b"pandas-2fa license\n")
 
     expected_module_path = str(java_runtime / "jmods")
     escaped_module_path = expected_module_path.replace("'", "''")
@@ -160,6 +177,59 @@ def test_integrated_launcher_cleans_backend_process_tree() -> None:
     script = INTEGRATED_SCRIPT.read_text(encoding="utf-8")
     assert "function Stop-OwnedProcessTree" in script
     assert "Stop-OwnedProcessTree -RootProcess $backendProcess" in script
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+@pytest.mark.parametrize("jlink_exit_code", [23, 0], ids=["nonzero", "missing_java"])
+def test_build_portable_java_removes_partial_output_on_failure(
+    tmp_path: Path, jlink_exit_code: int
+) -> None:
+    java_home = tmp_path / "java-home"
+    (java_home / "jmods").mkdir(parents=True)
+    fake_jlink = java_home / "bin" / "jlink.cmd"
+    fake_jlink.parent.mkdir()
+    fake_jlink.write_text(
+        "@echo off\r\n"
+        "set \"output=\"\r\n"
+        ":parse\r\n"
+        "if \"%~1\"==\"\" exit /b 99\r\n"
+        "if /I \"%~1\"==\"--output\" goto create\r\n"
+        "shift\r\n"
+        "goto parse\r\n"
+        ":create\r\n"
+        "set \"output=%~2\"\r\n"
+        "mkdir \"%output%\\bin\" >nul\r\n"
+        "> \"%output%\\partial.txt\" echo partial\r\n"
+        f"exit /b {jlink_exit_code}\r\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "portable-java"
+    sibling = tmp_path / "keep-sibling"
+    sibling.mkdir()
+    sentinel = sibling / "sentinel.txt"
+    sentinel.write_bytes(b"keep")
+
+    result = _run(
+        [
+            POWERSHELL,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(BUILD_PORTABLE_JAVA_SCRIPT),
+            "-OutputDirectory",
+            str(output),
+            "-JavaHome",
+            str(java_home),
+            "-JlinkExecutable",
+            str(fake_jlink),
+        ],
+        tmp_path,
+    )
+
+    assert result.returncode != 0
+    assert not output.exists()
+    assert sentinel.read_bytes() == b"keep"
 
 
 def _security_audit_fixtures(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
@@ -616,10 +686,26 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                 ) not in names
                 excluded_license = (
                     "app/licenses/excluded-python-components/"
-                    f"{package}/{license_filename}"
+                    f"{package}/{package}-1.0.dist-info/licenses/{license_filename}"
                 )
                 assert excluded_license in names
                 assert archive.read(excluded_license) == f"{package} license\n".encode()
+            duplicate_license = (
+                "app/licenses/excluded-python-components/pyarrow/"
+                "pyarrow-1.0.dist-info/vendor/LICENSE.txt"
+            )
+            assert duplicate_license in names
+            assert archive.read(duplicate_license) == b"pyarrow nested license\n"
+            collision_root = (
+                "app/runtime/python/Lib/site-packages/pandas_2fa-1.0.dist-info/"
+            )
+            assert collision_root + "collision-sentinel.txt" in names
+            assert (
+                archive.read(collision_root + "collision-sentinel.txt")
+                == b"keep collision"
+            )
+            assert collision_root + "LICENSE" in names
+            assert archive.read(collision_root + "LICENSE") == b"pandas-2fa license\n"
             for directory_name in profile["python_remove_directory_names"]:
                 assert (
                     "app/runtime/python/Lib/site-packages/sentence_transformers/"
