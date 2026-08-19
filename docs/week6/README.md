@@ -38,9 +38,21 @@ $f = Get-Item -LiteralPath $zip
 if ($f.Length -ge 1000000000) { throw "ZIP exceeds strict decimal limit: $($f.Length) bytes" }
 Get-FileHash -LiteralPath $zip -Algorithm SHA256
 
-$manifest = Get-Content -Raw -LiteralPath '.\PACKAGE_MANIFEST.json' | ConvertFrom-Json
-$manifest.package_profile
-$manifest.archive_size_limit_bytes
-$manifest.java_runtime_mode
-$manifest.source_commit
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::OpenRead($f.FullName)
+try {
+    $entry = @($archive.Entries | Where-Object { $_.FullName -eq 'app/PACKAGE_MANIFEST.json' })
+    if ($entry.Count -ne 1) { throw "Expected exactly one app/PACKAGE_MANIFEST.json entry" }
+    $stream = $entry[0].Open()
+    $reader = New-Object -TypeName System.IO.StreamReader -ArgumentList $stream
+    try { $manifest = ( $reader.ReadToEnd() | ConvertFrom-Json ) }
+    finally { $reader.Dispose() }
+}
+finally { $archive.Dispose() }
+
+if ($manifest.package_profile -ne 'lightweight') { throw 'Unexpected package_profile' }
+if ($manifest.archive_size_limit_bytes -ne 1000000000) { throw 'Unexpected archive_size_limit_bytes' }
+if ($manifest.java_runtime_mode -ne 'jlink') { throw 'Unexpected java_runtime_mode' }
+if ($manifest.source_commit -ne 'b8180477ade5829f551e2c55922a54500f142c1e') { throw 'Unexpected source_commit' }
+if ($manifest.first_run_downloads -ne $false) { throw 'first_run_downloads must be false' }
 ```
