@@ -104,6 +104,21 @@ def test_mobileclip_query_ids_are_stable_and_model_specific() -> None:
     assert first.file_id == first.source_id
     assert first.source_id != different.source_id
     assert len(first.source_id) == 64
+    assert backend.text_calls == [["a cat"], ["a dog"]]
+
+
+def test_mobileclip_query_cache_is_bounded() -> None:
+    from content_retrieval.embeddings.mobileclip import MobileClipEmbeddingEngine
+
+    backend = RecordingMobileClipBackend()
+    engine = MobileClipEmbeddingEngine(backend, query_cache_size=1)
+
+    engine.embed_queries(["a cat"])
+    engine.embed_queries(["a cat"])
+    engine.embed_queries(["a dog"])
+    engine.embed_queries(["a cat"])
+
+    assert backend.text_calls == [["a cat"], ["a dog"], ["a cat"]]
 
 
 def test_mobileclip_engine_isolates_one_bad_image() -> None:
@@ -203,6 +218,10 @@ def test_local_mobileclip_backend_uses_local_weights_and_rgb_preprocessing(
         def eval(self) -> None:
             calls["eval"] = True
 
+        def load_state_dict(self, state: object, *, assign: bool) -> None:
+            calls["state"] = state
+            calls["assign"] = assign
+
         def encode_image(self, batch: object) -> FakeTensor:
             calls["image_batch"] = batch
             return FakeTensor([[3.0, 4.0, 0.0]])
@@ -217,10 +236,13 @@ def test_local_mobileclip_backend_uses_local_weights_and_rgb_preprocessing(
 
     fake_mobileclip = types.ModuleType("mobileclip")
     fake_mobileclip.create_model_and_transforms = (
-        lambda name, pretrained: (
-            calls.update({"name": name, "pretrained": pretrained})
+        lambda name, **kwargs: (
+            calls.update({"name": name, "create_kwargs": kwargs})
             or (FakeModel(), None, fake_preprocess)
         )
+    )
+    fake_mobileclip.reparameterize_model = lambda model: (
+        calls.update({"reparameterized": True}) or model
     )
     fake_mobileclip.get_tokenizer = lambda name: (
         lambda texts: {"name": name, "texts": texts}
@@ -237,6 +259,9 @@ def test_local_mobileclip_backend_uses_local_weights_and_rgb_preprocessing(
     fake_torch = types.ModuleType("torch")
     fake_torch.stack = lambda values: list(values)
     fake_torch.no_grad = NoGrad
+    fake_torch.load = lambda path, **kwargs: (
+        calls.update({"load_path": path, "load_kwargs": kwargs}) or {"weights": 1}
+    )
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
 
     backend = LocalMobileClipBackend(
@@ -249,7 +274,16 @@ def test_local_mobileclip_backend_uses_local_weights_and_rgb_preprocessing(
     assert backend.encode_images([image_path]) == [[3.0, 4.0, 0.0]]
     assert backend.encode_texts(["a gray rectangle"]) == [[0.0, 3.0, 4.0]]
     assert calls["name"] == "mobileclip_s0"
-    assert calls["pretrained"] == str(weights_path.resolve())
+    assert calls["create_kwargs"] == {"pretrained": None, "reparameterize": False}
+    assert calls["load_path"] == str(weights_path.resolve())
+    assert calls["load_kwargs"] == {
+        "map_location": "cpu",
+        "mmap": True,
+        "weights_only": True,
+    }
+    assert calls["state"] == {"weights": 1}
+    assert calls["assign"] is True
+    assert calls["reparameterized"] is True
     assert calls["eval"] is True
     assert calls["image_mode"] == "RGB"
     assert calls["tokens"] == {

@@ -7,7 +7,7 @@ import os
 from typing import Protocol
 
 from content_retrieval.domain.retrieval import (
-    IndexRecord,
+    RetrievalRecord,
     SearchChannel,
 )
 
@@ -22,13 +22,13 @@ _RRF_CONSTANT = 60
 
 
 class RankedCandidate(Protocol):
-    record: IndexRecord
+    record: RetrievalRecord
     score: float
 
 
 @dataclass(frozen=True, slots=True)
 class FusedCandidate:
-    record: IndexRecord
+    record: RetrievalRecord
     score: float
     channels: tuple[SearchChannel, ...]
 
@@ -41,7 +41,7 @@ class FusedCandidate:
 
 @dataclass(slots=True)
 class _FileScore:
-    record: IndexRecord
+    record: RetrievalRecord
     contribution: float
     total: float
     channels: set[SearchChannel]

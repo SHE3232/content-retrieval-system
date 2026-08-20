@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pytest
 
 from tools.week6.run_stress import (
     assess_stress,
+    current_process_peak_rss,
     current_process_rss,
     dataset_manifest_hash,
     percentile,
@@ -14,8 +16,33 @@ from tools.week6.run_stress import (
 )
 
 
+def test_stress_helpers_respect_explicit_source_checkout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "baseline"
+    backend_source = repository / "backend" / "src"
+    backend_source.mkdir(parents=True)
+    monkeypatch.setenv("WEEK6_SOURCE_REPOSITORY", str(repository))
+    monkeypatch.setenv("WEEK6_BACKEND_SOURCE", str(backend_source))
+    module_path = Path(__file__).parents[1] / "run_stress.py"
+    spec = importlib.util.spec_from_file_location("week6_stress_target_test", module_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.REPOSITORY_ROOT == repository.resolve()
+    assert module.BACKEND_SOURCE == backend_source.resolve()
+
+
 def test_current_process_rss_is_positive() -> None:
     assert current_process_rss() > 0
+
+
+def test_current_process_peak_rss_is_at_least_current_rss() -> None:
+    current = current_process_rss()
+    peak = current_process_peak_rss()
+    assert peak >= current
 
 
 def test_percentile_uses_linear_interpolation() -> None:

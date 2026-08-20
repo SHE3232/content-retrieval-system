@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from collections.abc import Iterable, Sequence
 import hashlib
 import math
@@ -61,8 +62,17 @@ class LocalMobileClipBackend:
 
         model, _, preprocess = mobileclip.create_model_and_transforms(
             "mobileclip_s0",
-            pretrained=str(path),
+            pretrained=None,
+            reparameterize=False,
         )
+        state = torch.load(
+            str(path),
+            map_location="cpu",
+            mmap=True,
+            weights_only=True,
+        )
+        model.load_state_dict(state, assign=True)
+        model = mobileclip.reparameterize_model(model)
         model.eval()
         self.model_id = model_id
         self.space_id = space_id
@@ -114,6 +124,7 @@ class MobileClipEmbeddingEngine:
         backend: MobileClipEncoderBackend,
         *,
         batch_size: int = 8,
+        query_cache_size: int = 128,
     ) -> None:
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
@@ -123,8 +134,12 @@ class MobileClipEmbeddingEngine:
             raise ValueError("backend space_id must not be blank")
         if backend.dimensions <= 0:
             raise ValueError("backend dimensions must be positive")
+        if query_cache_size < 0:
+            raise ValueError("query_cache_size must be non-negative")
         self.backend = backend
         self.batch_size = batch_size
+        self.query_cache_size = query_cache_size
+        self._query_cache: OrderedDict[str, tuple[float, ...]] = OrderedDict()
 
     def embed_images(
         self,
@@ -161,6 +176,10 @@ class MobileClipEmbeddingEngine:
             query_id = hashlib.sha256(
                 f"{self.backend.model_id}\0{normalized}".encode("utf-8")
             ).hexdigest()
+            cached = self._cached_query(query_id, input_index=input_index)
+            if cached is not None:
+                result.items.append(cached)
+                continue
             valid.append((input_index, normalized, query_id))
 
         for start in range(0, len(valid), self.batch_size):
@@ -168,6 +187,7 @@ class MobileClipEmbeddingEngine:
                 valid[start : start + self.batch_size],
                 result,
             )
+        result.items.sort(key=lambda item: int(item.metadata["input_index"]))
         return result
 
     def _embed_image_batch(
@@ -274,8 +294,39 @@ class MobileClipEmbeddingEngine:
                         },
                     )
                 )
+                self._cache_query(query_id, values)
             except (TypeError, ValueError) as error:
                 result.errors.append(EmbeddingError(str(error)))
+
+    def _cached_query(
+        self,
+        query_id: str,
+        *,
+        input_index: int,
+    ) -> EmbeddingVector | None:
+        values = self._query_cache.get(query_id)
+        if values is None:
+            return None
+        self._query_cache.move_to_end(query_id)
+        return EmbeddingVector(
+            source_id=query_id,
+            file_id=query_id,
+            model_id=self.backend.model_id,
+            space_id=self.backend.space_id,
+            modality="text",
+            values=list(values),
+            dimensions=self.backend.dimensions,
+            normalized=True,
+            metadata={"input_index": input_index, "source_kind": "query"},
+        )
+
+    def _cache_query(self, query_id: str, values: Sequence[float]) -> None:
+        if self.query_cache_size == 0:
+            return
+        self._query_cache[query_id] = tuple(float(value) for value in values)
+        self._query_cache.move_to_end(query_id)
+        while len(self._query_cache) > self.query_cache_size:
+            self._query_cache.popitem(last=False)
 
     def _normalize(self, vector: Sequence[float]) -> list[float]:
         values = list(vector)

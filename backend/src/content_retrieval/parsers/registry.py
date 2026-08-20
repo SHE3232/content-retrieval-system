@@ -40,10 +40,21 @@ class ParserRegistry:
         raise UnsupportedFormatError(path, mime_type)
 
 
-def create_default_registry() -> ParserRegistry:
+def create_default_registry(
+    *,
+    tika_url: str = "http://127.0.0.1:9998",
+) -> ParserRegistry:
     from .docx import DocxParser
     from .image import ImageParser
     from .pdf import PdfParser
+    from .tika import TikaClient
     from .txt import TxtParser
 
-    return ParserRegistry([TxtParser(), PdfParser(), DocxParser(), ImageParser()])
+    return ParserRegistry(
+        [
+            TxtParser(),
+            PdfParser(),
+            DocxParser(TikaClient(tika_url)),
+            ImageParser(),
+        ]
+    )

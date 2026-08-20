@@ -7,7 +7,12 @@ import math
 import os
 import re
 
-from content_retrieval.domain.retrieval import IndexRecord, SearchFilters
+from content_retrieval.domain.retrieval import (
+    IndexRecord,
+    RetrievalRecord,
+    SearchFilters,
+    SearchRecord,
+)
 
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff]")
@@ -20,7 +25,7 @@ def tokenize(text: str) -> list[str]:
 
 @dataclass(frozen=True, slots=True)
 class KeywordCandidate:
-    record: IndexRecord
+    record: RetrievalRecord
     score: float
 
     def __post_init__(self) -> None:
@@ -30,7 +35,7 @@ class KeywordCandidate:
 
 @dataclass(frozen=True, slots=True)
 class _IndexedDocument:
-    record: IndexRecord
+    record: SearchRecord
     frequencies: Counter[str]
     length: int
 
@@ -40,7 +45,7 @@ class KeywordIndex:
 
     def __init__(
         self,
-        records: Iterable[IndexRecord] = (),
+        records: Iterable[RetrievalRecord] = (),
         *,
         k1: float = 1.5,
         b: float = 0.75,
@@ -56,13 +61,18 @@ class KeywordIndex:
         self._average_length = 0.0
         self.rebuild(records)
 
-    def rebuild(self, records: Iterable[IndexRecord]) -> None:
+    def rebuild(self, records: Iterable[RetrievalRecord]) -> None:
         documents: list[_IndexedDocument] = []
         document_frequency: Counter[str] = Counter()
         for record in records:
-            name_tokens = tokenize(record.name)
-            path_tokens = tokenize(str(record.path))
-            document_tokens = tokenize(record.document)
+            search_record = (
+                record
+                if isinstance(record, SearchRecord)
+                else SearchRecord.from_index_record(record)
+            )
+            name_tokens = tokenize(search_record.name)
+            path_tokens = tokenize(str(search_record.path))
+            document_tokens = tokenize(search_record.document)
             tokens = (
                 name_tokens * 3
                 + path_tokens * 2
@@ -71,7 +81,7 @@ class KeywordIndex:
             frequencies = Counter(tokens)
             documents.append(
                 _IndexedDocument(
-                    record=record,
+                    record=search_record,
                     frequencies=frequencies,
                     length=len(tokens),
                 )
@@ -152,7 +162,7 @@ class KeywordIndex:
 
     @staticmethod
     def _matches_filters(
-        record: IndexRecord,
+        record: RetrievalRecord,
         filters: SearchFilters,
     ) -> bool:
         if filters.mime_types and record.mime_type not in filters.mime_types:

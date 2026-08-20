@@ -13,6 +13,13 @@ from tools.week6.run_integrated_e2e import (
 )
 
 
+def test_flutter_e2e_disables_dependency_resolution_for_offline_runs() -> None:
+    source = (Path(__file__).parents[1] / "run_integrated_e2e.py").read_text(
+        encoding="utf-8"
+    )
+    assert '"--no-pub"' in source
+
+
 def test_catalog_scope_uses_normalized_parent_path(tmp_path: Path) -> None:
     target = tmp_path / "api"
     other = tmp_path / "ui"

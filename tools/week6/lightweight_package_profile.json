@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "profile": "lightweight",
+  "pruning_policy_version": "2",
+  "archive_size_limit_bytes": 1000000000,
+  "python_remove_packages": [
+    "pycocoevalcap",
+    "clip_benchmark",
+    "datasets",
+    "pandas",
+    "pyarrow",
+    "pytest",
+    "_pytest",
+    "pytest_cov",
+    "coverage",
+    "pip",
+    "setuptools",
+    "reportlab",
+    "pygments",
+    "hf_xet",
+    "onnxruntime",
+    "kubernetes",
+    "scipy",
+    "scikit-learn",
+    "joblib",
+    "threadpoolctl",
+    "lxml",
+    "python-docx",
+    "multiprocess",
+    "dill",
+    "pyreadline3"
+  ],
+  "python_remove_directory_names": [
+    "__pycache__",
+    "tests",
+    "test",
+    "testing"
+  ],
+  "python_remove_file_extensions": [
+    ".pyc",
+    ".pyo",
+    ".lib",
+    ".a",
+    ".c",
+    ".cmake",
+    ".h",
+    ".hpp",
+    ".pxd",
+    ".pxi",
+    ".pyi",
+    ".pyx"
+  ],
+  "python_remove_relative_trees": [
+    "Lib/test",
+    "Lib/ensurepip",
+    "Lib/site-packages/torch/include",
+    "Lib/site-packages/scipy.libs",
+    "Lib/site-packages/sklearn",
+    "Lib/site-packages/docx",
+    "Lib/site-packages/pyarrow.libs",
+    "Lib/site-packages/pandas.libs",
+    "Lib/idlelib",
+    "Lib/tkinter",
+    "Lib/lib2to3",
+    "tcl",
+    "include"
+  ],
+  "python_preserve_relative_trees": [
+    "Lib/site-packages/torch/testing",
+    "Lib/site-packages/torch/_numpy/testing",
+    "Lib/site-packages/numpy/testing",
+    "Lib/site-packages/numpy/_core/tests"
+  ],
+  "python_remove_relative_files": [
+    "DLLs/_tkinter.pyd",
+    "DLLs/tcl86t.dll",
+    "DLLs/tk86t.dll",
+    "Lib/site-packages/threadpoolctl.py"
+  ],
+  "python_lazy_import_patches": [
+    {
+      "relative_path": "Lib/site-packages/sentence_transformers/util/similarity.py",
+      "top_level_import": "from sklearn.metrics import pairwise_distances",
+      "call_line": "        dist = pairwise_distances(a_coo, b_coo, metric=\"manhattan\")"
+    },
+    {
+      "relative_path": "Lib/site-packages/sentence_transformers/util/tensor.py",
+      "top_level_import": "from scipy.sparse import coo_matrix",
+      "call_line": "    return coo_matrix((values, (indices[0], indices[1])), shape=x.shape)"
+    }
+  ],
+  "java_modules": [
+    "java.base",
+    "java.desktop",
+    "java.logging",
+    "java.management",
+    "java.naming",
+    "java.net.http",
+    "java.sql",
+    "java.xml",
+    "jdk.crypto.ec",
+    "jdk.unsupported"
+  ]
+}

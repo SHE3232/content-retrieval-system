@@ -2,7 +2,7 @@
 param(
     [string]$PackageRoot = $PSScriptRoot,
     [int]$Port = 8000,
-    [int]$ReadyTimeoutSeconds = 180,
+    [int]$ReadyTimeoutSeconds = 600,
     [switch]$CheckOnly
 )
 
@@ -30,6 +30,63 @@ function Get-JavaProcessIds {
         Get-Process -Name java -ErrorAction SilentlyContinue |
             ForEach-Object { $_.Id }
     )
+}
+
+function Stop-OwnedProcessTree {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$RootProcess
+    )
+
+    $rootProcessId = $RootProcess.Id
+    $processTable = @(Get-CimInstance Win32_Process -ErrorAction Stop)
+    $depthByProcessId = @{$rootProcessId = 0}
+    $changed = $true
+    while ($changed) {
+        $changed = $false
+        foreach ($processEntry in $processTable) {
+            $processId = [int]$processEntry.ProcessId
+            $parentProcessId = [int]$processEntry.ParentProcessId
+            if (
+                -not $depthByProcessId.ContainsKey($processId) -and
+                $depthByProcessId.ContainsKey($parentProcessId)
+            ) {
+                $depthByProcessId[$processId] = [int]$depthByProcessId[$parentProcessId] + 1
+                $changed = $true
+            }
+        }
+    }
+
+    $ownedProcesses = @(
+        $processTable |
+            Where-Object { $depthByProcessId.ContainsKey([int]$_.ProcessId) } |
+            Sort-Object -Property @{
+                Expression = { [int]$depthByProcessId[[int]$_.ProcessId] }
+                Descending = $true
+            }
+    )
+    try {
+        foreach ($ownedProcess in $ownedProcesses) {
+            try {
+                Invoke-CimMethod `
+                    -InputObject $ownedProcess `
+                    -MethodName Terminate `
+                    -ErrorAction Stop | Out-Null
+            }
+            catch [Microsoft.Management.Infrastructure.CimException] {
+                # An owned process may exit between the snapshot and termination.
+            }
+        }
+        try {
+            $RootProcess.WaitForExit(5000) | Out-Null
+        }
+        catch [System.InvalidOperationException] {
+            # The root wrapper already exited.
+        }
+    }
+    finally {
+        $RootProcess.Dispose()
+    }
 }
 
 function Test-BackendReady {
@@ -76,6 +133,7 @@ $pythonExecutable = $pythonCandidates | Where-Object {
     Test-Path -LiteralPath $_ -PathType Leaf
 } | Select-Object -First 1
 $pythonExecutable = Resolve-RequiredFile -Path $pythonExecutable -Label 'Packaged Python executable'
+$javaExecutable = Resolve-RequiredFile -Path (Join-Path $root 'runtime/java/bin/java.exe') -Label 'Packaged Java executable'
 $mvpLauncher = Resolve-RequiredFile -Path (Join-Path $root 'tools/start-mvp.ps1') -Label 'MVP launcher'
 $modelRoot = Resolve-RequiredDirectory -Path (Join-Path $root 'models') -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path (Join-Path $modelRoot 'model-manifest.json') -Label 'Model manifest'
@@ -88,6 +146,7 @@ if ($CheckOnly) {
     Write-Output 'Integrated package preflight passed'
     Write-Output "Frontend: $frontendExecutable"
     Write-Output "Python: $pythonExecutable"
+    Write-Output "Java: $javaExecutable"
     Write-Output "Models: $modelRoot"
     exit 0
 }
@@ -101,6 +160,7 @@ try {
         '-ExecutionPolicy', 'Bypass',
         '-File', ('"' + $mvpLauncher + '"'),
         '-PythonExecutable', ('"' + $pythonExecutable + '"'),
+        '-JavaExecutable', ('"' + $javaExecutable + '"'),
         '-ModelRoot', ('"' + $modelRoot + '"'),
         '-ManifestPath', ('"' + $modelManifest + '"'),
         '-DataDir', ('"' + $dataDir + '"'),
@@ -140,11 +200,7 @@ try {
         $frontendProcess.Dispose()
     }
     if ($null -ne $backendProcess) {
-        if (-not $backendProcess.HasExited) {
-            Stop-Process -Id $backendProcess.Id -Force -ErrorAction SilentlyContinue
-            $backendProcess.WaitForExit(5000) | Out-Null
-        }
-        $backendProcess.Dispose()
+        Stop-OwnedProcessTree -RootProcess $backendProcess
     }
     $afterJava = Get-JavaProcessIds
     $ownedJava = @($afterJava | Where-Object { $_ -notin $beforeJava })

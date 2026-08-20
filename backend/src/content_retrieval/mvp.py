@@ -97,6 +97,7 @@ class RuntimeBuilder(Protocol):
         model_root: Path,
         manifest_path: Path,
         data_dir: Path,
+        tika_url: str,
     ) -> LocalRuntime: ...
 
 
@@ -161,6 +162,7 @@ def create_mvp_app(
             model_root=settings.model_root,
             manifest_path=settings.manifest_path,
             data_dir=settings.data_dir,
+            tika_url=settings.tika_url,
         )
         primary_error: BaseException | None = None
         try:

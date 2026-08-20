@@ -13,11 +13,20 @@ def _result(multiplier: float = 1.0) -> dict:
         "hardware": {"fingerprint": "same-machine", "power_mode": "balanced"},
         "dataset_sha256": "b" * 64,
         "models_sha256": "c" * 64,
+        "configuration": {
+            "workload_sha256": "d" * 64,
+            "workload_mode": "mixed-cold-and-cache-hit",
+            "unique_queries": 20,
+            "target_cache_hit_ratio": 0.8,
+            "warmup_inputs_disjoint": True,
+        },
         "rounds": [
             {
                 "metrics": {
                     "embedding_combined_p95_ms": 100 * multiplier,
                     "vector_query_p95_ms": 100 * multiplier,
+                    "embedding_hot_p95_ms": 100 * multiplier,
+                    "vector_query_hot_p95_ms": 100 * multiplier,
                     "peak_rss_bytes": 1000 * multiplier,
                     "full_search_p95_ms": 200 * multiplier,
                 }
@@ -39,6 +48,23 @@ def test_three_round_medians_pass_at_five_percent_improvement() -> None:
     result = compare_performance(_result(), _result(0.95))
     assert result["status"] == "PASS"
     assert result["improvements_percent"]["peak_rss_bytes"] == pytest.approx(5.0)
+    assert result["improvements_percent"]["embedding_hot_p95_ms"] == pytest.approx(5.0)
+    assert result["improvements_percent"]["vector_query_hot_p95_ms"] == pytest.approx(5.0)
+
+
+def test_hot_cache_improvement_does_not_replace_mixed_workload_gate() -> None:
+    baseline = _result()
+    candidate = _result()
+    for item in candidate["rounds"]:
+        item["metrics"]["embedding_hot_p95_ms"] = 90.0
+        item["metrics"]["vector_query_hot_p95_ms"] = 90.0
+        item["metrics"]["peak_rss_bytes"] = 900.0
+
+    result = compare_performance(baseline, candidate)
+
+    assert result["status"] == "FAIL"
+    assert result["improvements_percent"]["embedding_combined_p95_ms"] == 0.0
+    assert result["improvements_percent"]["vector_query_p95_ms"] == 0.0
 
 
 @pytest.mark.parametrize("field", ["hardware", "dataset_sha256", "models_sha256"])
@@ -50,6 +76,21 @@ def test_comparison_rejects_incomparable_inputs(field: str) -> None:
         candidate[field] = "d" * 64
     with pytest.raises(ValueError, match="comparable"):
         compare_performance(_result(), candidate)
+
+
+def test_comparison_rejects_unknown_power_mode_or_different_workload() -> None:
+    baseline = _result()
+    candidate = _result(0.9)
+    baseline["hardware"]["power_mode"] = "recorded-by-operator:unknown"
+    candidate["hardware"]["power_mode"] = "recorded-by-operator:unknown"
+    with pytest.raises(ValueError, match="power mode"):
+        compare_performance(baseline, candidate)
+
+    baseline = _result()
+    candidate = _result(0.9)
+    candidate["configuration"]["workload_sha256"] = "e" * 64
+    with pytest.raises(ValueError, match="workload"):
+        compare_performance(baseline, candidate)
 
 
 def test_comparison_requires_three_rounds_and_rss() -> None:

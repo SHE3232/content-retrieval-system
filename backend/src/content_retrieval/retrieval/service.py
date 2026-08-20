@@ -47,7 +47,7 @@ class RetrievalService:
     def refresh(self) -> None:
         """Rebuild the volatile keyword catalog from persistent records."""
         try:
-            records = self.repository.list_records()
+            records = self.repository.list_search_records()
         except StorageError as error:
             raise RetrievalError(
                 "keyword catalog refresh failed"

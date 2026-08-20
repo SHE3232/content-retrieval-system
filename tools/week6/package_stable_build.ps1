@@ -4,6 +4,7 @@ param(
     [string]$SourceCommit,
     [string]$FrontendReleaseDir,
     [string]$PythonRuntimeDir,
+    [string]$JavaRuntimeDir,
     [string]$ModelRoot,
     [string]$ModelManifestPath,
     [string]$TikaJar,
@@ -13,11 +14,22 @@ param(
     [string]$OutputZip,
     [string]$ThirdPartySourceDir,
     [string]$StagingRoot,
+    [ValidateSet('complete', 'lightweight')]
+    [string]$PackageProfile = 'complete',
+    [long]$ArchiveSizeLimitBytes = 0,
+    [string]$LightweightProfilePath,
+    [string]$JlinkExecutable,
     [switch]$ReplaceExactTarget
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$oneClickLauncherName = [Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String('5YaF5a655qOA57Si57O757ufLmV4ZQ==')
+)
+$integratedLauncherName = [Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String('5ZCv5Yqo5bqU55SoLnBzMQ==')
+)
 
 function Resolve-RequiredFile {
     param([string]$Path, [string]$Label)
@@ -38,8 +50,22 @@ function Resolve-RequiredDirectory {
 function Copy-DirectoryContents {
     param([string]$Source, [string]$Destination)
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
-    Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+    & robocopy.exe $Source $Destination /E /COPY:DAT /DCOPY:DAT /R:2 /W:1 /XJ /NFL /NDL /NJH /NJS /NP | Out-Null
+    $robocopyExitCode = $LASTEXITCODE
+    if ($robocopyExitCode -gt 7) {
+        throw "Robocopy failed with exit code $robocopyExitCode while copying $Source"
+    }
+}
+
+function Copy-ThirdPartySource {
+    param([string]$Source, [string]$Destination)
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    & robocopy.exe $Source $Destination /E /COPY:DAT /DCOPY:DAT /R:2 /W:1 /XJ `
+        /XD .git .venv __pycache__ xcuserdata *.xcuserdatad .idea .vscode `
+        /XF *.xcuserstate .DS_Store /NFL /NDL /NJH /NJS /NP | Out-Null
+    $robocopyExitCode = $LASTEXITCODE
+    if ($robocopyExitCode -gt 7) {
+        throw "Robocopy failed with exit code $robocopyExitCode while copying curated third-party source $Source"
     }
 }
 
@@ -89,20 +115,54 @@ function Get-Sha256 {
 function Get-RelativeFileManifest {
     param([string]$Root)
     $rootPath = [System.IO.Path]::GetFullPath($Root)
+    $extendedRoot = if ($rootPath.StartsWith('\\')) {
+        '\\?\UNC\' + $rootPath.Substring(2)
+    } else {
+        '\\?\' + $rootPath
+    }
     return @(
-        Get-ChildItem -LiteralPath $rootPath -Recurse -File | Sort-Object FullName | ForEach-Object {
+        [System.IO.Directory]::EnumerateFiles(
+            $extendedRoot,
+            '*',
+            [System.IO.SearchOption]::AllDirectories
+        ) | Sort-Object | ForEach-Object {
+            $fileInfo = [System.IO.FileInfo]::new($_)
             [ordered]@{
-                path = $_.FullName.Substring($rootPath.Length + 1).Replace('\', '/')
-                bytes = $_.Length
-                sha256 = Get-Sha256 -Path $_.FullName
+                path = $_.Substring($extendedRoot.Length + 1).Replace('\', '/')
+                bytes = $fileInfo.Length
+                sha256 = Get-Sha256 -Path $_
             }
         }
     )
 }
 
 $repository = Resolve-RequiredDirectory -Path $RepositoryRoot -Label 'Repository root'
+$lightweightPolicy = $null
+if ($PackageProfile -eq 'lightweight') {
+    if ([string]::IsNullOrWhiteSpace($LightweightProfilePath)) {
+        $LightweightProfilePath = Join-Path $PSScriptRoot 'lightweight_package_profile.json'
+    }
+    $resolvedLightweightProfile = Resolve-RequiredFile -Path $LightweightProfilePath -Label 'Lightweight package profile'
+    $lightweightPolicy = Get-Content -LiteralPath $resolvedLightweightProfile -Raw | ConvertFrom-Json
+    if ($ArchiveSizeLimitBytes -eq 0) {
+        $ArchiveSizeLimitBytes = [long]$lightweightPolicy.archive_size_limit_bytes
+    }
+    if ($ArchiveSizeLimitBytes -le 0) {
+        throw 'ArchiveSizeLimitBytes must be positive for the lightweight package profile'
+    }
+    . (Join-Path $PSScriptRoot 'lightweight_package.ps1')
+}
 if ([string]::IsNullOrWhiteSpace($OutputZip)) {
-    $OutputZip = Join-Path $repository 'output/week6/第六周最终提交_请上传这4项/01_Windows完整集成稳定版.zip'
+    $defaultZipNameBase64 = if ($PackageProfile -eq 'lightweight') {
+        'MDFfV2luZG93c+i9u+mHj+mbhuaIkOeos+WumueJiC56aXA='
+    } else {
+        'MDFfV2luZG93c+WujOaVtOmbhuaIkOeos+WumueJiC56aXA='
+    }
+    $defaultZipName = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($defaultZipNameBase64))
+    $defaultOutputDirectory = [Text.Encoding]::UTF8.GetString(
+        [Convert]::FromBase64String('b3V0cHV0L3dlZWs2L+esrOWFreWRqOacgOe7iOaPkOS6pF/or7fkuIrkvKDov5k06aG5')
+    )
+    $OutputZip = Join-Path $repository (Join-Path $defaultOutputDirectory $defaultZipName)
 }
 $absoluteOutput = [System.IO.Path]::GetFullPath($OutputZip)
 $allowedRoot = [System.IO.Path]::GetFullPath((Join-Path $repository 'output/week6'))
@@ -131,6 +191,88 @@ if ([string]::IsNullOrWhiteSpace($FrontendReleaseDir)) {
 if ([string]::IsNullOrWhiteSpace($PythonRuntimeDir)) {
     $PythonRuntimeDir = Join-Path $repository 'backend/.venv'
 }
+
+function Remove-DirectoryTree {
+    param([string]$Path)
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $extendedPath = if ($fullPath.StartsWith('\\')) {
+        '\\?\UNC\' + $fullPath.Substring(2)
+    } else {
+        '\\?\' + $fullPath
+    }
+    if ([System.IO.Directory]::Exists($extendedPath)) {
+        [System.IO.Directory]::Delete($extendedPath, $true)
+    }
+}
+
+function New-ZipFromDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceDirectory,
+        [Parameter(Mandatory = $true)][string]$DestinationArchive
+    )
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+    $sourcePath = [System.IO.Path]::GetFullPath($SourceDirectory).TrimEnd('\')
+    $extendedSource = if ($sourcePath.StartsWith('\\')) {
+        '\\?\UNC\' + $sourcePath.Substring(2)
+    } else {
+        '\\?\' + $sourcePath
+    }
+    $archiveStream = [System.IO.File]::Open(
+        $DestinationArchive,
+        [System.IO.FileMode]::CreateNew,
+        [System.IO.FileAccess]::Write,
+        [System.IO.FileShare]::None
+    )
+    $archive = $null
+    try {
+        $archive = [System.IO.Compression.ZipArchive]::new(
+            $archiveStream,
+            [System.IO.Compression.ZipArchiveMode]::Create,
+            $false,
+            [System.Text.Encoding]::UTF8
+        )
+        foreach ($file in [System.IO.Directory]::EnumerateFiles(
+            $extendedSource,
+            '*',
+            [System.IO.SearchOption]::AllDirectories
+        )) {
+            $relativePath = $file.Substring($extendedSource.Length + 1).Replace('\', '/')
+            $entry = $archive.CreateEntry(
+                $relativePath,
+                [System.IO.Compression.CompressionLevel]::Optimal
+            )
+            $inputStream = [System.IO.File]::Open(
+                $file,
+                [System.IO.FileMode]::Open,
+                [System.IO.FileAccess]::Read,
+                [System.IO.FileShare]::ReadWrite
+            )
+            try {
+                $entryStream = $entry.Open()
+                try {
+                    $inputStream.CopyTo($entryStream)
+                } finally {
+                    $entryStream.Dispose()
+                }
+            } finally {
+                $inputStream.Dispose()
+            }
+        }
+    } finally {
+        if ($null -ne $archive) {
+            $archive.Dispose()
+        } else {
+            $archiveStream.Dispose()
+        }
+    }
+}
+if ([string]::IsNullOrWhiteSpace($JavaRuntimeDir)) {
+    $javaCommand = Get-Command java -CommandType Application -ErrorAction Stop | Select-Object -First 1
+    $JavaRuntimeDir = Split-Path -Parent (Split-Path -Parent $javaCommand.Source)
+}
 if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
     $ModelRoot = Join-Path $repository 'models'
 }
@@ -155,6 +297,16 @@ if ([string]::IsNullOrWhiteSpace($ThirdPartySourceDir)) {
 
 $frontend = Resolve-RequiredDirectory -Path $FrontendReleaseDir -Label 'Flutter release directory'
 $pythonRuntime = Resolve-RequiredDirectory -Path $PythonRuntimeDir -Label 'Python runtime directory'
+$javaRuntime = Resolve-RequiredDirectory -Path $JavaRuntimeDir -Label 'Java runtime directory'
+$resolvedJlink = $null
+if ($PackageProfile -eq 'lightweight') {
+    if ([string]::IsNullOrWhiteSpace($JlinkExecutable)) {
+        $JlinkExecutable = Join-Path $javaRuntime 'bin/jlink.exe'
+    }
+    $resolvedJlink = Resolve-RequiredFile -Path $JlinkExecutable -Label 'jlink executable'
+} else {
+    $javaExecutable = Resolve-RequiredFile -Path (Join-Path $javaRuntime 'bin/java.exe') -Label 'Java runtime executable'
+}
 $models = Resolve-RequiredDirectory -Path $ModelRoot -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path $ModelManifestPath -Label 'Model manifest'
 $tikaPath = Resolve-RequiredFile -Path $TikaJar -Label 'Tika JAR'
@@ -162,12 +314,15 @@ $tikaChecksum = Resolve-RequiredFile -Path $TikaChecksumFile -Label 'Tika checks
 $mvpScript = Resolve-RequiredFile -Path $MvpLauncher -Label 'MVP launcher'
 $integratedScript = Resolve-RequiredFile -Path $IntegratedLauncher -Label 'Integrated launcher'
 
-if (Test-Path -LiteralPath $absoluteOutput) {
-    if (-not $ReplaceExactTarget) {
-        throw "Output ZIP already exists; pass -ReplaceExactTarget to replace this exact file: $absoluteOutput"
-    }
-    Remove-Item -LiteralPath $absoluteOutput -Force
+$targetIsDirectory = [System.IO.Directory]::Exists($absoluteOutput)
+if ($targetIsDirectory) {
+    throw "Output ZIP path is a directory: $absoluteOutput"
 }
+$targetExists = [System.IO.File]::Exists($absoluteOutput)
+if ($targetExists -and -not $ReplaceExactTarget) {
+    throw "Output ZIP already exists; pass -ReplaceExactTarget to replace this exact file: $absoluteOutput"
+}
+$replaceExistingTarget = $targetExists -and $ReplaceExactTarget.IsPresent
 $outputDirectory = Split-Path -Parent $absoluteOutput
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 
@@ -202,26 +357,55 @@ try {
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/pyproject.toml') 'Backend pyproject') -Destination (Join-Path $appRoot 'backend/pyproject.toml')
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/uv.lock') 'Backend lockfile') -Destination (Join-Path $appRoot 'backend/uv.lock')
     $pythonRuntimeMode = Copy-PythonRuntime -Source $pythonRuntime -Destination (Join-Path $appRoot 'runtime/python')
+    if ($PackageProfile -eq 'lightweight') {
+        & (Join-Path $PSScriptRoot 'build_portable_java.ps1') `
+            -OutputDirectory (Join-Path $appRoot 'runtime/java') `
+            -JavaHome $javaRuntime `
+            -JlinkExecutable $resolvedJlink `
+            -Modules @($lightweightPolicy.java_modules)
+        if (-not (Test-Path -LiteralPath (Join-Path $appRoot 'runtime/java/bin/java.exe') -PathType Leaf)) {
+            throw 'Portable Java runtime build did not create bin/java.exe'
+        }
+    } else {
+        Copy-DirectoryContents -Source $javaRuntime -Destination (Join-Path $appRoot 'runtime/java')
+    }
     Copy-DirectoryContents -Source $models -Destination (Join-Path $appRoot 'models')
     Copy-Item -LiteralPath $modelManifest -Destination (Join-Path $appRoot 'models/model-manifest.json') -Force
     New-Item -ItemType Directory -Force -Path (Join-Path $appRoot 'tools/tika') | Out-Null
     Copy-Item -LiteralPath $tikaPath -Destination (Join-Path $appRoot 'tools/tika/tika-server-standard-3.3.1.jar')
     Copy-Item -LiteralPath $tikaChecksum -Destination (Join-Path $appRoot 'tools/tika/tika-server-standard-3.3.1.jar.sha512')
     Copy-Item -LiteralPath $mvpScript -Destination (Join-Path $appRoot 'tools/start-mvp.ps1')
-    Copy-Item -LiteralPath $integratedScript -Destination (Join-Path $appRoot '启动应用.ps1')
+    Copy-Item -LiteralPath $integratedScript -Destination (Join-Path $appRoot $integratedLauncherName)
+    $oneClickLauncherPath = Join-Path $appRoot $oneClickLauncherName
+    & (Join-Path $PSScriptRoot 'build_one_click_launcher.ps1') -OutputPath $oneClickLauncherPath
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $oneClickLauncherPath -PathType Leaf)) {
+        throw 'One-click launcher build failed during stable package creation'
+    }
     if (Test-Path -LiteralPath $ThirdPartySourceDir -PathType Container) {
-        Copy-DirectoryContents -Source $ThirdPartySourceDir -Destination (Join-Path $appRoot 'third_party/mobileclip-src')
+        Copy-ThirdPartySource -Source $ThirdPartySourceDir -Destination (Join-Path $appRoot 'third_party/mobileclip-src')
+    }
+
+    if ($PackageProfile -eq 'lightweight') {
+        Invoke-LightweightPythonPruning -AppRoot $appRoot -Policy $lightweightPolicy
     }
 
     $manifest = [ordered]@{
         schema_version = 1
         source_commit = $SourceCommit
         generated_at = [DateTimeOffset]::Now.ToString('o')
-        platform_claim = 'Windows complete integrated stable build'
+        platform_claim = if ($PackageProfile -eq 'lightweight') { 'Windows lightweight integrated stable build' } else { 'Windows complete integrated stable build' }
         first_run_downloads = $false
+        package_profile = $PackageProfile
         python_runtime_mode = $pythonRuntimeMode
-        excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings', 'logs', 'credentials')
+        java_runtime_mode = if ($PackageProfile -eq 'lightweight') { 'jlink' } else { 'bundled' }
+        one_click_launcher = $oneClickLauncherName
+        excluded = @('.git', '.venv development cache', 'data', 'mvp-input', 'user settings including Xcode xcuserdata', 'logs', 'credentials')
         files = Get-RelativeFileManifest -Root $appRoot
+    }
+    if ($PackageProfile -eq 'lightweight') {
+        $manifest.archive_size_limit_bytes = $ArchiveSizeLimitBytes
+        $manifest.pruning_policy_version = [string]$lightweightPolicy.pruning_policy_version
+        $manifest.excluded_runtime_components = @($lightweightPolicy.python_remove_packages)
     }
     [System.IO.File]::WriteAllText(
         (Join-Path $appRoot 'PACKAGE_MANIFEST.json'),
@@ -229,20 +413,27 @@ try {
         [System.Text.UTF8Encoding]::new($false)
     )
 
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::CreateFromDirectory(
-        $stageRoot,
-        $temporaryZip,
-        [System.IO.Compression.CompressionLevel]::Optimal,
-        $false
-    )
-    Move-Item -LiteralPath $temporaryZip -Destination $absoluteOutput
+    New-ZipFromDirectory -SourceDirectory $stageRoot -DestinationArchive $temporaryZip
+    if ($PackageProfile -eq 'lightweight') {
+        $temporaryArchive = Get-Item -LiteralPath $temporaryZip -Force
+        Assert-LightweightArchiveSize -ArchiveBytes $temporaryArchive.Length -LimitBytes $ArchiveSizeLimitBytes
+    }
+    if ($replaceExistingTarget) {
+        [System.IO.File]::Replace(
+            $temporaryZip,
+            $absoluteOutput,
+            [System.Management.Automation.Language.NullString]::Value,
+            $true
+        )
+    } else {
+        [System.IO.File]::Move($temporaryZip, $absoluteOutput)
+    }
 } finally {
     if (Test-Path -LiteralPath $temporaryZip -PathType Leaf) {
         Remove-Item -LiteralPath $temporaryZip -Force
     }
     if (Test-Path -LiteralPath $stageRoot -PathType Container) {
-        Remove-Item -LiteralPath $stageRoot -Recurse -Force
+        Remove-DirectoryTree -Path $stageRoot
     }
     if ((Test-Path -LiteralPath $stagingBase -PathType Container) -and -not (Get-ChildItem -LiteralPath $stagingBase -Force | Select-Object -First 1)) {
         Remove-Item -LiteralPath $stagingBase -Force
@@ -250,5 +441,7 @@ try {
 }
 
 $hash = Get-Sha256 -Path $absoluteOutput
+$archiveBytes = (Get-Item -LiteralPath $absoluteOutput -Force).Length
 Write-Output "Stable package created: $absoluteOutput"
 Write-Output "SHA256: $hash"
+Write-Output "Archive bytes: $archiveBytes"

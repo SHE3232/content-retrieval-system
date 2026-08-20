@@ -109,6 +109,9 @@ def test_upsert_survives_restart_and_roundtrips_record(tmp_path: Path) -> None:
     second = ChromaVectorRepository(database_path)
     assert second.get(record.record_id) == record
     assert second.list_records() == [record]
+    search_records = second.list_search_records()
+    assert search_records == [record]
+    assert not hasattr(search_records[0], "vector")
 
 
 def test_close_releases_persistent_chroma_system(tmp_path: Path) -> None:
@@ -205,6 +208,42 @@ def test_repository_keeps_embedding_spaces_isolated(tmp_path: Path) -> None:
     assert [candidate.record for candidate in image_candidates] == [image_record]
     assert text_candidates[0].score == pytest.approx(1.0)
     assert image_candidates[0].score == pytest.approx(1.0)
+
+
+def test_query_cache_reuses_results_and_invalidates_after_upsert(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = ChromaVectorRepository(tmp_path / "index", query_cache_size=2)
+    first = make_record(tmp_path, key="a", vector_values=[1.0, 0.0])
+    repository.upsert([first])
+    collection = repository._collection_for_vector(first.vector, create=False)
+    assert collection is not None
+    original_query = collection.query
+    calls = 0
+
+    def recording_query(*args: object, **kwargs: object):
+        nonlocal calls
+        calls += 1
+        return original_query(*args, **kwargs)
+
+    monkeypatch.setattr(collection, "query", recording_query)
+    monkeypatch.setattr(
+        repository,
+        "_collection_for_vector",
+        lambda vector, *, create: collection,
+    )
+    query = make_query(values=[1.0, 0.0])
+
+    assert repository.query(query, limit=10)[0].record == first
+    assert repository.query(query, limit=10)[0].record == first
+    assert calls == 1
+
+    second = make_record(tmp_path, key="b", vector_values=[0.9, 0.1])
+    repository.upsert([second])
+    repository.query(query, limit=10)
+
+    assert calls == 2
 
 
 def test_query_applies_metadata_and_path_filters(tmp_path: Path) -> None:

@@ -99,6 +99,76 @@ class IndexRecord:
         return self.vector.dimensions
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class SearchRecord:
+    """Retrieval-only record that does not retain a stored embedding vector."""
+
+    record_id: str
+    source_id: str
+    file_id: str
+    source_key: str
+    path: Path
+    name: str
+    mime_type: str
+    modality: SearchModality
+    document: str
+    modified_at: datetime
+    size_bytes: int
+    page_number: int | None = None
+    paragraph_number: int | None = None
+    sequence_number: int = 0
+
+    @classmethod
+    def from_index_record(cls, record: IndexRecord) -> SearchRecord:
+        return cls(
+            record_id=record.record_id,
+            source_id=record.source_id,
+            file_id=record.file_id,
+            source_key=record.source_key,
+            path=record.path,
+            name=record.name,
+            mime_type=record.mime_type,
+            modality=record.modality,
+            document=record.document,
+            modified_at=record.modified_at,
+            size_bytes=record.size_bytes,
+            page_number=record.page_number,
+            paragraph_number=record.paragraph_number,
+            sequence_number=record.sequence_number,
+        )
+
+    def _identity(self) -> tuple[object, ...]:
+        return (
+            self.record_id,
+            self.source_id,
+            self.file_id,
+            self.source_key,
+            self.path,
+            self.name,
+            self.mime_type,
+            self.modality,
+            self.document,
+            self.modified_at,
+            self.size_bytes,
+            self.page_number,
+            self.paragraph_number,
+            self.sequence_number,
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, SearchRecord):
+            return self._identity() == other._identity()
+        if isinstance(other, IndexRecord):
+            return self == SearchRecord.from_index_record(other)
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(self._identity())
+
+
+RetrievalRecord = IndexRecord | SearchRecord
+
+
 @dataclass(frozen=True, slots=True)
 class SearchFilters:
     """Optional local metadata filters applied before ranking."""
@@ -130,7 +200,7 @@ class SearchFilters:
 
 @dataclass(frozen=True, slots=True)
 class VectorCandidate:
-    record: IndexRecord
+    record: RetrievalRecord
     score: float
 
     def __post_init__(self) -> None:

@@ -189,6 +189,7 @@ def test_runtime_factory_builds_persistent_local_services(
         model_root=model_root,
         manifest_path=manifest,
         data_dir=data_dir,
+        tika_url="http://127.0.0.1:10098",
         text_batch_size=4,
         image_batch_size=3,
     )
@@ -223,6 +224,8 @@ def test_runtime_factory_builds_persistent_local_services(
     ]
     assert bundle.text_engine.batch_size == 4
     assert bundle.image_engine.batch_size == 3
+    docx_parser = bundle.ingestion_service._registry.resolve(Path("sample.docx"))
+    assert docx_parser.tika_client.base_url == "http://127.0.0.1:10098"
     assert bundle.repository.count() == 0
 
     from chromadb.api.shared_system_client import SharedSystemClient
