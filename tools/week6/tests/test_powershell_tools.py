@@ -189,6 +189,20 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
             duplicate_license.parent.mkdir(parents=True)
             duplicate_license.write_bytes(b"pyarrow nested license\n")
 
+    torchgen = site_packages / "torchgen"
+    torchgen.mkdir(exist_ok=True)
+    (torchgen / "__init__.py").write_text("RUNTIME = True\n", encoding="utf-8")
+    (torchgen / "schemas.yaml").write_text("runtime: required\n", encoding="utf-8")
+    (torchgen / "developer-header.h").write_text(
+        "// development only\n", encoding="utf-8"
+    )
+    torchgen_metadata = site_packages / "torchgen-1.0.dist-info"
+    torchgen_metadata.mkdir(exist_ok=True)
+    (torchgen_metadata / "METADATA").write_text(
+        "Metadata-Version: 2.1\nName: torchgen\nVersion: 1.0\n",
+        encoding="utf-8",
+    )
+
     collision_metadata = site_packages / "pandas_2fa-1.0.dist-info"
     collision_metadata.mkdir()
     (collision_metadata / "METADATA").write_text(
@@ -394,6 +408,16 @@ def test_lightweight_profile_v2_declares_exact_inference_pruning() -> None:
         }
     ).lower()
     assert "scipy" not in serialized_removals
+
+
+def test_lightweight_profile_preserves_torchgen_runtime_dependency() -> None:
+    profile = LIGHTWEIGHT_PROFILE
+
+    assert "torchgen" not in profile["python_remove_packages"]
+    assert all(
+        "torchgen" not in relative_tree.lower()
+        for relative_tree in profile["python_remove_relative_trees"]
+    )
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
@@ -1121,6 +1145,19 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                 in names
             )
             assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.dll" in names
+            assert "app/runtime/python/Lib/site-packages/torchgen/__init__.py" in names
+            assert "app/runtime/python/Lib/site-packages/torchgen/schemas.yaml" in names
+            assert (
+                "app/runtime/python/Lib/site-packages/torchgen/developer-header.h"
+                not in names
+            )
+            torchgen_metadata = (
+                "app/runtime/python/Lib/site-packages/torchgen-1.0.dist-info/METADATA"
+            )
+            assert torchgen_metadata in names
+            assert "Name: torchgen" in archive.read(torchgen_metadata).decode(
+                "utf-8"
+            ).splitlines()
             assert "app/runtime/java/bin/java.exe" in names
             for package in profile["python_remove_packages"]:
                 license_filename = LIGHTWEIGHT_LICENSE_FILENAMES.get(package, "LICENSE")
@@ -1181,6 +1218,7 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
             assert package_manifest["excluded_runtime_components"] == profile[
                 "python_remove_packages"
             ]
+            assert "torchgen" not in package_manifest["excluded_runtime_components"]
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

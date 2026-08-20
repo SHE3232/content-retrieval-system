@@ -21,7 +21,6 @@
     "onnxruntime",
     "kubernetes",
     "sympy",
-    "torchgen",
     "scikit-learn",
     "joblib",
     "threadpoolctl",
