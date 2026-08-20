@@ -280,6 +280,77 @@ function Copy-ExcludedPackageLicenses {
     }
 }
 
+function Test-PathIsSameOrDescendant {
+    param(
+        [Parameter(Mandatory = $true)][string]$Candidate,
+        [Parameter(Mandatory = $true)][string]$Root
+    )
+
+    $candidatePath = [System.IO.Path]::GetFullPath(
+        (ConvertFrom-ExtendedPath -Path $Candidate)
+    ).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    )
+    $rootPath = [System.IO.Path]::GetFullPath(
+        (ConvertFrom-ExtendedPath -Path $Root)
+    ).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    )
+    if ($candidatePath.Equals($rootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+    return $candidatePath.StartsWith(
+        $rootPath + [System.IO.Path]::DirectorySeparatorChar,
+        [System.StringComparison]::OrdinalIgnoreCase
+    )
+}
+
+function Get-LightweightPrunableDirectories {
+    param(
+        [Parameter(Mandatory = $true)][string]$PythonRoot,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$DirectoryNames,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$PreservedRoots
+    )
+
+    $pending = [System.Collections.Generic.Stack[string]]::new()
+    $pending.Push($PythonRoot)
+    while ($pending.Count -gt 0) {
+        $current = $pending.Pop()
+        foreach ($directory in [System.IO.Directory]::EnumerateDirectories(
+            (ConvertTo-ExtendedPath -Path $current),
+            '*',
+            [System.IO.SearchOption]::TopDirectoryOnly
+        )) {
+            $safeDirectory = Resolve-StagingChildPath -Root $PythonRoot -Candidate $directory
+            $directoryName = [System.IO.Path]::GetFileName($safeDirectory)
+            if (
+                $directoryName.EndsWith('.dist-info', [System.StringComparison]::OrdinalIgnoreCase) -or
+                $directoryName.EndsWith('.egg-info', [System.StringComparison]::OrdinalIgnoreCase)
+            ) {
+                continue
+            }
+
+            $isPreserved = $false
+            foreach ($preservedRoot in $PreservedRoots) {
+                if (Test-PathIsSameOrDescendant -Candidate $safeDirectory -Root $preservedRoot) {
+                    $isPreserved = $true
+                    break
+                }
+            }
+            if ($isPreserved) {
+                continue
+            }
+            if ($DirectoryNames -contains $directoryName.ToLowerInvariant()) {
+                Write-Output $safeDirectory
+                continue
+            }
+            $pending.Push($safeDirectory)
+        }
+    }
+}
+
 function Invoke-LightweightPythonPruning {
     param(
         [Parameter(Mandatory = $true)][string]$AppRoot,
@@ -292,6 +363,12 @@ function Invoke-LightweightPythonPruning {
     )
     $pythonRoot = Resolve-StagingChildPath -Root $canonicalAppRoot -Candidate (Join-Path $canonicalAppRoot 'runtime/python')
     $sitePackages = Resolve-StagingChildPath -Root $canonicalAppRoot -Candidate (Join-Path $pythonRoot 'Lib/site-packages')
+    $preservedRoots = @(
+        foreach ($preserveTreeValue in @($Policy.python_preserve_relative_trees)) {
+            $preserveTree = [string]$preserveTreeValue
+            Resolve-StagingChildPath -Root $pythonRoot -Candidate (Join-Path $pythonRoot $preserveTree)
+        }
+    )
 
     Invoke-LightweightLazyImportPatches `
         -PythonRoot $pythonRoot `
@@ -321,13 +398,10 @@ function Invoke-LightweightPythonPruning {
 
     $directoryNames = @($Policy.python_remove_directory_names | ForEach-Object { ([string]$_).ToLowerInvariant() })
     $directoriesToRemove = @(
-        [System.IO.Directory]::EnumerateDirectories(
-            (ConvertTo-ExtendedPath -Path $pythonRoot),
-            '*',
-            [System.IO.SearchOption]::AllDirectories
-        ) | Where-Object {
-            $directoryNames -contains ([System.IO.Path]::GetFileName($_)).ToLowerInvariant()
-        } | Sort-Object Length -Descending
+        Get-LightweightPrunableDirectories `
+            -PythonRoot $pythonRoot `
+            -DirectoryNames $directoryNames `
+            -PreservedRoots $preservedRoots
     )
     foreach ($directory in $directoriesToRemove) {
         Remove-StagingDirectory -Root $canonicalAppRoot -Path $directory

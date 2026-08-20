@@ -28,6 +28,7 @@ LIGHTWEIGHT_LICENSE_FILENAMES = {
 }
 
 V2_REMOVED_DISTRIBUTIONS = {
+    "scipy",
     "scikit-learn",
     "joblib",
     "threadpoolctl",
@@ -38,6 +39,7 @@ V2_REMOVED_DISTRIBUTIONS = {
     "pyreadline3",
 }
 V2_REMOVED_RELATIVE_TREES = {
+    "Lib/site-packages/scipy.libs",
     "Lib/site-packages/sklearn",
     "Lib/site-packages/docx",
     "Lib/site-packages/pyarrow.libs",
@@ -47,6 +49,12 @@ V2_REMOVED_RELATIVE_TREES = {
     "Lib/lib2to3",
     "tcl",
     "include",
+}
+V2_PRESERVED_RELATIVE_TREES = {
+    "Lib/site-packages/torch/testing",
+    "Lib/site-packages/torch/_numpy/testing",
+    "Lib/site-packages/numpy/testing",
+    "Lib/site-packages/numpy/_core/tests",
 }
 V2_REMOVED_RELATIVE_FILES = {
     "DLLs/_tkinter.pyd",
@@ -71,6 +79,11 @@ SIMILARITY_RELATIVE_PATH = (
 SIMILARITY_TOP_LEVEL_IMPORT = "from sklearn.metrics import pairwise_distances"
 SIMILARITY_CALL_LINE = (
     '        dist = pairwise_distances(a_coo, b_coo, metric="manhattan")'
+)
+TENSOR_RELATIVE_PATH = "Lib/site-packages/sentence_transformers/util/tensor.py"
+TENSOR_TOP_LEVEL_IMPORT = "from scipy.sparse import coo_matrix"
+TENSOR_CALL_LINE = (
+    "    return coo_matrix((values, (indices[0], indices[1])), shape=x.shape)"
 )
 
 
@@ -127,6 +140,16 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
             + "\r\n        return dist\r\n"
         ).encode("utf-8")
     )
+    tensor = runtime / TENSOR_RELATIVE_PATH
+    tensor.write_bytes(
+        (
+            TENSOR_TOP_LEVEL_IMPORT
+            + "\r\n\r\ndef to_scipy_coo(x):\r\n"
+            + "    x = x.coalesce()\r\n"
+            + TENSOR_CALL_LINE
+            + "\r\n"
+        ).encode("utf-8")
+    )
     (sentence_transformers / "inference.py").write_text(
         "def encode():\n    return 'ok'\n", encoding="utf-8"
     )
@@ -151,6 +174,22 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text("remove tree\n", encoding="utf-8")
 
+    for preserve_tree in V2_PRESERVED_RELATIVE_TREES:
+        preserve_root = runtime / preserve_tree
+        (preserve_root / "nested" / "testing").mkdir(parents=True, exist_ok=True)
+        (preserve_root / "runtime.py").write_text(
+            "RUNTIME = True\n", encoding="utf-8"
+        )
+        (preserve_root / "runtime.yaml").write_text(
+            "runtime: required\n", encoding="utf-8"
+        )
+        (preserve_root / "nested" / "testing" / "runtime.py").write_text(
+            "NESTED_RUNTIME = True\n", encoding="utf-8"
+        )
+        (preserve_root / "development.h").write_text(
+            "// development only\n", encoding="utf-8"
+        )
+
     for relative_file in profile.get("python_remove_relative_files", []):
         marker = runtime / relative_file
         marker.parent.mkdir(parents=True, exist_ok=True)
@@ -172,7 +211,7 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
 
     for package in profile["python_remove_packages"]:
         component = site_packages / package
-        component.mkdir()
+        component.mkdir(exist_ok=True)
         (component / "package-marker.txt").write_text("remove package\n", encoding="utf-8")
         license_filename = LIGHTWEIGHT_LICENSE_FILENAMES.get(package, "LICENSE")
         metadata_dir = site_packages / f"{package}-1.0.dist-info"
@@ -201,6 +240,33 @@ def _add_lightweight_runtime_fixture(runtime: Path, java_runtime: Path) -> None:
     (torchgen_metadata / "METADATA").write_text(
         "Metadata-Version: 2.1\nName: torchgen\nVersion: 1.0\n",
         encoding="utf-8",
+    )
+
+    sympy = site_packages / "sympy"
+    (sympy / "tests").mkdir(parents=True, exist_ok=True)
+    (sympy / "__init__.py").write_text("RUNTIME = True\n", encoding="utf-8")
+    (sympy / "definitions.yaml").write_text(
+        "runtime: required\n", encoding="utf-8"
+    )
+    (sympy / "tests" / "test_runtime.py").write_text(
+        "# removable tests\n", encoding="utf-8"
+    )
+    (sympy / "cache.h").write_text("// removable header\n", encoding="utf-8")
+    sympy_metadata = site_packages / "sympy-1.0.dist-info"
+    sympy_metadata.mkdir(exist_ok=True)
+    (sympy_metadata / "METADATA").write_text(
+        "Metadata-Version: 2.1\nName: sympy\nVersion: 1.0\n",
+        encoding="utf-8",
+    )
+
+    torch_metadata = site_packages / "torch-1.0.dist-info"
+    (torch_metadata / "licenses" / "vendor" / "testing").mkdir(parents=True)
+    (torch_metadata / "METADATA").write_text(
+        "Metadata-Version: 2.1\nName: torch\nVersion: 1.0\n",
+        encoding="utf-8",
+    )
+    (torch_metadata / "licenses" / "vendor" / "testing" / "LICENSE").write_bytes(
+        b"torch testing license\x00\xff"
     )
 
     collision_metadata = site_packages / "pandas_2fa-1.0.dist-info"
@@ -367,13 +433,19 @@ def _minimal_v2_policy() -> dict[str, object]:
         "python_remove_directory_names": [],
         "python_remove_file_extensions": [],
         "python_remove_relative_trees": [],
+        "python_preserve_relative_trees": [],
         "python_remove_relative_files": [],
         "python_lazy_import_patches": [
             {
                 "relative_path": SIMILARITY_RELATIVE_PATH,
                 "top_level_import": SIMILARITY_TOP_LEVEL_IMPORT,
                 "call_line": SIMILARITY_CALL_LINE,
-            }
+            },
+            {
+                "relative_path": TENSOR_RELATIVE_PATH,
+                "top_level_import": TENSOR_TOP_LEVEL_IMPORT,
+                "call_line": TENSOR_CALL_LINE,
+            },
         ],
     }
 
@@ -385,12 +457,32 @@ def _write_similarity_fixture(app_root: Path, content: str) -> Path:
     return similarity
 
 
+def _write_tensor_fixture(app_root: Path, content: str) -> Path:
+    tensor = app_root / "runtime" / "python" / TENSOR_RELATIVE_PATH
+    tensor.parent.mkdir(parents=True, exist_ok=True)
+    tensor.write_bytes(content.encode("utf-8"))
+    return tensor
+
+
+def _write_valid_lazy_patch_fixtures(app_root: Path) -> tuple[Path, Path]:
+    similarity = _write_similarity_fixture(
+        app_root,
+        SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_CALL_LINE + "\n",
+    )
+    tensor = _write_tensor_fixture(
+        app_root,
+        TENSOR_TOP_LEVEL_IMPORT + "\n" + TENSOR_CALL_LINE + "\n",
+    )
+    return similarity, tensor
+
+
 def test_lightweight_profile_v2_declares_exact_inference_pruning() -> None:
     profile = LIGHTWEIGHT_PROFILE
 
     assert profile["pruning_policy_version"] == "2"
     assert V2_REMOVED_DISTRIBUTIONS <= set(profile["python_remove_packages"])
     assert V2_REMOVED_RELATIVE_TREES <= set(profile["python_remove_relative_trees"])
+    assert set(profile["python_preserve_relative_trees"]) == V2_PRESERVED_RELATIVE_TREES
     assert V2_REMOVED_RELATIVE_FILES == set(profile["python_remove_relative_files"])
     assert V2_REMOVED_EXTENSIONS <= set(profile["python_remove_file_extensions"])
     assert profile["python_lazy_import_patches"] == [
@@ -398,7 +490,12 @@ def test_lightweight_profile_v2_declares_exact_inference_pruning() -> None:
             "relative_path": SIMILARITY_RELATIVE_PATH,
             "top_level_import": SIMILARITY_TOP_LEVEL_IMPORT,
             "call_line": SIMILARITY_CALL_LINE,
-        }
+        },
+        {
+            "relative_path": TENSOR_RELATIVE_PATH,
+            "top_level_import": TENSOR_TOP_LEVEL_IMPORT,
+            "call_line": TENSOR_CALL_LINE,
+        },
     ]
     serialized_removals = json.dumps(
         {
@@ -407,13 +504,17 @@ def test_lightweight_profile_v2_declares_exact_inference_pruning() -> None:
             "files": profile["python_remove_relative_files"],
         }
     ).lower()
-    assert "scipy" not in serialized_removals
+    assert "scipy" in profile["python_remove_packages"]
+    assert "Lib/site-packages/scipy.libs" in profile["python_remove_relative_trees"]
+    assert "sympy" not in serialized_removals
+    assert "torchgen" not in serialized_removals
 
 
 def test_lightweight_profile_preserves_torchgen_runtime_dependency() -> None:
     profile = LIGHTWEIGHT_PROFILE
 
     assert "torchgen" not in profile["python_remove_packages"]
+    assert "sympy" not in profile["python_remove_packages"]
     assert all(
         "torchgen" not in relative_tree.lower()
         for relative_tree in profile["python_remove_relative_trees"]
@@ -434,8 +535,16 @@ def test_lightweight_pruning_v2_is_exact_and_preserves_runtime_boundaries(
         + "\r\n        return dist\r\n"
     )
     similarity = _write_similarity_fixture(app_root, original_similarity)
+    original_tensor = (
+        TENSOR_TOP_LEVEL_IMPORT
+        + "\r\n\r\ndef to_scipy_coo(x):\r\n"
+        + TENSOR_CALL_LINE
+        + "\r\n"
+    )
+    tensor = _write_tensor_fixture(app_root, original_tensor)
 
     import_names = {
+        "scipy": "scipy",
         "scikit-learn": "sklearn",
         "joblib": "joblib",
         "threadpoolctl": None,
@@ -478,8 +587,6 @@ def test_lightweight_pruning_v2_is_exact_and_preserves_runtime_boundaries(
         marker.write_bytes(b"remove extension")
 
     preserved_files = {
-        site_packages / "scipy" / "stats.py": b"required scipy",
-        site_packages / "scipy.libs" / "openblas.dll": b"required scipy dll",
         site_packages / "sentence_transformers" / "inference.py": b"required code",
         site_packages / "torch" / "lib" / "torch_cpu.dll": b"required torch dll",
         app_root / "models" / "weights.bin": b"required model",
@@ -498,18 +605,15 @@ def test_lightweight_pruning_v2_is_exact_and_preserves_runtime_boundaries(
 
     assert result.returncode == 0, result.stdout + result.stderr
     patched = similarity.read_bytes()
-    assert not patched.startswith(SIMILARITY_TOP_LEVEL_IMPORT.encode())
-    assert (
-        (
-            "        "
-            + SIMILARITY_TOP_LEVEL_IMPORT
-            + "\r\n"
-            + SIMILARITY_CALL_LINE
-        ).encode()
-        in patched
-    )
+    similarity_lines = patched.decode("utf-8").splitlines()
+    assert similarity_lines.count(SIMILARITY_TOP_LEVEL_IMPORT) == 0
+    assert similarity_lines.count("        " + SIMILARITY_TOP_LEVEL_IMPORT) == 1
     assert not patched.startswith(b"\xef\xbb\xbf")
     assert b"\n" not in patched.replace(b"\r\n", b"")
+    patched_tensor = tensor.read_bytes()
+    tensor_lines = patched_tensor.decode("utf-8").splitlines()
+    assert tensor_lines.count(TENSOR_TOP_LEVEL_IMPORT) == 0
+    assert tensor_lines.count("    " + TENSOR_TOP_LEVEL_IMPORT) == 1
 
     for distribution, import_name in import_names.items():
         if import_name is not None:
@@ -561,6 +665,9 @@ def test_lightweight_lazy_import_patch_fails_closed_before_pruning(
     if similarity_content is not None:
         similarity = _write_similarity_fixture(app_root, similarity_content)
         original = similarity.read_bytes()
+    _write_tensor_fixture(
+        app_root, TENSOR_TOP_LEVEL_IMPORT + "\n" + TENSOR_CALL_LINE + "\n"
+    )
     policy = _minimal_v2_policy()
     policy["python_remove_packages"] = ["scikit-learn"]
     policy["python_remove_relative_trees"] = ["Lib/site-packages/sklearn"]
@@ -575,14 +682,137 @@ def test_lightweight_lazy_import_patch_fails_closed_before_pruning(
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_tensor_lazy_import_patch_fails_closed_before_any_patch_or_pruning(
+    tmp_path: Path,
+) -> None:
+    app_root = tmp_path / "app"
+    similarity = _write_similarity_fixture(
+        app_root,
+        SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_CALL_LINE + "\n",
+    )
+    tensor = _write_tensor_fixture(app_root, TENSOR_TOP_LEVEL_IMPORT + "\n")
+    similarity_before = similarity.read_bytes()
+    tensor_before = tensor.read_bytes()
+    scipy = app_root / "runtime" / "python" / "Lib" / "site-packages" / "scipy"
+    scipy.mkdir(parents=True)
+    sentinel = scipy / "keep-on-failure.py"
+    sentinel.write_bytes(b"not pruned")
+    policy = _minimal_v2_policy()
+    policy["python_remove_packages"] = ["scipy"]
+
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode != 0
+    assert "lazy import patch" in (result.stdout + result.stderr).lower()
+    assert similarity.read_bytes() == similarity_before
+    assert tensor.read_bytes() == tensor_before
+    assert sentinel.read_bytes() == b"not pruned"
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_directory_name_pruning_preserves_runtime_trees_case_insensitively(
+    tmp_path: Path,
+) -> None:
+    app_root = tmp_path / "app"
+    _write_valid_lazy_patch_fixtures(app_root)
+    python_root = app_root / "runtime" / "python"
+    preserved_runtime_files: list[Path] = []
+    preserved_headers: list[Path] = []
+    for relative_tree in V2_PRESERVED_RELATIVE_TREES:
+        preserve_root = python_root / relative_tree
+        nested_testing = preserve_root / "nested" / "testing"
+        nested_testing.mkdir(parents=True)
+        runtime_file = nested_testing / "runtime.py"
+        runtime_file.write_bytes(b"required runtime")
+        header = nested_testing / "development.h"
+        header.write_bytes(b"remove extension")
+        preserved_runtime_files.append(runtime_file)
+        preserved_headers.append(header)
+    ordinary_tests = (
+        python_root / "Lib" / "site-packages" / "ordinary" / "tests"
+    )
+    ordinary_tests.mkdir(parents=True)
+    (ordinary_tests / "remove.py").write_bytes(b"remove ordinary tests")
+    policy = _minimal_v2_policy()
+    policy["python_remove_directory_names"] = ["tests", "testing"]
+    policy["python_remove_file_extensions"] = [".h"]
+    policy["python_preserve_relative_trees"] = [
+        relative_tree.upper() for relative_tree in V2_PRESERVED_RELATIVE_TREES
+    ]
+
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert all(path.read_bytes() == b"required runtime" for path in preserved_runtime_files)
+    assert all(not path.exists() for path in preserved_headers)
+    assert not ordinary_tests.exists()
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_directory_name_pruning_does_not_enter_package_metadata_trees(
+    tmp_path: Path,
+) -> None:
+    app_root = tmp_path / "app"
+    _write_valid_lazy_patch_fixtures(app_root)
+    site_packages = (
+        app_root / "runtime" / "python" / "Lib" / "site-packages"
+    )
+    metadata_licenses = [
+        site_packages
+        / "torch-1.0.dist-info"
+        / "licenses"
+        / "vendor"
+        / "testing"
+        / "LICENSE",
+        site_packages / "torch_legacy.egg-info" / "licenses" / "tests" / "LICENSE",
+    ]
+    for index, license_path in enumerate(metadata_licenses):
+        license_path.parent.mkdir(parents=True)
+        license_path.write_bytes(b"exact metadata license " + bytes([index]))
+    escape_directory = site_packages / "torch.dist-info-escape" / "testing"
+    escape_directory.mkdir(parents=True)
+    (escape_directory / "remove.py").write_bytes(b"not metadata")
+    policy = _minimal_v2_policy()
+    policy["python_remove_directory_names"] = ["tests", "testing"]
+
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    for index, license_path in enumerate(metadata_licenses):
+        assert license_path.read_bytes() == b"exact metadata license " + bytes([index])
+    assert not escape_directory.exists()
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_preserve_tree_policy_rejects_path_traversal_before_patching(
+    tmp_path: Path,
+) -> None:
+    app_root = tmp_path / "app"
+    similarity, tensor = _write_valid_lazy_patch_fixtures(app_root)
+    similarity_before = similarity.read_bytes()
+    tensor_before = tensor.read_bytes()
+    outside = app_root / "outside"
+    outside.mkdir(parents=True)
+    (outside / "keep.py").write_bytes(b"keep outside")
+    policy = _minimal_v2_policy()
+    policy["python_preserve_relative_trees"] = ["../../outside"]
+
+    result = _invoke_lightweight_pruning(tmp_path, app_root, policy)
+
+    assert result.returncode != 0
+    assert "escapes staging root" in (result.stdout + result.stderr).lower()
+    assert similarity.read_bytes() == similarity_before
+    assert tensor.read_bytes() == tensor_before
+    assert (outside / "keep.py").read_bytes() == b"keep outside"
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
 @pytest.mark.parametrize("unsafe_kind", ["traversal", "directory_as_file"])
 def test_lightweight_relative_file_removal_rejects_unsafe_targets(
     tmp_path: Path, unsafe_kind: str
 ) -> None:
     app_root = tmp_path / "app"
-    _write_similarity_fixture(
-        app_root, SIMILARITY_TOP_LEVEL_IMPORT + "\n" + SIMILARITY_CALL_LINE + "\n"
-    )
+    _write_valid_lazy_patch_fixtures(app_root)
     policy = _minimal_v2_policy()
     if unsafe_kind == "traversal":
         outside = app_root / "outside.txt"
@@ -1123,26 +1353,31 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                 "sentence_transformers/util/similarity.py"
             )
             patched_similarity = archive.read(similarity_name)
-            assert not patched_similarity.startswith(
-                SIMILARITY_TOP_LEVEL_IMPORT.encode()
-            )
+            similarity_lines = patched_similarity.decode("utf-8").splitlines()
+            assert similarity_lines.count(SIMILARITY_TOP_LEVEL_IMPORT) == 0
             assert (
-                (
-                    "        "
-                    + SIMILARITY_TOP_LEVEL_IMPORT
-                    + "\r\n"
-                    + SIMILARITY_CALL_LINE
-                ).encode()
-                in patched_similarity
+                similarity_lines.count("        " + SIMILARITY_TOP_LEVEL_IMPORT)
+                == 1
             )
+            tensor_name = (
+                "app/runtime/python/Lib/site-packages/"
+                "sentence_transformers/util/tensor.py"
+            )
+            patched_tensor = archive.read(tensor_name)
+            tensor_lines = patched_tensor.decode("utf-8").splitlines()
+            assert tensor_lines.count(TENSOR_TOP_LEVEL_IMPORT) == 0
+            assert tensor_lines.count("    " + TENSOR_TOP_LEVEL_IMPORT) == 1
             assert (
                 "app/runtime/python/Lib/site-packages/"
                 "sentence_transformers/inference.py"
             ) in names
-            assert "app/runtime/python/Lib/site-packages/scipy/_inference.py" in names
-            assert (
-                "app/runtime/python/Lib/site-packages/scipy.libs/libopenblas.dll"
-                in names
+            assert not any(
+                name.startswith("app/runtime/python/Lib/site-packages/scipy/")
+                for name in names
+            )
+            assert not any(
+                name.startswith("app/runtime/python/Lib/site-packages/scipy.libs/")
+                for name in names
             )
             assert "app/runtime/python/Lib/site-packages/torch/lib/torch_cpu.dll" in names
             assert "app/runtime/python/Lib/site-packages/torchgen/__init__.py" in names
@@ -1158,6 +1393,37 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
             assert "Name: torchgen" in archive.read(torchgen_metadata).decode(
                 "utf-8"
             ).splitlines()
+            assert "app/runtime/python/Lib/site-packages/sympy/__init__.py" in names
+            assert "app/runtime/python/Lib/site-packages/sympy/definitions.yaml" in names
+            assert "app/runtime/python/Lib/site-packages/sympy/cache.h" not in names
+            assert not any(
+                name.startswith("app/runtime/python/Lib/site-packages/sympy/tests/")
+                for name in names
+            )
+            sympy_metadata = (
+                "app/runtime/python/Lib/site-packages/sympy-1.0.dist-info/METADATA"
+            )
+            assert sympy_metadata in names
+            assert "Name: sympy" in archive.read(sympy_metadata).decode(
+                "utf-8"
+            ).splitlines()
+            for preserve_tree in profile["python_preserve_relative_trees"]:
+                preserve_root = f"app/runtime/python/{preserve_tree}"
+                assert f"{preserve_root}/runtime.py" in names
+                assert f"{preserve_root}/runtime.yaml" in names
+                assert f"{preserve_root}/nested/testing/runtime.py" in names
+                assert f"{preserve_root}/development.h" not in names
+            torch_testing_license = (
+                "app/runtime/python/Lib/site-packages/torch-1.0.dist-info/"
+                "licenses/vendor/testing/LICENSE"
+            )
+            assert torch_testing_license in names
+            assert archive.read(torch_testing_license) == b"torch testing license\x00\xff"
+            assert archive.read("app/models/weights.bin") == b"weights"
+            assert (
+                archive.read("app/tools/tika/tika-server-standard-3.3.1.jar")
+                == b"tika"
+            )
             assert "app/runtime/java/bin/java.exe" in names
             for package in profile["python_remove_packages"]:
                 license_filename = LIGHTWEIGHT_LICENSE_FILENAMES.get(package, "LICENSE")
@@ -1219,6 +1485,8 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
                 "python_remove_packages"
             ]
             assert "torchgen" not in package_manifest["excluded_runtime_components"]
+            assert "sympy" not in package_manifest["excluded_runtime_components"]
+            assert "scipy" in package_manifest["excluded_runtime_components"]
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
