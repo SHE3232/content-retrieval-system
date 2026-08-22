@@ -1,3 +1,5 @@
+import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -7,6 +9,9 @@ from tools.compliance.generate_license_inventory import (
     parse_pubspec_lock,
     parse_uv_lock,
 )
+
+
+REPOSITORY = Path(__file__).resolve().parents[3]
 
 
 def test_parse_uv_lock_keeps_name_version_and_registry(tmp_path: Path) -> None:
@@ -64,3 +69,23 @@ def test_build_inventory_rejects_unapproved_locked_component(tmp_path: Path) -> 
         match=r"unreviewed component: python:demo@1\.2\.3",
     ):
         build_inventory(tmp_path, {"components": []})
+
+
+def test_repository_inventory_covers_every_locked_component() -> None:
+    approvals = json.loads(
+        (REPOSITORY / "tools/compliance/approved-licenses.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    rows = build_inventory(REPOSITORY, approvals)
+    with (REPOSITORY / "docs/dependency-licenses.csv").open(
+        encoding="utf-8",
+        newline="",
+    ) as inventory_file:
+        rendered = list(csv.DictReader(inventory_file))
+
+    assert rendered == rows
+    assert len(rows) == 374
+    assert not [
+        row for row in rows if row["review_status"] == "review-required"
+    ]
