@@ -4,7 +4,7 @@
 
 **Goal:** License project-owned code under Apache-2.0, account for every locked dependency and material third-party asset, and make incomplete or restricted release inventories fail verification.
 
-**Architecture:** A standard root license layer is separated from third-party notices and a machine-readable approval baseline. A standard-library Python tool parses the three uv locks and the Flutter lock, renders an auditable CSV, and compares every discovered component with the approved baseline. The Week 6 packager copies the legal files into both complete and lightweight archives.
+**Architecture:** A standard root license layer is separated from third-party notices and a machine-readable approval baseline. A standard-library Python tool parses the three uv locks and the Flutter lock, renders an auditable CSV, and compares every discovered component with the approved baseline. The Week 6 packager copies the legal files and their supporting inventory into both complete and lightweight archives.
 
 **Tech Stack:** Python 3.10 standard library, pytest, PowerShell 7, Markdown, CSV, JSON, uv lockfiles, Flutter pub lockfile.
 
@@ -230,7 +230,7 @@ git add -- LICENSE NOTICE THIRD_PARTY_NOTICES.md docs/OPEN_SOURCE_COMPLIANCE.md 
 git commit -m "docs: license project under Apache 2.0"
 ```
 
-### Task 4: Include legal files in stable release archives
+### Task 4: Include legal files and enforce restricted-model release mode
 
 **Files:**
 - Modify: `tools/week6/tests/test_powershell_tools.py`
@@ -241,11 +241,15 @@ git commit -m "docs: license project under Apache 2.0"
 Before `_init_repo(tmp_path)`, create `LICENSE`, `NOTICE`, and `THIRD_PARTY_NOTICES.md` with distinct payloads. In the ZIP assertions add:
 
 ```python
-for legal_name in ("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"):
+    for legal_name in ("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"):
     archived_name = f"app/{legal_name}"
     assert archived_name in names
     assert archive.read(archived_name) == (tmp_path / legal_name).read_bytes()
 ```
+
+Also assert that `docs/dependency-licenses.csv`, `docs/OPEN_SOURCE_COMPLIANCE.md`,
+`tools/compliance/approved-licenses.json`, and `datasets/licenses/NOTICE.md` are
+copied byte-for-byte so that links inside the notices remain valid in the archive.
 
 - [ ] **Step 2: Run both parameterized package cases and verify RED**
 
@@ -272,7 +276,20 @@ foreach ($legalName in @('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md')) {
 
 Expected: `2 passed`.
 
-- [ ] **Step 5: Commit packaging enforcement**
+- [ ] **Step 5: Add a failing restricted-model release test**
+
+Create a model manifest containing `Apple Machine Learning Research Model License`.
+Verify that packaging fails by default, succeeds only with an explicit
+`-ResearchOnlyDistribution` switch, preserves the model license, and writes
+`distribution_class: research-only` to `PACKAGE_MANIFEST.json`.
+
+- [ ] **Step 6: Implement and verify the research-only gate**
+
+Parse the model manifest before staging. Reject Apple research-licensed weights
+unless the switch is present and an applicable license file exists below the model
+root. General packages must record `distribution_class: general`.
+
+- [ ] **Step 7: Commit packaging enforcement**
 
 ```powershell
 git add -- tools/week6/package_stable_build.ps1 tools/week6/tests/test_powershell_tools.py
