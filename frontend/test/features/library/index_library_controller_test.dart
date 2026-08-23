@@ -84,6 +84,26 @@ void main() {
     expect(controller.errorMessage, isNot(contains('后端')));
   });
 
+  test('retrieval refresh errors name the local retrieval service', () async {
+    final service = _FakeLibraryService()
+      ..reindexResults.add(
+        const ApiException(
+          ApiErrorKind.rejected,
+          'raw',
+          code: 'RETRIEVAL_UNAVAILABLE',
+        ),
+      );
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: _FakeDirectoryPicker(),
+    );
+    addTearDown(controller.dispose);
+
+    await controller.reindex(_sourceKey);
+
+    expect(controller.errorMessage, '索引已更新，但本地检索服务刷新失败，请重新启动本地检索服务后重试。');
+  });
+
   test('running job polls to completion and refreshes page one', () async {
     final service = _FakeLibraryService()
       ..startedJobs.add(_job(IndexJobStatus.queued))
@@ -206,6 +226,7 @@ void main() {
     final deleted = await controller.remove(_sourceKey);
 
     expect(deleted?.deletedRecords, 4);
+    expect(controller.successMessage, '资料已从索引库移除，共清理 4 条可搜索内容');
     expect(controller.page, 1);
     expect(service.pageCalls.last.page, 1);
   });

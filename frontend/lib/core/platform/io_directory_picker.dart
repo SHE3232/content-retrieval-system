@@ -38,7 +38,7 @@ final class IoDirectoryPicker implements DirectoryPicker {
       if (result.exitCode == 1) return null;
       if (result.exitCode != 0) {
         throw DirectoryPickerException(
-          '无法打开文件夹选择器，请重试。',
+          '无法打开资料文件夹选择窗口，请重新尝试。',
           cause: ProcessException(
             executable,
             arguments,
@@ -52,7 +52,7 @@ final class IoDirectoryPicker implements DirectoryPicker {
     } on DirectoryPickerException {
       rethrow;
     } on ProcessException catch (error) {
-      throw DirectoryPickerException('无法打开文件夹选择器，请重试。', cause: error);
+      throw DirectoryPickerException('无法打开资料文件夹选择窗口，请重新尝试。', cause: error);
     }
   }
 
@@ -65,19 +65,19 @@ final class IoDirectoryPicker implements DirectoryPicker {
           '-STA',
           '-NonInteractive',
           '-Command',
-          r'''Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.Description = '选择索引文件夹'; if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dialog.SelectedPath) }''',
+          r'''Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.Description = '选择资料文件夹'; if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dialog.SelectedPath) }''',
         ],
       ),
       DesktopPlatform.macos => (
         'osascript',
-        <String>['-e', 'POSIX path of (choose folder with prompt "选择索引文件夹")'],
+        <String>['-e', 'POSIX path of (choose folder with prompt "选择资料文件夹")'],
       ),
       DesktopPlatform.linux => (
         'zenity',
-        <String>['--file-selection', '--directory', '--title=选择索引文件夹'],
+        <String>['--file-selection', '--directory', '--title=选择资料文件夹'],
       ),
       DesktopPlatform.unsupported => throw const DirectoryPickerException(
-        '当前平台不支持选择桌面文件夹。',
+        '当前平台不支持选择资料文件夹。',
       ),
     };
   }

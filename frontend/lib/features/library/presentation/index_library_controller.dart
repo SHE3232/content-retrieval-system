@@ -118,7 +118,7 @@ final class IndexLibraryController extends ChangeNotifier {
     try {
       final deleted = await service.remove(sourceKey);
       if (_disposed) return null;
-      successMessage = '已从索引移除 ${deleted.deletedRecords} 条记录';
+      successMessage = '资料已从索引库移除，共清理 ${deleted.deletedRecords} 条可搜索内容';
       final remaining = total > 0 ? total - 1 : 0;
       final previousPageWouldBeEmpty =
           page > 1 && remaining <= (page - 1) * pageSize;
@@ -213,7 +213,7 @@ final class IndexLibraryController extends ChangeNotifier {
       'FILE_NOT_INDEXED' => '此文件已不在索引中，列表将刷新。',
       'SOURCE_FILE_NOT_FOUND' => '源文件不存在，无法重新索引。',
       'STORAGE_UNAVAILABLE' => '索引存储暂时不可用，请稍后刷新。',
-      'RETRIEVAL_UNAVAILABLE' => '索引已更新，但搜索服务刷新失败，请重新启动本地检索服务后重试。',
+      'RETRIEVAL_UNAVAILABLE' => '索引已更新，但本地检索服务刷新失败，请重新启动本地检索服务后重试。',
       'SERVICE_UNAVAILABLE' => '本地检索服务暂时不可用，请检查运行状态后重新尝试。',
       _ when error.kind == ApiErrorKind.offline => '无法连接本地检索服务，请检查服务地址和运行状态。',
       _ when error.kind == ApiErrorKind.timeout => '请求用时过长，请重新尝试。',

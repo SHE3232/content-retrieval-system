@@ -15,6 +15,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';
 
+const _retiredUserCopy = <String>[
+  '后端在线',
+  '后端离线',
+  '正在检测后端',
+  '添加文件夹',
+  '索引文件夹',
+  '选择桌面文件夹',
+  '从索引移除',
+  '搜索服务',
+];
+
 void main() {
   testWidgets('connects the production application shell and themes', (
     tester,
@@ -68,7 +79,7 @@ void main() {
     expect(find.byType(AppShell), findsOneWidget);
     expect(find.byType(SearchPage), findsOneWidget);
     expect(find.byType(NavigationRail), findsOneWidget);
-    for (final forbidden in ['后端在线', '后端离线', '正在检测后端', '添加文件夹']) {
+    for (final forbidden in _retiredUserCopy) {
       expect(find.text(forbidden), findsNothing, reason: forbidden);
     }
     expect(find.text('搜索本地资料'), findsOneWidget);
@@ -144,6 +155,29 @@ void main() {
     ]) {
       expect(source, isNot(contains(forbidden)), reason: forbidden);
     }
+  });
+
+  test('production Dart user copy avoids retired terminology', () {
+    final violations = <String>[];
+    final files = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'));
+
+    for (final file in files) {
+      final lines = file.readAsLinesSync();
+      for (var index = 0; index < lines.length; index += 1) {
+        final line = lines[index];
+        if (!line.contains("'") && !line.contains('"')) continue;
+        for (final forbidden in _retiredUserCopy) {
+          if (line.contains(forbidden)) {
+            violations.add('${file.path}:${index + 1}: $forbidden');
+          }
+        }
+      }
+    }
+
+    expect(violations, isEmpty, reason: violations.join('\n'));
   });
 
   testWidgets('shows all destinations and the injected search page initially', (

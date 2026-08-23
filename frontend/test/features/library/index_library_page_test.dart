@@ -142,11 +142,13 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '从索引库移除'));
     for (var attempt = 0; attempt < 30; attempt += 1) {
       await tester.pump(const Duration(milliseconds: 20));
-      if (find.textContaining('已从索引移除').evaluate().isNotEmpty) break;
+      if (find.textContaining('资料已从索引库移除').evaluate().isNotEmpty) {
+        break;
+      }
     }
 
     expect(service.removeCalls, [_sourceKey]);
-    expect(find.textContaining('已从索引移除'), findsOneWidget);
+    expect(find.text('资料已从索引库移除，共清理 4 条可搜索内容'), findsOneWidget);
     expect(find.byType(MaterialBanner), findsNothing);
     expect(find.text('索引库为空'), findsOneWidget);
   });

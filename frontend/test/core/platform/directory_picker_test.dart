@@ -23,6 +23,7 @@ void main() {
       expect(executable, 'powershell.exe');
       expect(arguments, containsAllInOrder(['-NoProfile', '-STA', '-Command']));
       expect(arguments!.last, contains('FolderBrowserDialog'));
+      expect(arguments!.last, contains('选择资料文件夹'));
       expect(picker.isSupported, isTrue);
     },
   );
@@ -48,8 +49,10 @@ void main() {
       expect(await mac.pickDirectory(), '/Users/test/Documents');
       expect(await linux.pickDirectory(), '/Users/test/Documents');
       expect(calls[0].program, 'osascript');
+      expect(calls[0].args, contains(contains('选择资料文件夹')));
       expect(calls[1].program, 'zenity');
       expect(calls[1].args, contains('--directory'));
+      expect(calls[1].args, contains('--title=选择资料文件夹'));
     },
   );
 
@@ -70,7 +73,7 @@ void main() {
         isA<DirectoryPickerException>().having(
           (error) => error.message,
           'message',
-          '无法打开文件夹选择器，请重试。',
+          '无法打开资料文件夹选择窗口，请重新尝试。',
         ),
       ),
     );
