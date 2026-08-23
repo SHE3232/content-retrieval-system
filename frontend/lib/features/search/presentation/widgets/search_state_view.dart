@@ -14,6 +14,7 @@ final class SearchStateView extends StatelessWidget {
     required this.controller,
     required this.fileLauncher,
     required this.pathClipboard,
+    required this.retainResultsWhileLoading,
     required this.onRetry,
     required this.onClearFilters,
   });
@@ -21,6 +22,7 @@ final class SearchStateView extends StatelessWidget {
   final SearchController controller;
   final FileLauncher fileLauncher;
   final PathClipboard pathClipboard;
+  final bool retainResultsWhileLoading;
   final VoidCallback? onRetry;
   final VoidCallback onClearFilters;
 
@@ -33,9 +35,11 @@ final class SearchStateView extends StatelessWidget {
       body: '例如：“哪个 PDF 讲过键盘导航？”\n支持文档、文本文件和图片。',
     ),
     SearchViewState.loading =>
-      controller.response == null
-          ? _initialLoading(context)
-          : _retainedLoading(context, controller.response!),
+      retainResultsWhileLoading &&
+              controller.response != null &&
+              controller.response!.hits.isNotEmpty
+          ? _retainedLoading(context, controller.response!)
+          : _initialLoading(context),
     SearchViewState.success => _success(context, controller.response!),
     SearchViewState.empty => _empty(context),
     SearchViewState.failure => _failure(context),

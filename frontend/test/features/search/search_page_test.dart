@@ -515,6 +515,64 @@ void main() {
     expect(find.text('updated.txt'), findsOneWidget);
   });
 
+  testWidgets('manual query replaces results with initial loading state', (
+    tester,
+  ) async {
+    final pending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(names: const ['notes.txt']),
+        pending.future,
+      ]);
+    await harness.search('notes');
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      'different query',
+    );
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pump();
+
+    expect(find.text('notes.txt'), findsNothing);
+    expect(find.text('正在更新结果'), findsNothing);
+    expect(
+      find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
+      findsNWidgets(3),
+    );
+
+    pending.complete(_response(names: const ['new-result.txt']));
+    await tester.pumpAndSettle();
+
+    expect(find.text('new-result.txt'), findsOneWidget);
+  });
+
+  testWidgets('filter update after an empty response uses initial loading', (
+    tester,
+  ) async {
+    final pending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(hits: const <SearchHit>[]),
+        pending.future,
+      ]);
+    await harness.search('missing');
+
+    await tester.tap(find.text('语义'));
+    await tester.pump();
+
+    expect(find.text('正在更新结果'), findsNothing);
+    expect(find.byKey(const Key('search-result-list')), findsNothing);
+    expect(
+      find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
+      findsNWidgets(3),
+    );
+
+    pending.complete(_response(names: const ['found.txt']));
+    await tester.pumpAndSettle();
+
+    expect(find.text('found.txt'), findsOneWidget);
+  });
+
   testWidgets(
     'loading filter lock stays synchronized inside the bottom sheet',
     (tester) async {

@@ -38,6 +38,7 @@ final class _SearchPageState extends State<SearchPage> {
   late final TextEditingController _queryController;
   late final FocusNode _queryFocusNode;
   late final FocusNode _filterButtonFocusNode;
+  bool _retainResultsWhileLoading = false;
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ final class _SearchPageState extends State<SearchPage> {
     if (!_canSubmit) {
       return;
     }
+    _retainResultsWhileLoading = false;
     widget.controller.setQuery(_queryController.text);
     await widget.controller.submit();
   }
@@ -77,6 +79,7 @@ final class _SearchPageState extends State<SearchPage> {
     if (normalizedQuery.isEmpty || !_canSubmit) {
       return;
     }
+    _retainResultsWhileLoading = true;
     unawaited(widget.controller.submit());
   }
 
@@ -167,6 +170,7 @@ final class _SearchPageState extends State<SearchPage> {
                         queryController: _queryController,
                         queryFocusNode: _queryFocusNode,
                         filterButtonFocusNode: _filterButtonFocusNode,
+                        retainResultsWhileLoading: _retainResultsWhileLoading,
                         canSubmit: _canSubmit,
                         showFilterButton: !showPersistentFilters,
                         onSubmit: _submit,
@@ -214,6 +218,7 @@ final class _SearchMainColumn extends StatelessWidget {
     required this.queryController,
     required this.queryFocusNode,
     required this.filterButtonFocusNode,
+    required this.retainResultsWhileLoading,
     required this.canSubmit,
     required this.showFilterButton,
     required this.onSubmit,
@@ -227,6 +232,7 @@ final class _SearchMainColumn extends StatelessWidget {
   final TextEditingController queryController;
   final FocusNode queryFocusNode;
   final FocusNode filterButtonFocusNode;
+  final bool retainResultsWhileLoading;
   final bool canSubmit;
   final bool showFilterButton;
   final Future<void> Function() onSubmit;
@@ -263,6 +269,7 @@ final class _SearchMainColumn extends StatelessWidget {
               controller: controller,
               fileLauncher: fileLauncher,
               pathClipboard: pathClipboard,
+              retainResultsWhileLoading: retainResultsWhileLoading,
               onRetry: canSubmit ? () => unawaited(onSubmit()) : null,
               onClearFilters: onClearFilters,
             ),
