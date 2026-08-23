@@ -368,6 +368,7 @@ void main() {
   testWidgets('settings page has no overflow at 200 percent text scale', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await tester.binding.setSurfaceSize(const Size(600, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final controller = SettingsController(
@@ -387,8 +388,11 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('外观'), findsOneWidget);
     expect(find.text('无障碍'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '保存设置'), findsOneWidget);
+    final saveButton = find.widgetWithText(FilledButton, '保存设置');
+    expect(saveButton, findsOneWidget);
+    expect(tester.getSemantics(saveButton).label, '保存设置');
     expect(find.text('已保存'), findsOneWidget);
+    semantics.dispose();
   });
 }
 

@@ -629,6 +629,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('guide.pdf'), findsOneWidget);
+    expect(find.byKey(const Key('library-total-files')), findsOneWidget);
     expect(
       tester.getSize(find.widgetWithText(FilledButton, '打开文件')).height,
       greaterThanOrEqualTo(48),

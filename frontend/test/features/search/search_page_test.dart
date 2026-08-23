@@ -1513,6 +1513,7 @@ void main() {
         await harness.search('responsive');
 
         expect(find.text('one.txt'), findsOneWidget);
+        expect(find.widgetWithText(FilledButton, '搜索资料'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

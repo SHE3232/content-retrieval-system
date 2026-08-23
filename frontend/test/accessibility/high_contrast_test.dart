@@ -16,6 +16,24 @@ void main() {
       _expectRatio(scheme.onPrimary, scheme.primary, 4.5, 'primary text');
       _expectRatio(scheme.onError, scheme.error, 4.5, 'error text');
       _expectRatio(
+        scheme.onErrorContainer,
+        scheme.errorContainer,
+        4.5,
+        'persistent error notice text',
+      );
+      _expectRatio(
+        scheme.onTertiaryContainer,
+        scheme.tertiaryContainer,
+        4.5,
+        'persistent warning notice text',
+      );
+      _expectRatio(
+        scheme.onSurface,
+        scheme.surfaceContainerHigh,
+        4.5,
+        'persistent information notice text',
+      );
+      _expectRatio(
         scheme.onSecondaryContainer,
         scheme.secondaryContainer,
         4.5,

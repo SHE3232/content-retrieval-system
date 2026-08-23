@@ -29,10 +29,14 @@ void main() {
     await _controlShortcut(tester, LogicalKeyboardKey.digit2);
     await tester.pump();
     expect(find.text('LIBRARY_PAGE'), findsOneWidget);
+    expect(find.text('SEARCH_PAGE'), findsNothing);
+    expect(find.text('SEARCH_PAGE', skipOffstage: false), findsOneWidget);
 
     await _controlShortcut(tester, LogicalKeyboardKey.digit3);
     await tester.pump();
     expect(find.text('SETTINGS_PAGE'), findsOneWidget);
+    expect(find.text('LIBRARY_PAGE'), findsNothing);
+    expect(find.text('LIBRARY_PAGE', skipOffstage: false), findsOneWidget);
 
     await _controlShortcut(tester, LogicalKeyboardKey.digit1);
     await tester.pump();

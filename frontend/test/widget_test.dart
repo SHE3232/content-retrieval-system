@@ -68,6 +68,11 @@ void main() {
     expect(find.byType(AppShell), findsOneWidget);
     expect(find.byType(SearchPage), findsOneWidget);
     expect(find.byType(NavigationRail), findsOneWidget);
+    for (final forbidden in ['后端在线', '后端离线', '正在检测后端', '添加文件夹']) {
+      expect(find.text(forbidden), findsNothing, reason: forbidden);
+    }
+    expect(find.text('搜索本地资料'), findsOneWidget);
+    expect(find.text('本地检索服务已就绪'), findsOneWidget);
     expect(find.text('搜索内容'), findsOneWidget);
     expect(
       find.text('You have pushed the button this many times:'),
@@ -360,7 +365,7 @@ void main() {
     expect(theme.cardTheme.elevation, 0);
     expect(
       theme.outlinedButtonTheme.style!.minimumSize!.resolve({}),
-      const Size(0, 48),
+      const Size(48, 48),
     );
     expect(
       theme.iconButtonTheme.style!.minimumSize!.resolve({}),
@@ -486,7 +491,7 @@ void main() {
       expect(theme.filledButtonTheme.style, isNotNull);
       expect(
         theme.filledButtonTheme.style!.minimumSize!.resolve({}),
-        const Size(0, 48),
+        const Size(48, 48),
       );
       expect(
         theme.filledButtonTheme.style!.backgroundColor!.resolve({}),

@@ -2,17 +2,53 @@ import 'package:content_retrieval_app/core/platform/directory_picker.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_controller.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_page.dart';
+import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
+import 'package:content_retrieval_app/features/search/presentation/search_page.dart';
 import 'package:content_retrieval_app/features/settings/data/settings_repository.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_controller.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_page.dart';
 import 'package:content_retrieval_app/features/shell/app_shell.dart';
-import 'package:flutter/material.dart';
+import 'package:content_retrieval_app/features/status/backend_status_controller.dart';
+import 'package:content_retrieval_app/features/status/backend_status_models.dart';
+import 'package:flutter/material.dart' hide SearchController;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
 
 void main() {
+  testWidgets('search exposes one workspace heading', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final searchController = SearchController(FakeSearchService());
+    final statusController = BackendStatusController(FakeBackendStatusClient())
+      ..state = BackendConnectionState.online;
+    addTearDown(searchController.dispose);
+    addTearDown(statusController.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SearchPage(
+            controller: searchController,
+            statusController: statusController,
+            fileLauncher: FakeFileLauncher(),
+            pathClipboard: FakePathClipboard(),
+          ),
+        ),
+      ),
+    );
+
+    expectSingleHeader(tester, '搜索本地资料');
+    expect(
+      tester
+          .getSemantics(find.text('描述你记得的内容，找到对应文件和位置'))
+          .flagsCollection
+          .isHeader,
+      isFalse,
+    );
+    semantics.dispose();
+  });
+
   testWidgets('shell announces the current destination after shortcuts', (
     tester,
   ) async {
@@ -93,9 +129,10 @@ void main() {
       ),
     );
 
+    expectSingleHeader(tester, '设置');
     expect(
-      tester.getSemantics(find.text('设置')).flagsCollection.isHeader,
-      isTrue,
+      tester.getSemantics(find.text('这些偏好只保存在当前设备上')).flagsCollection.isHeader,
+      isFalse,
     );
     expect(
       tester.getSemantics(find.text('连接')).flagsCollection.isHeader,
@@ -173,14 +210,38 @@ void main() {
       ),
     );
 
+    expectSingleHeader(tester, '索引库');
     expect(
-      tester.getSemantics(find.text('索引库')).flagsCollection.isHeader,
-      isTrue,
+      tester.getSemantics(find.text('管理可搜索的本地资料')).flagsCollection.isHeader,
+      isFalse,
     );
     expect(find.bySemanticsLabel('刷新索引库'), findsOneWidget);
     expect(find.bySemanticsLabel('添加资料文件夹'), findsOneWidget);
     semantics.dispose();
   });
+}
+
+void expectSingleHeader(WidgetTester tester, String label) {
+  final pageHeaders = find.descendant(
+    of: find.byKey(const Key('workspace-header')),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.header == true,
+    ),
+  );
+  final headers = tester
+      .widgetList<Semantics>(
+        find.byWidgetPredicate(
+          (widget) => widget is Semantics && widget.properties.header == true,
+        ),
+      )
+      .where((widget) => widget.properties.label == null);
+  expect(pageHeaders, findsOneWidget);
+  expect(find.text(label), findsOneWidget);
+  expect(
+    tester.getSemantics(find.text(label)).flagsCollection.isHeader,
+    isTrue,
+  );
+  expect(headers.length, greaterThanOrEqualTo(1));
 }
 
 final class _SemanticsSettingsStore implements SettingsStore {
