@@ -1,0 +1,1980 @@
+{
+  "schema_version": 1,
+  "generated_from": [
+    "backend/uv.lock",
+    "conversion-tools/uv.lock",
+    "model-tools/uv.lock",
+    "frontend/pubspec.lock"
+  ],
+  "evidence_policy": "Exact release metadata, supplemented by shipped or fixed-revision upstream license files for ambiguous and restricted items; metadata classifiers are normalized only when unambiguous.",
+  "components": [
+    {
+      "key": "dart:async@2.13.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/async/versions/2.13.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:boolean_selector@2.1.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/boolean_selector/versions/2.1.2",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:characters@1.4.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/characters/versions/1.4.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:clock@1.1.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pub.dev/packages/clock/versions/1.1.2",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:collection@1.19.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/collection/versions/1.19.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:cupertino_icons@1.0.9",
+      "license_expression": "MIT",
+      "evidence_url": "https://pub.dev/packages/cupertino_icons/versions/1.0.9",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:fake_async@1.3.3",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pub.dev/packages/fake_async/versions/1.3.3",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:file@7.0.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/file/versions/7.0.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:flutter@0.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/flutter/flutter/blob/ee80f08bbf97172ec030b8751ceab557177a34a6/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "Flutter SDK package pinned by frontend/.metadata revision ee80f08bbf97172ec030b8751ceab557177a34a6"
+    },
+    {
+      "key": "dart:flutter_driver@0.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/flutter/flutter/blob/ee80f08bbf97172ec030b8751ceab557177a34a6/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "Flutter SDK package pinned by frontend/.metadata revision ee80f08bbf97172ec030b8751ceab557177a34a6"
+    },
+    {
+      "key": "dart:flutter_lints@6.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/flutter_lints/versions/6.0.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:flutter_test@0.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/flutter/flutter/blob/ee80f08bbf97172ec030b8751ceab557177a34a6/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "Flutter SDK package pinned by frontend/.metadata revision ee80f08bbf97172ec030b8751ceab557177a34a6"
+    },
+    {
+      "key": "dart:fuchsia_remote_debug_protocol@0.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/flutter/flutter/blob/ee80f08bbf97172ec030b8751ceab557177a34a6/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "Flutter SDK package pinned by frontend/.metadata revision ee80f08bbf97172ec030b8751ceab557177a34a6"
+    },
+    {
+      "key": "dart:http@1.6.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/http/versions/1.6.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:http_parser@4.1.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/http_parser/versions/4.1.2",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:integration_test@0.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/flutter/flutter/blob/ee80f08bbf97172ec030b8751ceab557177a34a6/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "Flutter SDK package pinned by frontend/.metadata revision ee80f08bbf97172ec030b8751ceab557177a34a6"
+    },
+    {
+      "key": "dart:leak_tracker@11.0.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/leak_tracker/versions/11.0.2",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:leak_tracker_flutter_testing@3.0.10",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/leak_tracker_flutter_testing/versions/3.0.10",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:leak_tracker_testing@3.0.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/leak_tracker_testing/versions/3.0.2",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:lints@6.1.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/lints/versions/6.1.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:matcher@0.12.19",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/matcher/versions/0.12.19",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:material_color_utilities@0.13.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pub.dev/packages/material_color_utilities/versions/0.13.0",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:meta@1.18.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/meta/versions/1.18.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:path@1.9.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/path/versions/1.9.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:platform@3.1.6",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/platform/versions/3.1.6",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:process@5.0.5",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/process/versions/5.0.5",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:sky_engine@0.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/flutter/flutter/blob/ee80f08bbf97172ec030b8751ceab557177a34a6/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "Flutter SDK package pinned by frontend/.metadata revision ee80f08bbf97172ec030b8751ceab557177a34a6"
+    },
+    {
+      "key": "dart:source_span@1.10.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/source_span/versions/1.10.2",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:stack_trace@1.12.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/stack_trace/versions/1.12.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:stream_channel@2.1.4",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/stream_channel/versions/2.1.4",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:string_scanner@1.4.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/string_scanner/versions/1.4.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:sync_http@0.3.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/sync_http/versions/0.3.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:term_glyph@1.2.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/term_glyph/versions/1.2.2",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:test_api@0.7.11",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/test_api/versions/0.7.11",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:typed_data@1.4.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/typed_data/versions/1.4.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:vector_math@2.2.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/vector_math/versions/2.2.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:vm_service@15.2.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/vm_service/versions/15.2.0",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:web@1.1.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pub.dev/packages/web/versions/1.1.1",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "dart:webdriver@3.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pub.dev/packages/webdriver/versions/3.1.0",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact pub.dev archive LICENSE"
+    },
+    {
+      "key": "python:absl-py@2.5.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/absl-py/2.5.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:ai-edge-litert@2.1.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/ai-edge-litert/2.1.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:ai-edge-quantizer@0.4.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/ai-edge-quantizer/0.4.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:ai-edge-tensorflow@2.21.0.dev20251110",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/ai-edge-tensorflow/2.21.0.dev20251110/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:aiohappyeyeballs@2.7.1",
+      "license_expression": "PSF-2.0",
+      "evidence_url": "https://pypi.org/project/aiohappyeyeballs/2.7.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:aiohttp@3.14.1",
+      "license_expression": "Apache-2.0 AND MIT",
+      "evidence_url": "https://pypi.org/project/aiohttp/3.14.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:aiosignal@1.4.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/aiosignal/1.4.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:annotated-doc@0.0.4",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/annotated-doc/0.0.4/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:annotated-types@0.7.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/annotated-types/0.7.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:anyio@4.14.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/anyio/4.14.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:astunparse@1.6.3",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/astunparse/1.6.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:async-timeout@5.0.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/async-timeout/5.0.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:attrs@26.1.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/attrs/26.1.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:backports-strenum@1.3.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/backports-strenum/1.3.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:bcrypt@5.0.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/bcrypt/5.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:braceexpand@0.1.7",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/braceexpand/0.1.7/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:build@1.5.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/build/1.5.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:certifi@2026.6.17",
+      "license_expression": "MPL-2.0",
+      "evidence_url": "https://pypi.org/project/certifi/2026.6.17/",
+      "review_status": "approved",
+      "redistribution": "retain MPL notices and provide source for modified MPL-covered files",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:charset-normalizer@3.4.9",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/charset-normalizer/3.4.9/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:chromadb@1.5.9",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/chromadb/1.5.9/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:click@8.4.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/click/8.4.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:clip-benchmark@1.6.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/clip-benchmark/1.6.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:colorama@0.4.6",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/colorama/0.4.6/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:coloredlogs@15.0.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/coloredlogs/15.0.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:content-retrieval-backend@0.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "LICENSE",
+      "review_status": "project-owned",
+      "redistribution": "covered by the project Apache-2.0 LICENSE",
+      "notes": "project package"
+    },
+    {
+      "key": "python:content-retrieval-conversion-tools@0.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "LICENSE",
+      "review_status": "project-owned",
+      "redistribution": "covered by the project Apache-2.0 LICENSE",
+      "notes": "project package"
+    },
+    {
+      "key": "python:content-retrieval-model-tools@0.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "LICENSE",
+      "review_status": "project-owned",
+      "redistribution": "covered by the project Apache-2.0 LICENSE",
+      "notes": "project package"
+    },
+    {
+      "key": "python:coverage@7.15.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/coverage/7.15.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:cuda-bindings@13.3.1",
+      "license_expression": "LicenseRef-NVIDIA-SOFTWARE-LICENSE",
+      "evidence_url": "https://pypi.org/project/cuda-bindings/13.3.1/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:cuda-pathfinder@1.5.6",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/cuda-pathfinder/1.5.6/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:cuda-pathfinder@1.6.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/cuda-pathfinder/1.6.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:cuda-toolkit@13.0.3.0",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/cuda-toolkit/13.0.3.0/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:datasets@5.0.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/datasets/5.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:datasets@5.0.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/datasets/5.0.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:dill@0.4.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/dill/0.4.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:durationpy@0.10",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/durationpy/0.10/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:exceptiongroup@1.3.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/exceptiongroup/1.3.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:fastapi@0.139.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/fastapi/0.139.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:filelock@3.29.7",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/filelock/3.29.7/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:fire@0.7.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/fire/0.7.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:flatbuffers@25.12.19",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/flatbuffers/25.12.19/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:frozenlist@1.8.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/frozenlist/1.8.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:fsspec@2026.4.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/fsspec/2026.4.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:fsspec@2026.6.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/fsspec/2026.6.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:ftfy@6.3.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/ftfy/6.3.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:gast@0.7.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/gast/0.7.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:google-pasta@0.2.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/google-pasta/0.2.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:googleapis-common-protos@1.75.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/googleapis-common-protos/1.75.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:grpcio@1.82.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/grpcio/1.82.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:h11@0.16.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/h11/0.16.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:h5py@3.14.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/h5py/3.14.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:hf-xet@1.5.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/hf-xet/1.5.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:hf-xet@1.5.2rc0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/hf-xet/1.5.2rc0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:httpcore@1.0.9",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/httpcore/1.0.9/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:httptools@0.8.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/httptools/0.8.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:httpx@0.28.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/httpx/0.28.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:huggingface-hub@0.36.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/huggingface-hub/0.36.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:huggingface-hub@1.23.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/huggingface-hub/1.23.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:humanfriendly@10.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/humanfriendly/10.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:idna@3.18",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/idna/3.18/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:immutabledict@4.3.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/immutabledict/4.3.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:importlib-metadata@9.0.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/importlib-metadata/9.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:importlib-resources@7.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/importlib-resources/7.1.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:iniconfig@2.3.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/iniconfig/2.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:jax@0.6.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/jax/0.6.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:jaxlib@0.6.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/jaxlib/0.6.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:jaxtyping@0.3.7",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/jaxtyping/0.3.7/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:jinja2@3.1.6",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/jinja2/3.1.6/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:joblib@1.5.3",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/joblib/1.5.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:jsonschema-specifications@2025.9.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/jsonschema-specifications/2025.9.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:jsonschema@4.26.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/jsonschema/4.26.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:kagglehub@1.0.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/kagglehub/1.0.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:kagglesdk@0.1.28",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/kagglesdk/0.1.28/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:keras-nightly@3.12.0.dev2025100703",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/keras-nightly/3.12.0.dev2025100703/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:kubernetes@36.0.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/kubernetes/36.0.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:libclang@18.1.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/libclang/18.1.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:litert-torch@0.8.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/litert-torch/0.8.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:markdown-it-py@4.2.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/markdown-it-py/4.2.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:markdown@3.10.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/markdown/3.10.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:markupsafe@3.0.3",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/markupsafe/3.0.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:mdurl@0.1.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/mdurl/0.1.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:ml-dtypes@0.5.4",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/ml-dtypes/0.5.4/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:mmh3@5.2.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/mmh3/5.2.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:mobileclip@0.1.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://github.com/apple/ml-mobileclip/blob/aecfb5453d022e9deff12f81a150ea8f35194baa/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "local source dependency; retain upstream ACKNOWLEDGEMENTS; model weights use a separate research-only license"
+    },
+    {
+      "key": "python:mpmath@1.3.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/mpmath/1.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:multidict@6.7.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/multidict/6.7.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:multipledispatch@1.0.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/multipledispatch/1.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:multiprocess@0.70.19",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/multiprocess/0.70.19/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:namex@0.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/namex/0.1.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:networkx@3.4.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/networkx/3.4.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:numpy@2.2.6",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/numpy/2.2.6/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:nvidia-cublas@13.1.1.3",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cublas/13.1.1.3/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cuda-cupti@13.0.85",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cuda-cupti/13.0.85/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cuda-nvrtc@13.0.88",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cuda-nvrtc/13.0.88/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cuda-runtime@13.0.96",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cuda-runtime/13.0.96/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cudnn-cu13@9.20.0.48",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cudnn-cu13/9.20.0.48/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cufft@12.0.0.61",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cufft/12.0.0.61/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cufile@1.15.1.6",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cufile/1.15.1.6/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-curand@10.4.0.35",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-curand/10.4.0.35/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cusolver@12.0.4.66",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cusolver/12.0.4.66/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cusparse@12.6.3.3",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cusparse/12.6.3.3/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-cusparselt-cu13@0.8.1",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-cusparselt-cu13/0.8.1/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-nccl-cu13@2.29.7",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-nccl-cu13/2.29.7/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-nvjitlink@13.3.33",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-nvjitlink/13.3.33/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-nvshmem-cu13@3.4.5",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-nvshmem-cu13/3.4.5/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:nvidia-nvtx@13.0.85",
+      "license_expression": "LicenseRef-NVIDIA-Proprietary",
+      "evidence_url": "https://pypi.org/project/nvidia-nvtx/13.0.85/",
+      "review_status": "restricted",
+      "redistribution": "exclude from the default CPU release; NVIDIA EULA applies",
+      "notes": "conditional Linux CUDA component; proprietary NVIDIA terms; not in default Windows CPU release"
+    },
+    {
+      "key": "python:oauthlib@3.3.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/oauthlib/3.3.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:onnxruntime@1.23.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/onnxruntime/1.23.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:open-clip-torch@3.3.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/open-clip-torch/3.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opentelemetry-api@1.43.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/opentelemetry-api/1.43.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opentelemetry-exporter-otlp-proto-common@1.43.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/opentelemetry-exporter-otlp-proto-common/1.43.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opentelemetry-exporter-otlp-proto-grpc@1.43.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/opentelemetry-exporter-otlp-proto-grpc/1.43.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opentelemetry-proto@1.43.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/opentelemetry-proto/1.43.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opentelemetry-sdk@1.43.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/opentelemetry-sdk/1.43.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opentelemetry-semantic-conventions@0.64b0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/opentelemetry-semantic-conventions/0.64b0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:opt-einsum@3.4.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/opt-einsum/3.4.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:optree@0.19.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/optree/0.19.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:orjson@3.11.9",
+      "license_expression": "MPL-2.0 AND (Apache-2.0 OR MIT)",
+      "evidence_url": "https://pypi.org/project/orjson/3.11.9/",
+      "review_status": "approved",
+      "redistribution": "retain MPL notices and provide source for modified MPL-covered files",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:overrides@7.7.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/overrides/7.7.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:packaging@26.2",
+      "license_expression": "Apache-2.0 OR BSD-2-Clause",
+      "evidence_url": "https://pypi.org/project/packaging/26.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pandas@2.3.3",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/pandas/2.3.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pillow@12.3.0",
+      "license_expression": "MIT-CMU",
+      "evidence_url": "https://pypi.org/project/pillow/12.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pluggy@1.6.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pluggy/1.6.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:propcache@0.5.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/propcache/0.5.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:protobuf@7.35.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/protobuf/7.35.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:protobuf@7.36.0rc1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/protobuf/7.36.0rc1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pyarrow@25.0.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/pyarrow/25.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pybase64@1.4.3",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/pybase64/1.4.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pycocoevalcap@1.2",
+      "license_expression": "BSD-2-Clause",
+      "evidence_url": "https://pypi.org/project/pycocoevalcap/1.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pycocotools@2.0.11",
+      "license_expression": "BSD-2-Clause",
+      "evidence_url": "https://pypi.org/project/pycocotools/2.0.11/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pydantic-core@2.46.4",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pydantic-core/2.46.4/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pydantic-settings@2.14.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pydantic-settings/2.14.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pydantic@2.13.4",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pydantic/2.13.4/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pygments@2.20.0",
+      "license_expression": "BSD-2-Clause",
+      "evidence_url": "https://pypi.org/project/pygments/2.20.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pypdfium2@4.30.0",
+      "license_expression": "(Apache-2.0 OR BSD-3-Clause) AND LicenseRef-PdfiumThirdParty",
+      "evidence_url": "https://pypi.org/project/pypdfium2/4.30.0/",
+      "review_status": "approved",
+      "redistribution": "retain pypdfium2 and PDFium bundled third-party notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pypika@0.51.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/pypika/0.51.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pyproject-hooks@1.2.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pyproject-hooks/1.2.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pyreadline3@3.5.6",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/pyreadline3/3.5.6/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pytest-cov@6.3.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pytest-cov/6.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pytest@8.4.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pytest/8.4.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pytest@9.1.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pytest/9.1.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:python-dateutil@2.9.0.post0",
+      "license_expression": "Apache-2.0 OR BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/python-dateutil/2.9.0.post0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:python-dotenv@1.2.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/python-dotenv/1.2.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:python-multipart@0.0.32",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/python-multipart/0.0.32/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pytz@2026.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pytz/2026.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pytz@2026.3.post1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pytz/2026.3.post1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:pyyaml@6.0.3",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/pyyaml/6.0.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:referencing@0.37.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/referencing/0.37.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:regex@2026.7.10",
+      "license_expression": "Apache-2.0 AND CNRI-Python",
+      "evidence_url": "https://pypi.org/project/regex/2026.7.10/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:regex@2026.7.19",
+      "license_expression": "Apache-2.0 AND CNRI-Python",
+      "evidence_url": "https://pypi.org/project/regex/2026.7.19/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:requests-oauthlib@2.0.0",
+      "license_expression": "ISC",
+      "evidence_url": "https://pypi.org/project/requests-oauthlib/2.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:requests@2.34.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/requests/2.34.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:rich@15.0.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/rich/15.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:rpds-py@0.30.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/rpds-py/0.30.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:safetensors@0.8.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/safetensors/0.8.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:scikit-learn@1.7.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/scikit-learn/1.7.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:scipy@1.15.3",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/scipy/1.15.3/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:sentence-transformers@5.6.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/sentence-transformers/5.6.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:sentence-transformers@5.6.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/sentence-transformers/5.6.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:setuptools@83.0.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/setuptools/83.0.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:shellingham@1.5.4",
+      "license_expression": "ISC",
+      "evidence_url": "https://pypi.org/project/shellingham/1.5.4/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:six@1.17.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/six/1.17.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:starlette@1.3.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/starlette/1.3.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:sympy@1.14.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/sympy/1.14.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tabulate@0.10.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/tabulate/0.10.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tb-nightly@2.20.0a20250717",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/tb-nightly/2.20.0a20250717/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tenacity@9.1.4",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/tenacity/9.1.4/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tensorboard-data-server@0.7.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/tensorboard-data-server/0.7.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:termcolor@3.3.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/termcolor/3.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:threadpoolctl@3.6.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/threadpoolctl/3.6.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:timm@1.0.27",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/timm/1.0.27/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:timm@1.0.28",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/timm/1.0.28/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tokenizers@0.22.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/tokenizers/0.22.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tokenizers@0.23.0rc0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/tokenizers/0.23.0rc0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tomli@2.4.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/tomli/2.4.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:torch-xla2@0.0.1.dev202412041639",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/torch-xla2/0.0.1.dev202412041639/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:torch@2.13.0",
+      "license_expression": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
+      "evidence_url": "https://pypi.org/project/torch/2.13.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:torch@2.9.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/pytorch/pytorch/blob/v2.9.1/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "PyTorch CPU index distribution"
+    },
+    {
+      "key": "python:torch@2.9.1+cpu",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/pytorch/pytorch/blob/v2.9.1/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "PyTorch CPU index distribution"
+    },
+    {
+      "key": "python:torchao@0.17.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/torchao/0.17.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:torchvision@0.24.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/pytorch/vision/blob/v0.24.1/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "PyTorch CPU index distribution"
+    },
+    {
+      "key": "python:torchvision@0.24.1+cpu",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://github.com/pytorch/vision/blob/v0.24.1/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "PyTorch CPU index distribution"
+    },
+    {
+      "key": "python:torchvision@0.28.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/torchvision/0.28.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tqdm@4.68.4",
+      "license_expression": "MPL-2.0 AND MIT",
+      "evidence_url": "https://pypi.org/project/tqdm/4.68.4/",
+      "review_status": "approved",
+      "redistribution": "retain MPL notices and provide source for modified MPL-covered files",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:transformers@4.57.6",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/transformers/4.57.6/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:transformers@5.13.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/transformers/5.13.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:transformers@5.14.1",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/transformers/5.14.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:triton@3.7.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/triton/3.7.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:typer@0.26.8",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/typer/0.26.8/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:typing-extensions@4.16.0",
+      "license_expression": "PSF-2.0",
+      "evidence_url": "https://pypi.org/project/typing-extensions/4.16.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:typing-inspection@0.4.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/typing-inspection/0.4.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:tzdata@2026.3",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/tzdata/2026.3/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:urllib3@2.7.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/urllib3/2.7.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:uvicorn@0.51.0",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/uvicorn/0.51.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:uvloop@0.22.1",
+      "license_expression": "Apache-2.0 OR MIT",
+      "evidence_url": "https://pypi.org/project/uvloop/0.22.1/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:wadler-lindig@0.1.7",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/wadler-lindig/0.1.7/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:watchfiles@1.2.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/watchfiles/1.2.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:wcwidth@0.8.2",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/wcwidth/0.8.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:webdataset@1.0.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/webdataset/1.0.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:websocket-client@1.9.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/websocket-client/1.9.0/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:websockets@16.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/websockets/16.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:werkzeug@3.1.8",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/werkzeug/3.1.8/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:wheel@0.47.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/wheel/0.47.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:wrapt@2.3.0rc1",
+      "license_expression": "BSD-2-Clause",
+      "evidence_url": "https://pypi.org/project/wrapt/2.3.0rc1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:xxhash@3.8.1",
+      "license_expression": "BSD-2-Clause",
+      "evidence_url": "https://pypi.org/project/xxhash/3.8.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:yarl@1.24.2",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "https://pypi.org/project/yarl/1.24.2/",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    },
+    {
+      "key": "python:zipp@4.1.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/zipp/4.1.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
+    }
+  ]
+}

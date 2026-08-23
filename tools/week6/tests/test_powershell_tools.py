@@ -106,6 +106,22 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def _init_repo(root: Path) -> str:
+    for legal_name in ("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"):
+        legal_path = root / legal_name
+        if not legal_path.exists():
+            legal_path.write_text(f"{legal_name} fixture\n", encoding="utf-8")
+    for compliance_name in (
+        "docs/dependency-licenses.csv",
+        "docs/OPEN_SOURCE_COMPLIANCE.md",
+        "tools/compliance/approved-licenses.json",
+        "datasets/licenses/NOTICE.md",
+    ):
+        compliance_path = root / compliance_name
+        if not compliance_path.exists():
+            compliance_path.parent.mkdir(parents=True, exist_ok=True)
+            compliance_path.write_text(
+                f"{compliance_name} fixture\n", encoding="utf-8"
+            )
     _git(root, "init")
     _git(root, "config", "core.longpaths", "true")
     _git(root, "config", "user.email", "week6@example.invalid")
@@ -1269,6 +1285,23 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
     )
     user_state.mkdir(parents=True)
     (user_state / "UserInterfaceState.xcuserstate").write_bytes(b"private UI state")
+    legal_payloads = {
+        "LICENSE": b"root Apache license fixture\n",
+        "NOTICE": b"root notice fixture\n",
+        "THIRD_PARTY_NOTICES.md": b"root third-party notice fixture\n",
+    }
+    for legal_name, payload in legal_payloads.items():
+        (tmp_path / legal_name).write_bytes(payload)
+    compliance_payloads = {
+        "docs/dependency-licenses.csv": b"dependency license inventory fixture\n",
+        "docs/OPEN_SOURCE_COMPLIANCE.md": b"compliance report fixture\n",
+        "tools/compliance/approved-licenses.json": b"approval baseline fixture\n",
+        "datasets/licenses/NOTICE.md": b"dataset notice fixture\n",
+    }
+    for relative_name, payload in compliance_payloads.items():
+        compliance_path = tmp_path / relative_name
+        compliance_path.parent.mkdir(parents=True, exist_ok=True)
+        compliance_path.write_bytes(payload)
     commit = _init_repo(tmp_path)
     output = tmp_path / "output" / "week6" / "stable.zip"
 
@@ -1331,11 +1364,20 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
         assert "app/内容检索系统.exe" in names
         assert "app/models/weights.bin" in names
         assert "app/PACKAGE_MANIFEST.json" in names
+        for legal_name, payload in legal_payloads.items():
+            archived_name = f"app/{legal_name}"
+            assert archived_name in names
+            assert archive.read(archived_name) == payload
+        for relative_name, payload in compliance_payloads.items():
+            archived_name = f"app/{relative_name}"
+            assert archived_name in names
+            assert archive.read(archived_name) == payload
         assert not any("private-index" in name for name in names)
         assert not any(name.endswith("user.log") for name in names)
         package_manifest = json.loads(archive.read("app/PACKAGE_MANIFEST.json"))
         assert package_manifest["source_commit"] == commit
         assert package_manifest["one_click_launcher"] == "内容检索系统.exe"
+        assert package_manifest["distribution_class"] == "general"
         if package_profile == "complete":
             assert package_manifest["java_runtime_mode"] == "bundled"
             assert "app/runtime/python/Lib/site-packages/sklearn/keep.py" in names
@@ -1487,6 +1529,74 @@ def test_package_stable_build_uses_whitelist_and_records_commit(
             assert "torchgen" not in package_manifest["excluded_runtime_components"]
             assert "sympy" not in package_manifest["excluded_runtime_components"]
             assert "scipy" in package_manifest["excluded_runtime_components"]
+
+
+@pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")
+def test_package_stable_build_requires_research_only_acknowledgement(
+    tmp_path: Path,
+) -> None:
+    command, output, staging = _lightweight_package_fixture(
+        tmp_path, archive_size_limit_bytes=1_000_000
+    )
+    manifest = Path(command[command.index("-ModelManifestPath") + 1])
+    manifest.write_text(
+        json.dumps(
+            {
+                "models": [
+                    {
+                        "model_id": "mobileclip-s0-v1",
+                        "license_name": (
+                            "Apple Machine Learning Research Model License"
+                        ),
+                    }
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _git(tmp_path, "add", str(manifest))
+    _git(tmp_path, "commit", "-m", "add restricted research model")
+    command[command.index("-SourceCommit") + 1] = _git(
+        tmp_path, "rev-parse", "HEAD"
+    )
+
+    rejected = _run(command, tmp_path)
+
+    assert rejected.returncode != 0
+    assert "ResearchOnlyDistribution" in rejected.stdout + rejected.stderr
+    assert not output.exists()
+    assert not staging.exists() or not any(staging.iterdir())
+
+    missing_license = _run([*command, "-ResearchOnlyDistribution"], tmp_path)
+
+    assert missing_license.returncode != 0
+    assert "license text is missing" in (
+        missing_license.stdout + missing_license.stderr
+    ).lower()
+    assert not output.exists()
+
+    model_license = manifest.parent / "LICENSE_MODELS"
+    model_license.write_text(
+        "Apple Machine Learning Research Model License fixture\n", encoding="utf-8"
+    )
+    _git(tmp_path, "add", str(model_license))
+    _git(tmp_path, "commit", "-m", "add research model license")
+    command[command.index("-SourceCommit") + 1] = _git(
+        tmp_path, "rev-parse", "HEAD"
+    )
+
+    accepted = _run([*command, "-ResearchOnlyDistribution"], tmp_path)
+
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+    with ZipFile(output) as archive:
+        names = {name.replace("\\", "/") for name in archive.namelist()}
+        assert "app/models/LICENSE_MODELS" in names
+        package_manifest = json.loads(archive.read("app/PACKAGE_MANIFEST.json"))
+        assert package_manifest["distribution_class"] == "research-only"
+        assert package_manifest["restricted_model_licenses"] == [
+            "Apple Machine Learning Research Model License"
+        ]
 
 
 @pytest.mark.skipif(POWERSHELL is None, reason="PowerShell is required")

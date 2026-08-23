@@ -19,6 +19,7 @@ param(
     [long]$ArchiveSizeLimitBytes = 0,
     [string]$LightweightProfilePath,
     [string]$JlinkExecutable,
+    [switch]$ResearchOnlyDistribution,
     [switch]$ReplaceExactTarget
 )
 
@@ -309,6 +310,58 @@ if ($PackageProfile -eq 'lightweight') {
 }
 $models = Resolve-RequiredDirectory -Path $ModelRoot -Label 'Model root'
 $modelManifest = Resolve-RequiredFile -Path $ModelManifestPath -Label 'Model manifest'
+try {
+    $modelInventory = Get-Content -LiteralPath $modelManifest -Raw | ConvertFrom-Json
+} catch {
+    throw "Model manifest is not valid JSON: $modelManifest"
+}
+if ($modelInventory.PSObject.Properties.Name -notcontains 'models') {
+    throw "Model manifest does not contain a models array: $modelManifest"
+}
+$researchModelLicenseName = 'Apple Machine Learning Research Model License'
+$restrictedModelLicenses = @(
+    @(
+        foreach ($model in @($modelInventory.models)) {
+            if ($null -eq $model -or $model.PSObject.Properties.Name -notcontains 'license_name' -or
+                [string]::IsNullOrWhiteSpace([string]$model.license_name)) {
+                $modelId = if ($null -ne $model -and $model.PSObject.Properties.Name -contains 'model_id') {
+                    [string]$model.model_id
+                } else {
+                    '<unknown>'
+                }
+                throw "Model manifest entry is missing license_name: $modelId"
+            }
+            $licenseName = [string]$model.license_name
+            if ([string]::Equals(
+                $licenseName,
+                $researchModelLicenseName,
+                [System.StringComparison]::OrdinalIgnoreCase
+            )) {
+                $researchModelLicenseName
+            }
+        }
+    ) | Sort-Object -Unique
+)
+if ($restrictedModelLicenses.Count -gt 0 -and -not $ResearchOnlyDistribution.IsPresent) {
+    throw (
+        'Model manifest contains non-commercial research-only weights. ' +
+        'Pass -ResearchOnlyDistribution only for a permitted non-commercial research package.'
+    )
+}
+if ($restrictedModelLicenses.Count -gt 0) {
+    $modelLicenseFound = $false
+    foreach ($licenseFile in @(Get-ChildItem -LiteralPath $models -Recurse -File -ErrorAction Stop |
+        Where-Object { $_.Name -match '^(?i)LICENSE(?:_MODELS)?$' })) {
+        if ((Get-Content -LiteralPath $licenseFile.FullName -Raw) -match
+            'Apple Machine Learning Research Model') {
+            $modelLicenseFound = $true
+            break
+        }
+    }
+    if (-not $modelLicenseFound) {
+        throw 'Research-only model license text is missing below the model root.'
+    }
+}
 $tikaPath = Resolve-RequiredFile -Path $TikaJar -Label 'Tika JAR'
 $tikaChecksum = Resolve-RequiredFile -Path $TikaChecksumFile -Label 'Tika checksum'
 $mvpScript = Resolve-RequiredFile -Path $MvpLauncher -Label 'MVP launcher'
@@ -352,6 +405,25 @@ $temporaryZip = Join-Path $outputDirectory ('.week6-' + [Guid]::NewGuid().ToStri
 
 try {
     New-Item -ItemType Directory -Force -Path $appRoot | Out-Null
+    foreach ($legalName in @('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md')) {
+        $legalSource = Resolve-RequiredFile `
+            -Path (Join-Path $repository $legalName) `
+            -Label "Legal file $legalName"
+        Copy-Item -LiteralPath $legalSource -Destination (Join-Path $appRoot $legalName)
+    }
+    foreach ($complianceName in @(
+        'docs/dependency-licenses.csv',
+        'docs/OPEN_SOURCE_COMPLIANCE.md',
+        'tools/compliance/approved-licenses.json',
+        'datasets/licenses/NOTICE.md'
+    )) {
+        $complianceSource = Resolve-RequiredFile `
+            -Path (Join-Path $repository $complianceName) `
+            -Label "Compliance file $complianceName"
+        $complianceDestination = Join-Path $appRoot $complianceName
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $complianceDestination) | Out-Null
+        Copy-Item -LiteralPath $complianceSource -Destination $complianceDestination
+    }
     Copy-DirectoryContents -Source $frontend -Destination (Join-Path $appRoot 'frontend')
     Copy-DirectoryContents -Source (Join-Path $repository 'backend/src') -Destination (Join-Path $appRoot 'backend/src')
     Copy-Item -LiteralPath (Resolve-RequiredFile (Join-Path $repository 'backend/pyproject.toml') 'Backend pyproject') -Destination (Join-Path $appRoot 'backend/pyproject.toml')
@@ -394,6 +466,8 @@ try {
         source_commit = $SourceCommit
         generated_at = [DateTimeOffset]::Now.ToString('o')
         platform_claim = if ($PackageProfile -eq 'lightweight') { 'Windows lightweight integrated stable build' } else { 'Windows complete integrated stable build' }
+        distribution_class = if ($restrictedModelLicenses.Count -gt 0) { 'research-only' } else { 'general' }
+        restricted_model_licenses = @($restrictedModelLicenses)
         first_run_downloads = $false
         package_profile = $PackageProfile
         python_runtime_mode = $pythonRuntimeMode
