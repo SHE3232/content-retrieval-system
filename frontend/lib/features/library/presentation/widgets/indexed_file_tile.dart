@@ -13,6 +13,8 @@ final class IndexedFileTile extends StatefulWidget {
     required this.onReindex,
     required this.onRemove,
     required this.actionsEnabled,
+    required this.restoreMoreActionsFocus,
+    required this.onMoreActionsFocusRestored,
     this.fileOpenSupported = true,
   });
 
@@ -22,6 +24,8 @@ final class IndexedFileTile extends StatefulWidget {
   final Future<void> Function() onReindex;
   final Future<void> Function() onRemove;
   final bool actionsEnabled;
+  final bool restoreMoreActionsFocus;
+  final VoidCallback onMoreActionsFocusRestored;
   final bool fileOpenSupported;
 
   @override
@@ -32,6 +36,8 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
   bool _opening = false;
   bool _copying = false;
   bool _showMoreActionsFocus = false;
+  bool _restoreMoreActionsWhenEnabled = false;
+  bool _pageFocusRestoreScheduled = false;
   String? _error;
   final GlobalKey<PopupMenuButtonState<_IndexedFileAction>>
   _moreActionsMenuKey = GlobalKey<PopupMenuButtonState<_IndexedFileAction>>();
@@ -52,7 +58,21 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
   }
 
   @override
+  void didUpdateWidget(IndexedFileTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.actionsEnabled &&
+        widget.actionsEnabled &&
+        _restoreMoreActionsWhenEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _restoreMoreActionsFocus();
+      });
+    }
+    _schedulePageFocusRestore();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _schedulePageFocusRestore();
     final file = widget.file;
     return Material(
       key: Key('indexed-file-row-${file.fileId}'),
@@ -156,8 +176,7 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
                       }
                     },
                     child: ExcludeSemantics(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
@@ -211,18 +230,42 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
     );
   }
 
+  void _schedulePageFocusRestore() {
+    if (_pageFocusRestoreScheduled ||
+        !widget.restoreMoreActionsFocus ||
+        !widget.actionsEnabled) {
+      return;
+    }
+    _pageFocusRestoreScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pageFocusRestoreScheduled = false;
+      if (!mounted ||
+          !widget.restoreMoreActionsFocus ||
+          !widget.actionsEnabled) {
+        return;
+      }
+      _moreActionsFocusNode.requestFocus();
+      widget.onMoreActionsFocusRestored();
+    });
+  }
+
   void _showMoreActionsMenu() {
     if (!widget.actionsEnabled) return;
     _moreActionsMenuKey.currentState?.showButtonMenu();
   }
 
   void _restoreMoreActionsFocus() {
-    if (mounted && widget.actionsEnabled) {
+    if (!mounted) return;
+    if (widget.actionsEnabled) {
+      _restoreMoreActionsWhenEnabled = false;
       _moreActionsFocusNode.requestFocus();
+    } else {
+      _restoreMoreActionsWhenEnabled = true;
     }
   }
 
   Future<void> _performAction(_IndexedFileAction action) async {
+    _restoreMoreActionsWhenEnabled = true;
     final callback = switch (action) {
       _IndexedFileAction.reindex => widget.onReindex,
       _IndexedFileAction.remove => widget.onRemove,

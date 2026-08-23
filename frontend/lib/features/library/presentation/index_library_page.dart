@@ -31,13 +31,22 @@ final class IndexLibraryPage extends StatefulWidget {
 
 final class _IndexLibraryPageState extends State<IndexLibraryPage> {
   String? _scheduledSuccessMessage;
+  String? _pendingReindexFocusSourceKey;
+  late final FocusNode _refreshFocusNode;
 
   @override
   void initState() {
     super.initState();
+    _refreshFocusNode = FocusNode(debugLabel: 'library-refresh-action');
     if (widget.controller.state == LibraryViewState.initial) {
       unawaited(widget.controller.load());
     }
+  }
+
+  @override
+  void dispose() {
+    _refreshFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,13 +65,12 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                 Semantics(
                   label: '刷新索引库',
                   button: true,
-                  enabled: !controller.isRefreshing,
+                  enabled: !controller.isBusy,
                   child: ExcludeSemantics(
                     child: IconButton(
                       tooltip: '刷新索引库',
-                      onPressed: controller.isRefreshing
-                          ? null
-                          : controller.refresh,
+                      focusNode: _refreshFocusNode,
+                      onPressed: controller.isBusy ? null : controller.refresh,
                       icon: const Icon(Icons.refresh),
                     ),
                   ),
@@ -72,12 +80,12 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                   button: true,
                   enabled:
                       controller.directoryPicker.isSupported &&
-                      !controller.isMutationInProgress,
+                      !controller.isBusy,
                   child: ExcludeSemantics(
                     child: FilledButton.icon(
                       onPressed:
                           controller.directoryPicker.isSupported &&
-                              !controller.isMutationInProgress
+                              !controller.isBusy
                           ? controller.selectDirectoryAndStart
                           : null,
                       icon: const Icon(Icons.create_new_folder_outlined),
@@ -122,7 +130,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                   tone: WorkspaceNoticeTone.error,
                   message: controller.errorMessage!,
                   actionLabel: '重新尝试',
-                  onAction: controller.refresh,
+                  onAction: controller.isBusy ? null : controller.refresh,
                   onDismiss: controller.clearError,
                   announce: true,
                 ),
@@ -140,7 +148,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                   children: [
                     IconButton(
                       tooltip: '上一页',
-                      onPressed: controller.page > 1
+                      onPressed: !controller.isBusy && controller.page > 1
                           ? controller.previousPage
                           : null,
                       icon: const Icon(Icons.chevron_left),
@@ -148,7 +156,9 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                     Text('${controller.page} / ${controller.totalPages}'),
                     IconButton(
                       tooltip: '下一页',
-                      onPressed: controller.page < controller.totalPages
+                      onPressed:
+                          !controller.isBusy &&
+                              controller.page < controller.totalPages
                           ? controller.nextPage
                           : null,
                       icon: const Icon(Icons.chevron_right),
@@ -237,7 +247,15 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
           fileLauncher: widget.fileLauncher,
           pathClipboard: widget.pathClipboard,
           fileOpenSupported: widget.fileOpenSupported,
-          actionsEnabled: !controller.isMutationInProgress,
+          actionsEnabled: !controller.isBusy,
+          restoreMoreActionsFocus:
+              _pendingReindexFocusSourceKey == file.sourceKey,
+          onMoreActionsFocusRestored: () {
+            if (!mounted || _pendingReindexFocusSourceKey != file.sourceKey) {
+              return;
+            }
+            setState(() => _pendingReindexFocusSourceKey = null);
+          },
           onReindex: () => _confirmReindex(file),
           onRemove: () => _confirmRemove(file),
         );
@@ -264,12 +282,8 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    _pendingReindexFocusSourceKey = file.sourceKey;
     await widget.controller.reindex(file.sourceKey);
-    if (mounted && widget.controller.errorMessage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('重新索引任务已完成')));
-    }
   }
 
   Future<void> _confirmRemove(IndexedFile file) async {
@@ -295,7 +309,16 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await widget.controller.remove(file.sourceKey);
+    final deleted = await widget.controller.remove(file.sourceKey);
+    if (deleted != null) _focusRefreshAction();
+  }
+
+  void _focusRefreshAction() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !widget.controller.isBusy) {
+        _refreshFocusNode.requestFocus();
+      }
+    });
   }
 
   Future<void> _showFailures(IndexFailureDetails details) {

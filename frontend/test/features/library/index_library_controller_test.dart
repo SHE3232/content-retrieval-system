@@ -210,6 +210,110 @@ void main() {
     expect(service.pageCalls.last.page, 1);
   });
 
+  test(
+    'refresh blocks every mutation until its delayed response settles',
+    () async {
+      final delayedPage = Completer<IndexedFilePage>();
+      final service = _FakeLibraryService()
+        ..pages.add(delayedPage.future)
+        ..startedJobs.add(_job(IndexJobStatus.queued));
+      final picker = _FakeDirectoryPicker()..results.add(r'C:\docs');
+      final controller = IndexLibraryController(
+        service: service,
+        directoryPicker: picker,
+        wait: (_) => Completer<void>().future,
+      );
+      addTearDown(controller.dispose);
+
+      final refresh = controller.load();
+      expect(controller.isRefreshing, isTrue);
+
+      await controller.selectDirectoryAndStart();
+      await controller.reindex(_sourceKey);
+      final deleted = await controller.remove(_sourceKey);
+
+      expect(picker.calls, 0);
+      expect(service.startCalls, 0);
+      expect(service.reindexCalls, 0);
+      expect(service.removeCalls, 0);
+      expect(deleted, isNull);
+
+      delayedPage.complete(_page(page: 1));
+      await refresh;
+    },
+  );
+
+  test('mutation blocks refresh and competing mutations', () async {
+    final delayedJob = Completer<IndexJob>();
+    final delayedPage = Completer<IndexedFilePage>();
+    final service = _FakeLibraryService()
+      ..reindexResults.add(delayedJob.future)
+      ..pages.add(delayedPage.future);
+    final picker = _FakeDirectoryPicker()..results.add(r'C:\docs');
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: picker,
+      wait: (_) => Completer<void>().future,
+    );
+    addTearDown(controller.dispose);
+
+    final mutation = controller.reindex(_sourceKey);
+    expect(controller.isMutationInProgress, isTrue);
+
+    final refresh = controller.refresh();
+    await controller.selectDirectoryAndStart();
+    final deleted = await controller.remove(_sourceKey);
+
+    expect(service.pageCalls, isEmpty);
+    expect(service.reindexCalls, 1);
+    expect(service.startCalls, 0);
+    expect(service.removeCalls, 0);
+    expect(picker.calls, 0);
+    expect(deleted, isNull);
+
+    delayedPage.complete(_page(page: 1));
+    await refresh;
+    delayedJob.complete(_job(IndexJobStatus.queued));
+    await mutation;
+  });
+
+  test('stale refresh cannot restore a file after removal', () async {
+    final staleRefresh = Completer<IndexedFilePage>();
+    final service = _FakeLibraryService()
+      ..pages.add(_page(page: 1, total: 1, totalPages: 1))
+      ..pages.add(staleRefresh.future)
+      ..removeResults.add(
+        const DeletedIndexedFile(sourceKey: _sourceKey, deletedRecords: 4),
+      )
+      ..pages.add(
+        const IndexedFilePage(
+          items: [],
+          page: 1,
+          pageSize: 20,
+          total: 0,
+          totalPages: 0,
+        ),
+      );
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: _FakeDirectoryPicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+
+    final refresh = controller.refresh();
+    expect(await controller.remove(_sourceKey), isNull);
+    expect(service.removeCalls, 0);
+
+    staleRefresh.complete(_page(page: 1, total: 1, totalPages: 1));
+    await refresh;
+    expect(controller.files, hasLength(1));
+
+    expect(await controller.remove(_sourceKey), isNotNull);
+    expect(controller.files, isEmpty);
+    expect(service.removeCalls, 1);
+  });
+
   test('dispose ignores a late page response', () async {
     final page = Completer<IndexedFilePage>();
     final service = _FakeLibraryService()..pages.add(page.future);
@@ -297,6 +401,9 @@ final class _FakeLibraryService implements IndexLibraryService {
   final List<Object> reindexResults = <Object>[];
   final List<Object> removeResults = <Object>[];
   final List<({int page, int pageSize})> pageCalls = [];
+  int startCalls = 0;
+  int reindexCalls = 0;
+  int removeCalls = 0;
 
   @override
   Future<IndexedFilePage> fetchFiles({
@@ -311,6 +418,7 @@ final class _FakeLibraryService implements IndexLibraryService {
 
   @override
   Future<IndexJob> startIndexing(String directory) async {
+    startCalls += 1;
     return startedJobs.removeAt(0);
   }
 
@@ -326,13 +434,16 @@ final class _FakeLibraryService implements IndexLibraryService {
 
   @override
   Future<IndexJob> reindex(String sourceKey) async {
+    reindexCalls += 1;
     final value = reindexResults.removeAt(0);
     if (value is ApiException) throw value;
+    if (value is Future<IndexJob>) return value;
     return value as IndexJob;
   }
 
   @override
   Future<DeletedIndexedFile> remove(String sourceKey) async {
+    removeCalls += 1;
     final value = removeResults.removeAt(0);
     if (value is ApiException) throw value;
     return value as DeletedIndexedFile;

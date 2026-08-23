@@ -136,7 +136,7 @@ void main() {
       isTrue,
     );
     expect(find.bySemanticsLabel('刷新索引库'), findsOneWidget);
-    expect(find.bySemanticsLabel('添加文件夹'), findsOneWidget);
+    expect(find.bySemanticsLabel('添加资料文件夹'), findsOneWidget);
     semantics.dispose();
   });
 }

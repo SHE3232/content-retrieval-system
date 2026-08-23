@@ -39,8 +39,10 @@ final class IndexLibraryController extends ChangeNotifier {
   bool _disposed = false;
   int _pollGeneration = 0;
 
+  bool get isBusy => isRefreshing || isMutationInProgress;
+
   Future<void> load({int page = 1, bool preserveError = false}) async {
-    if (_disposed || isRefreshing) return;
+    if (_disposed || isBusy) return;
     isRefreshing = true;
     if (!preserveError) errorMessage = null;
     if (files.isEmpty) state = LibraryViewState.loading;
@@ -77,30 +79,42 @@ final class IndexLibraryController extends ChangeNotifier {
   }
 
   Future<void> selectDirectoryAndStart() async {
-    if (_disposed || isMutationInProgress) return;
+    if (_disposed || isBusy) return;
     if (!directoryPicker.isSupported) {
       errorMessage = '当前平台不支持添加本地资料文件夹，请使用 Windows、macOS 或 Linux 桌面版。';
       _notify();
       return;
     }
 
-    final directory = await directoryPicker.pickDirectory();
-    if (_disposed || directory == null || directory.trim().isEmpty) return;
+    if (!_beginMutation()) return;
+    String? directory;
+    try {
+      directory = await directoryPicker.pickDirectory();
+    } catch (_) {
+      if (!_disposed) {
+        isMutationInProgress = false;
+        _notify();
+      }
+      rethrow;
+    }
+    if (_disposed) return;
+    if (directory == null || directory.trim().isEmpty) {
+      isMutationInProgress = false;
+      _notify();
+      return;
+    }
 
-    await _startMutation(() => service.startIndexing(directory));
+    final selectedDirectory = directory;
+    await _startMutation(() => service.startIndexing(selectedDirectory));
   }
 
   Future<void> reindex(String sourceKey) async {
-    if (_disposed || isMutationInProgress) return;
+    if (!_beginMutation()) return;
     await _startMutation(() => service.reindex(sourceKey));
   }
 
   Future<DeletedIndexedFile?> remove(String sourceKey) async {
-    if (_disposed || isMutationInProgress) return null;
-    isMutationInProgress = true;
-    errorMessage = null;
-    successMessage = null;
-    _notify();
+    if (!_beginMutation()) return null;
     try {
       final deleted = await service.remove(sourceKey);
       if (_disposed) return null;
@@ -123,9 +137,6 @@ final class IndexLibraryController extends ChangeNotifier {
   }
 
   Future<void> _startMutation(Future<IndexJob> Function() start) async {
-    isMutationInProgress = true;
-    errorMessage = null;
-    successMessage = null;
     failureDetails = null;
     _notify();
     try {
@@ -145,6 +156,15 @@ final class IndexLibraryController extends ChangeNotifier {
       isMutationInProgress = false;
       _notify();
     }
+  }
+
+  bool _beginMutation() {
+    if (_disposed || isBusy) return false;
+    isMutationInProgress = true;
+    errorMessage = null;
+    successMessage = null;
+    _notify();
+    return true;
   }
 
   Future<void> _monitorJob(String jobId, int generation) async {

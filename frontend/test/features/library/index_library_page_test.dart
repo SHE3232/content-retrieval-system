@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:content_retrieval_app/core/platform/directory_picker.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_controller.dart';
@@ -187,6 +189,108 @@ void main() {
     expect(find.text('从索引库移除'), findsOneWidget);
   });
 
+  testWidgets(
+    'queued reindex waits for terminal state before restoring focus',
+    (tester) async {
+      final waits = <Completer<void>>[];
+      final service = _PageService()
+        ..pages.add(_page())
+        ..reindexJobs.add(_job(IndexJobStatus.queued))
+        ..fetchedJobs.add(_completedJob())
+        ..pages.add(_page());
+      final controller = IndexLibraryController(
+        service: service,
+        directoryPicker: _PagePicker(),
+        wait: (_) {
+          final wait = Completer<void>();
+          waits.add(wait);
+          return wait.future;
+        },
+      );
+      addTearDown(controller.dispose);
+      await controller.load();
+      await tester.pumpWidget(_app(controller));
+      final triggerFocusNode = tester
+          .widget<FocusableActionDetector>(
+            find.byKey(const Key('more-actions-file-1')),
+          )
+          .focusNode!;
+
+      await tester.tap(find.byKey(const Key('more-actions-file-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('重新索引文件'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '重新索引文件'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(controller.activeJob?.status, IndexJobStatus.queued);
+      expect(find.text('重新索引任务已完成'), findsNothing);
+      expect(
+        tester
+            .widget<FocusableActionDetector>(
+              find.byKey(const Key('more-actions-file-1')),
+            )
+            .enabled,
+        isFalse,
+      );
+
+      waits.single.complete();
+      for (var attempt = 0; attempt < 10; attempt += 1) {
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(controller.activeJob?.status, IndexJobStatus.completed);
+      expect(
+        tester
+            .widget<FocusableActionDetector>(
+              find.byKey(const Key('more-actions-file-1')),
+            )
+            .focusNode,
+        same(triggerFocusNode),
+      );
+      expect(triggerFocusNode.canRequestFocus, isTrue);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'more-actions-file-1',
+      );
+    },
+  );
+
+  testWidgets('successful removal focuses the stable refresh action', (
+    tester,
+  ) async {
+    final service = _PageService()
+      ..pages.add(_page())
+      ..removeResults.add(
+        const DeletedIndexedFile(sourceKey: _sourceKey, deletedRecords: 4),
+      )
+      ..pages.add(_emptyPage);
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.byKey(const Key('more-actions-file-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('从索引库移除'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '从索引库移除'));
+    for (var attempt = 0; attempt < 20; attempt += 1) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    expect(find.byKey(const Key('indexed-file-row-file-1')), findsNothing);
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'library-refresh-action',
+    );
+  });
+
   testWidgets('disabled more menu cannot receive focus or open', (
     tester,
   ) async {
@@ -212,6 +316,110 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('重新索引文件'), findsNothing);
+  });
+
+  testWidgets('reduced motion uses a static more-action focus ring', (
+    tester,
+  ) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller, disableAnimations: true));
+
+    final trigger = find.byKey(const Key('more-actions-file-1'));
+    expect(
+      find.descendant(of: trigger, matching: find.byType(AnimatedContainer)),
+      findsNothing,
+    );
+  });
+
+  testWidgets('refresh and mutation busy states disable page actions', (
+    tester,
+  ) async {
+    final delayedRefresh = Completer<IndexedFilePage>();
+    final service = _PageService()
+      ..pages.add(_page(total: 41, totalPages: 3))
+      ..pages.add(delayedRefresh.future);
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: _PagePicker(),
+      wait: (_) => Completer<void>().future,
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    final refresh = controller.refresh();
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '添加资料文件夹'))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<FocusableActionDetector>(
+            find.byKey(const Key('more-actions-file-1')),
+          )
+          .enabled,
+      isFalse,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.chevron_right),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    delayedRefresh.complete(_page(total: 41, totalPages: 3));
+    await refresh;
+    await tester.pump();
+
+    service.reindexJobs.add(_job(IndexJobStatus.queued));
+    await controller.reindex(_sourceKey);
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.refresh))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '添加资料文件夹'))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<FocusableActionDetector>(
+            find.byKey(const Key('more-actions-file-1')),
+          )
+          .enabled,
+      isFalse,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.chevron_right),
+          )
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('pagination follows the twenty pixel page rhythm', (
@@ -387,8 +595,15 @@ Widget _app(
   IndexLibraryController controller, {
   FakeFileLauncher? fileLauncher,
   FakePathClipboard? pathClipboard,
+  bool disableAnimations = false,
 }) {
   return MaterialApp(
+    builder: disableAnimations
+        ? (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          )
+        : null,
     home: Scaffold(
       body: IndexLibraryPage(
         controller: controller,
@@ -447,6 +662,10 @@ IndexJob _completedJob({IndexJobStatus status = IndexJobStatus.completed}) {
   );
 }
 
+IndexJob _job(IndexJobStatus status) {
+  return IndexJob(jobId: 'job-1', status: status, result: null);
+}
+
 final class _PagePicker implements DirectoryPicker {
   @override
   bool isSupported = true;
@@ -456,8 +675,9 @@ final class _PagePicker implements DirectoryPicker {
 }
 
 final class _PageService implements IndexLibraryService {
-  final List<IndexedFilePage> pages = [];
+  final List<Object> pages = [];
   final List<IndexJob> reindexJobs = [];
+  final List<IndexJob> fetchedJobs = [];
   final List<DeletedIndexedFile> removeResults = [];
   final List<String> reindexCalls = [];
   final List<String> removeCalls = [];
@@ -466,14 +686,18 @@ final class _PageService implements IndexLibraryService {
   Future<IndexedFilePage> fetchFiles({
     required int page,
     required int pageSize,
-  }) async => pages.removeAt(0);
+  }) async {
+    final value = pages.removeAt(0);
+    if (value is Future<IndexedFilePage>) return value;
+    return value as IndexedFilePage;
+  }
 
   @override
   Future<IndexJob> startIndexing(String directory) =>
       throw UnimplementedError();
 
   @override
-  Future<IndexJob> fetchJob(String jobId) => throw UnimplementedError();
+  Future<IndexJob> fetchJob(String jobId) async => fetchedJobs.removeAt(0);
 
   @override
   Future<IndexFailureDetails> fetchFailures(String jobId) =>
