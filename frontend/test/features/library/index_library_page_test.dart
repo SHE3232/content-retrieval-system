@@ -4,6 +4,7 @@ import 'package:content_retrieval_app/features/library/presentation/index_librar
 import 'package:content_retrieval_app/features/library/presentation/index_library_page.dart';
 import 'package:content_retrieval_app/core/presentation/workspace_notice.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fakes.dart';
@@ -146,7 +147,7 @@ void main() {
     expect(find.text('索引库为空'), findsOneWidget);
   });
 
-  testWidgets('cancelling reindex returns focus to the same more menu', (
+  testWidgets('more menu restores focus and reopens with keyboard', (
     tester,
   ) async {
     final controller = IndexLibraryController(
@@ -168,6 +169,70 @@ void main() {
     expect(
       FocusManager.instance.primaryFocus?.debugLabel,
       'more-actions-file-1',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('重新索引文件'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'more-actions-file-1',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pumpAndSettle();
+    expect(find.text('从索引库移除'), findsOneWidget);
+  });
+
+  testWidgets('disabled more menu cannot receive focus or open', (
+    tester,
+  ) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    controller.isMutationInProgress = true;
+    await tester.pumpWidget(_app(controller));
+
+    final menuFinder = find.byKey(const Key('more-actions-file-1'));
+    final trigger = tester.widget<FocusableActionDetector>(menuFinder);
+    expect(trigger.enabled, isFalse);
+
+    trigger.focusNode!.requestFocus();
+    await tester.pump();
+    expect(trigger.focusNode!.hasFocus, isFalse);
+
+    await tester.tap(menuFinder);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('重新索引文件'), findsNothing);
+  });
+
+  testWidgets('pagination follows the twenty pixel page rhythm', (
+    tester,
+  ) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page(total: 41, totalPages: 3)),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    final pagination = tester.widget<Padding>(
+      find
+          .ancestor(of: find.text('1 / 3'), matching: find.byType(Padding))
+          .first,
+    );
+    expect(
+      pagination.padding,
+      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     );
   });
 
@@ -334,7 +399,7 @@ Widget _app(
   );
 }
 
-IndexedFilePage _page() {
+IndexedFilePage _page({int total = 1, int totalPages = 1}) {
   return IndexedFilePage(
     items: [
       IndexedFile(
@@ -351,8 +416,8 @@ IndexedFilePage _page() {
     ],
     page: 1,
     pageSize: 20,
-    total: 1,
-    totalPages: 1,
+    total: total,
+    totalPages: totalPages,
   );
 }
 

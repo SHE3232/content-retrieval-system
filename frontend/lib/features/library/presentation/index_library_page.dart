@@ -130,7 +130,10 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
             Expanded(child: _body(controller)),
             if (controller.totalPages > 1)
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 12,

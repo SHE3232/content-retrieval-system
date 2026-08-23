@@ -2,6 +2,7 @@ import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 final class IndexedFileTile extends StatefulWidget {
   const IndexedFileTile({
@@ -30,7 +31,10 @@ final class IndexedFileTile extends StatefulWidget {
 final class _IndexedFileTileState extends State<IndexedFileTile> {
   bool _opening = false;
   bool _copying = false;
+  bool _showMoreActionsFocus = false;
   String? _error;
+  final GlobalKey<PopupMenuButtonState<_IndexedFileAction>>
+  _moreActionsMenuKey = GlobalKey<PopupMenuButtonState<_IndexedFileAction>>();
   late final FocusNode _moreActionsFocusNode;
 
   @override
@@ -120,31 +124,76 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
                     icon: const Icon(Icons.content_copy),
                   ),
                 ),
-                Focus(
-                  focusNode: _moreActionsFocusNode,
-                  child: PopupMenuButton<_IndexedFileAction>(
+                Semantics(
+                  label: '${file.name} 的更多操作',
+                  button: true,
+                  enabled: widget.actionsEnabled,
+                  onTap: widget.actionsEnabled ? _showMoreActionsMenu : null,
+                  child: FocusableActionDetector(
                     key: Key('more-actions-${file.fileId}'),
                     enabled: widget.actionsEnabled,
-                    tooltip: '${file.name} 的更多操作',
-                    padding: const EdgeInsets.all(12),
-                    icon: const Icon(Icons.more_vert),
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: _IndexedFileAction.reindex,
-                        child: ListTile(
-                          leading: Icon(Icons.refresh),
-                          title: Text('重新索引文件'),
+                    focusNode: _moreActionsFocusNode,
+                    descendantsAreFocusable: false,
+                    descendantsAreTraversable: false,
+                    includeFocusSemantics: false,
+                    shortcuts: const <ShortcutActivator, Intent>{
+                      SingleActivator(LogicalKeyboardKey.enter):
+                          ActivateIntent(),
+                      SingleActivator(LogicalKeyboardKey.space):
+                          ActivateIntent(),
+                    },
+                    actions: <Type, Action<Intent>>{
+                      ActivateIntent: CallbackAction<ActivateIntent>(
+                        onInvoke: (_) {
+                          _showMoreActionsMenu();
+                          return null;
+                        },
+                      ),
+                    },
+                    onShowFocusHighlight: (show) {
+                      if (mounted) {
+                        setState(() => _showMoreActionsFocus = show);
+                      }
+                    },
+                    child: ExcludeSemantics(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 100),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: _showMoreActionsFocus
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: PopupMenuButton<_IndexedFileAction>(
+                          key: _moreActionsMenuKey,
+                          enabled: widget.actionsEnabled,
+                          tooltip: '${file.name} 的更多操作',
+                          padding: const EdgeInsets.all(12),
+                          icon: const Icon(Icons.more_vert),
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: _IndexedFileAction.reindex,
+                              child: ListTile(
+                                leading: Icon(Icons.refresh),
+                                title: Text('重新索引文件'),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: _IndexedFileAction.remove,
+                              child: ListTile(
+                                leading: Icon(Icons.delete_outline),
+                                title: Text('从索引库移除'),
+                              ),
+                            ),
+                          ],
+                          onCanceled: _restoreMoreActionsFocus,
+                          onSelected: _performAction,
                         ),
                       ),
-                      PopupMenuItem(
-                        value: _IndexedFileAction.remove,
-                        child: ListTile(
-                          leading: Icon(Icons.delete_outline),
-                          title: Text('从索引库移除'),
-                        ),
-                      ),
-                    ],
-                    onSelected: _performAction,
+                    ),
                   ),
                 ),
               ],
@@ -162,13 +211,24 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
     );
   }
 
+  void _showMoreActionsMenu() {
+    if (!widget.actionsEnabled) return;
+    _moreActionsMenuKey.currentState?.showButtonMenu();
+  }
+
+  void _restoreMoreActionsFocus() {
+    if (mounted && widget.actionsEnabled) {
+      _moreActionsFocusNode.requestFocus();
+    }
+  }
+
   Future<void> _performAction(_IndexedFileAction action) async {
     final callback = switch (action) {
       _IndexedFileAction.reindex => widget.onReindex,
       _IndexedFileAction.remove => widget.onRemove,
     };
     await callback();
-    if (mounted) _moreActionsFocusNode.requestFocus();
+    _restoreMoreActionsFocus();
   }
 
   Future<void> _open() async {
