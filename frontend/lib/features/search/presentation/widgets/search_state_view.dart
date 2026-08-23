@@ -14,7 +14,7 @@ final class SearchStateView extends StatelessWidget {
     required this.controller,
     required this.fileLauncher,
     required this.pathClipboard,
-    required this.retainResultsWhileLoading,
+    required this.retainResultsForCurrentRequest,
     required this.onRetry,
     required this.onClearFilters,
   });
@@ -22,7 +22,7 @@ final class SearchStateView extends StatelessWidget {
   final SearchController controller;
   final FileLauncher fileLauncher;
   final PathClipboard pathClipboard;
-  final bool retainResultsWhileLoading;
+  final bool retainResultsForCurrentRequest;
   final VoidCallback? onRetry;
   final VoidCallback onClearFilters;
 
@@ -35,7 +35,7 @@ final class SearchStateView extends StatelessWidget {
       body: '例如：“哪个 PDF 讲过键盘导航？”\n支持文档、文本文件和图片。',
     ),
     SearchViewState.loading =>
-      retainResultsWhileLoading &&
+      retainResultsForCurrentRequest &&
               controller.response != null &&
               controller.response!.hits.isNotEmpty
           ? _retainedLoading(context, controller.response!)
@@ -103,6 +103,7 @@ final class SearchStateView extends StatelessWidget {
       response,
       header: [
         LiveRegionMessage(
+          key: const Key('search-updating-live-region'),
           message: '正在更新结果。',
           excludeChildSemantics: false,
           child: Column(
@@ -163,7 +164,9 @@ final class SearchStateView extends StatelessWidget {
     final error = controller.error;
     final (title, body) = _safeErrorCopy(error);
     final retainedResponse = controller.response;
-    if (retainedResponse != null) {
+    if (retainResultsForCurrentRequest &&
+        retainedResponse != null &&
+        retainedResponse.hits.isNotEmpty) {
       final theme = Theme.of(context);
       return _resultList(
         context,

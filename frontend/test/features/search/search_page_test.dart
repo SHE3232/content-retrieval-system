@@ -482,10 +482,11 @@ void main() {
   testWidgets('updating criteria retains results until replacement arrives', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     final pending = Completer<SearchResponse>();
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.addAll([
-        _response(names: const ['notes.txt']),
+        _response(query: 'notes', names: const ['notes.txt']),
         pending.future,
       ]);
     await harness.search('notes');
@@ -499,13 +500,16 @@ void main() {
       find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
       findsNothing,
     );
-    final updatingSemantics = find.byWidgetPredicate(
-      (widget) =>
-          widget is Semantics &&
-          widget.properties.label == '正在更新结果。' &&
-          widget.properties.liveRegion == true,
-    );
+    final updatingSemantics = find.semantics.byLabel('正在更新结果。');
     expect(updatingSemantics, findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('search-updating-live-region')))
+          .getSemanticsData()
+          .flagsCollection
+          .isLiveRegion,
+      isTrue,
+    );
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
     pending.complete(_response(names: const ['updated.txt']));
@@ -513,6 +517,7 @@ void main() {
 
     expect(find.text('notes.txt'), findsNothing);
     expect(find.text('updated.txt'), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('manual query replaces results with initial loading state', (
@@ -521,7 +526,7 @@ void main() {
     final pending = Completer<SearchResponse>();
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.addAll([
-        _response(names: const ['notes.txt']),
+        _response(query: 'notes', names: const ['notes.txt']),
         pending.future,
       ]);
     await harness.search('notes');
@@ -571,6 +576,103 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('found.txt'), findsOneWidget);
+  });
+
+  testWidgets('manual query failure does not retain old results', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'notes', names: const ['notes.txt']),
+        const ApiException(ApiErrorKind.timeout, 'private timeout detail'),
+      ]);
+    await harness.search('notes');
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      'different query',
+    );
+    await tester.tap(find.byKey(const Key('search-submit-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('notes.txt'), findsNothing);
+    expect(find.byKey(const Key('workspace-notice')), findsNothing);
+    expect(find.text('搜索用时过长'), findsOneWidget);
+    expect(find.text('重新尝试'), findsOneWidget);
+    expect(find.textContaining('保留上次的'), findsNothing);
+  });
+
+  testWidgets('filter failure after an empty response is not retained', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'missing', hits: const <SearchHit>[]),
+        const ApiException(ApiErrorKind.timeout, 'private timeout detail'),
+      ]);
+    await harness.search('missing');
+
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('workspace-notice')), findsNothing);
+    expect(find.byKey(const Key('search-result-list')), findsNothing);
+    expect(find.text('搜索用时过长'), findsOneWidget);
+    expect(find.text('保留上次的 0 条结果'), findsNothing);
+  });
+
+  testWidgets('edited query filter update does not retain pending results', (
+    tester,
+  ) async {
+    final pending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'notes', names: const ['notes.txt']),
+        pending.future,
+      ]);
+    await harness.search('notes');
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      'different query',
+    );
+    await tester.tap(find.text('语义'));
+    await tester.pump();
+
+    expect(find.text('notes.txt'), findsNothing);
+    expect(find.text('正在更新结果'), findsNothing);
+    expect(
+      find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
+      findsNWidgets(3),
+    );
+
+    pending.complete(
+      _response(query: 'different query', names: const ['updated.txt']),
+    );
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('edited query filter failure does not retain old results', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'notes', names: const ['notes.txt']),
+        const ApiException(ApiErrorKind.timeout, 'private timeout detail'),
+      ]);
+    await harness.search('notes');
+
+    await tester.enterText(
+      find.byKey(const Key('search-query-field')),
+      'different query',
+    );
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('notes.txt'), findsNothing);
+    expect(find.byKey(const Key('workspace-notice')), findsNothing);
+    expect(find.text('搜索用时过长'), findsOneWidget);
+    expect(find.textContaining('保留上次的'), findsNothing);
   });
 
   testWidgets(
@@ -653,7 +755,7 @@ void main() {
   ) async {
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.addAll([
-        _response(names: const ['notes.txt']),
+        _response(query: 'notes', names: const ['notes.txt']),
         const ApiException(
           ApiErrorKind.rejected,
           'private validation detail',
@@ -781,9 +883,10 @@ void main() {
   testWidgets('failed update retains results and shows a safe live notice', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     final harness = await _SearchHarness.create(tester)
       ..searchService.results.addAll([
-        _response(names: const ['notes.txt']),
+        _response(query: 'notes', names: const ['notes.txt']),
         const ApiException(ApiErrorKind.timeout, 'private timeout detail'),
       ]);
     await harness.search('notes');
@@ -796,11 +899,18 @@ void main() {
     expect(find.textContaining('请重新尝试。'), findsOneWidget);
     expect(find.text('重新尝试'), findsOneWidget);
     expect(find.byKey(const Key('workspace-notice')), findsOneWidget);
-    final notice = tester.widget<Semantics>(
-      find.byKey(const Key('workspace-notice')),
+    final noticeAnnouncement = find.semantics.byLabel(RegExp('搜索用时过长'));
+    expect(noticeAnnouncement, findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('workspace-notice')))
+          .getSemanticsData()
+          .flagsCollection
+          .isLiveRegion,
+      isTrue,
     );
-    expect(notice.properties.liveRegion, isTrue);
     expect(find.textContaining('private timeout detail'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('success rows show real metadata and active response summary', (
@@ -1188,6 +1298,31 @@ void main() {
     },
   );
 
+  testWidgets('compact filter ignores re-entry while sheet is opening', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester, surfaceSize: const Size(900, 720));
+    final button = tester.widget<OutlinedButton>(
+      find.byKey(const Key('search-filter-button')),
+    );
+
+    button.onPressed!();
+    button.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('search-filter-panel'), skipOffstage: false),
+      findsOneWidget,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('search-filter-panel'), skipOffstage: false),
+      findsNothing,
+    );
+  });
+
   testWidgets('filter reset restores defaults and resubmits active query', (
     tester,
   ) async {
@@ -1228,6 +1363,26 @@ void main() {
 
     expect(find.byKey(const Key('search-filter-panel')), findsNothing);
     expect(tester.widget<OutlinedButton>(button).focusNode?.hasFocus, isTrue);
+  });
+
+  testWidgets('closing filters after widening restores query focus', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester, surfaceSize: const Size(900, 720));
+
+    await tester.tap(find.byKey(const Key('search-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('search-filter-button')), findsNothing);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
   });
 
   testWidgets('bottom sheet filter selection stays visually synchronized', (

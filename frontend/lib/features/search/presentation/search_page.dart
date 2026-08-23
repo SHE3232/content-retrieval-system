@@ -38,7 +38,11 @@ final class _SearchPageState extends State<SearchPage> {
   late final TextEditingController _queryController;
   late final FocusNode _queryFocusNode;
   late final FocusNode _filterButtonFocusNode;
-  bool _retainResultsWhileLoading = false;
+  final GlobalKey _filterSheetKey = GlobalKey(
+    debugLabel: 'search filter sheet',
+  );
+  bool _retainResultsForCurrentRequest = false;
+  bool _filtersOpen = false;
 
   @override
   void initState() {
@@ -66,7 +70,7 @@ final class _SearchPageState extends State<SearchPage> {
     if (!_canSubmit) {
       return;
     }
-    _retainResultsWhileLoading = false;
+    _retainResultsForCurrentRequest = false;
     widget.controller.setQuery(_queryController.text);
     await widget.controller.submit();
   }
@@ -79,7 +83,15 @@ final class _SearchPageState extends State<SearchPage> {
     if (normalizedQuery.isEmpty || !_canSubmit) {
       return;
     }
-    _retainResultsWhileLoading = true;
+    final response = widget.controller.response;
+    final normalizedResponseQuery = response?.query.trim().replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
+    _retainResultsForCurrentRequest =
+        response != null &&
+        response.hits.isNotEmpty &&
+        normalizedResponseQuery == normalizedQuery;
     unawaited(widget.controller.submit());
   }
 
@@ -94,41 +106,66 @@ final class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> _showFilters() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () {
-            Navigator.of(sheetContext).pop();
+    if (_filtersOpen) {
+      return;
+    }
+    _filtersOpen = true;
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => CallbackShortcuts(
+          key: _filterSheetKey,
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () {
+              Navigator.of(sheetContext).pop();
+            },
           },
-        },
-        child: Focus(
-          autofocus: true,
-          child: SafeArea(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
-              ),
-              child: ListenableBuilder(
-                listenable: widget.controller,
-                builder: (context, _) => SearchFilterPanel(
-                  key: const Key('search-filter-panel'),
-                  controller: widget.controller,
-                  enabled: widget.controller.state != SearchViewState.loading,
-                  onChanged: _filtersChanged,
-                  onReset: _clearFilters,
+          child: Focus(
+            autofocus: true,
+            child: SafeArea(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
+                ),
+                child: ListenableBuilder(
+                  listenable: widget.controller,
+                  builder: (context, _) => SearchFilterPanel(
+                    key: const Key('search-filter-panel'),
+                    controller: widget.controller,
+                    enabled: widget.controller.state != SearchViewState.loading,
+                    onChanged: _filtersChanged,
+                    onReset: _clearFilters,
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    );
-    if (mounted) {
-      _filterButtonFocusNode.requestFocus();
+      );
+    } finally {
+      _filtersOpen = false;
+      _restoreFocusAfterFiltersClose();
     }
+  }
+
+  void _restoreFocusAfterFiltersClose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (_filterSheetKey.currentContext != null) {
+        _restoreFocusAfterFiltersClose();
+        return;
+      }
+      final filterButtonContext = _filterButtonFocusNode.context;
+      if (filterButtonContext != null && filterButtonContext.mounted) {
+        _filterButtonFocusNode.requestFocus();
+      } else {
+        _queryFocusNode.requestFocus();
+      }
+    });
   }
 
   @override
@@ -170,7 +207,8 @@ final class _SearchPageState extends State<SearchPage> {
                         queryController: _queryController,
                         queryFocusNode: _queryFocusNode,
                         filterButtonFocusNode: _filterButtonFocusNode,
-                        retainResultsWhileLoading: _retainResultsWhileLoading,
+                        retainResultsForCurrentRequest:
+                            _retainResultsForCurrentRequest,
                         canSubmit: _canSubmit,
                         showFilterButton: !showPersistentFilters,
                         onSubmit: _submit,
@@ -218,7 +256,7 @@ final class _SearchMainColumn extends StatelessWidget {
     required this.queryController,
     required this.queryFocusNode,
     required this.filterButtonFocusNode,
-    required this.retainResultsWhileLoading,
+    required this.retainResultsForCurrentRequest,
     required this.canSubmit,
     required this.showFilterButton,
     required this.onSubmit,
@@ -232,7 +270,7 @@ final class _SearchMainColumn extends StatelessWidget {
   final TextEditingController queryController;
   final FocusNode queryFocusNode;
   final FocusNode filterButtonFocusNode;
-  final bool retainResultsWhileLoading;
+  final bool retainResultsForCurrentRequest;
   final bool canSubmit;
   final bool showFilterButton;
   final Future<void> Function() onSubmit;
@@ -269,7 +307,7 @@ final class _SearchMainColumn extends StatelessWidget {
               controller: controller,
               fileLauncher: fileLauncher,
               pathClipboard: pathClipboard,
-              retainResultsWhileLoading: retainResultsWhileLoading,
+              retainResultsForCurrentRequest: retainResultsForCurrentRequest,
               onRetry: canSubmit ? () => unawaited(onSubmit()) : null,
               onClearFilters: onClearFilters,
             ),
