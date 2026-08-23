@@ -133,7 +133,11 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                   tone: WorkspaceNoticeTone.error,
                   message: controller.errorMessage!,
                   actionLabel: '重新尝试',
-                  onAction: controller.isBusy ? null : controller.refresh,
+                  onAction: controller.isBusy
+                      ? null
+                      : controller.hasDirectoryPickerFailure
+                      ? controller.selectDirectoryAndStart
+                      : controller.refresh,
                   onDismiss: controller.clearError,
                   announce: true,
                 ),

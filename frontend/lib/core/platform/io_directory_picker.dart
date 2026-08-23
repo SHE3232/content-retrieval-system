@@ -4,18 +4,11 @@ import 'package:content_retrieval_app/core/platform/directory_picker.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher_io.dart';
 
+export 'package:content_retrieval_app/core/platform/directory_picker.dart'
+    show DirectoryPickerException;
+
 typedef RunDirectoryPickerProcess =
     Future<ProcessResult> Function(String executable, List<String> arguments);
-
-final class DirectoryPickerException implements Exception {
-  const DirectoryPickerException(this.message, {this.cause});
-
-  final String message;
-  final Object? cause;
-
-  @override
-  String toString() => 'DirectoryPickerException($message)';
-}
 
 final class IoDirectoryPicker implements DirectoryPicker {
   IoDirectoryPicker({

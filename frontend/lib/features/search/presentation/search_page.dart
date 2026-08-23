@@ -75,6 +75,31 @@ final class _SearchPageState extends State<SearchPage> {
     await widget.controller.submit();
   }
 
+  Future<void> _retry() async {
+    if (!_canSubmit) {
+      return;
+    }
+    final response = widget.controller.response;
+    final normalizedQuery = widget.controller.query.trim().replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
+    final normalizedResponseQuery = response?.query.trim().replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
+    final canRetainResults =
+        _retainResultsForCurrentRequest &&
+        response != null &&
+        response.hits.isNotEmpty &&
+        normalizedResponseQuery == normalizedQuery;
+    if (!canRetainResults) {
+      await _submit();
+      return;
+    }
+    await widget.controller.submit();
+  }
+
   void _filtersChanged() {
     final normalizedQuery = widget.controller.query.trim().replaceAll(
       RegExp(r'\s+'),
@@ -212,6 +237,7 @@ final class _SearchPageState extends State<SearchPage> {
                         canSubmit: _canSubmit,
                         showFilterButton: !showPersistentFilters,
                         onSubmit: _submit,
+                        onRetry: _retry,
                         onShowFilters: _showFilters,
                         onClearFilters: _clearFilters,
                       );
@@ -260,6 +286,7 @@ final class _SearchMainColumn extends StatelessWidget {
     required this.canSubmit,
     required this.showFilterButton,
     required this.onSubmit,
+    required this.onRetry,
     required this.onShowFilters,
     required this.onClearFilters,
   });
@@ -274,6 +301,7 @@ final class _SearchMainColumn extends StatelessWidget {
   final bool canSubmit;
   final bool showFilterButton;
   final Future<void> Function() onSubmit;
+  final Future<void> Function() onRetry;
   final VoidCallback onShowFilters;
   final VoidCallback onClearFilters;
 
@@ -308,7 +336,7 @@ final class _SearchMainColumn extends StatelessWidget {
               fileLauncher: fileLauncher,
               pathClipboard: pathClipboard,
               retainResultsForCurrentRequest: retainResultsForCurrentRequest,
-              onRetry: canSubmit ? () => unawaited(onSubmit()) : null,
+              onRetry: canSubmit ? () => unawaited(onRetry()) : null,
               onClearFilters: onClearFilters,
             ),
           ),

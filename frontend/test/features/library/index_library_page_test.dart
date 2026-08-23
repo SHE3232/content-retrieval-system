@@ -525,6 +525,45 @@ void main() {
     expect(find.textContaining('后端'), findsNothing);
   });
 
+  testWidgets('directory picker failure is shown and can be retried', (
+    tester,
+  ) async {
+    final picker = _PagePicker()
+      ..results.addAll([
+        const DirectoryPickerException('无法打开资料文件夹选择窗口，请重新尝试。'),
+        null,
+      ]);
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_emptyPage),
+      directoryPicker: picker,
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.widgetWithText(FilledButton, '添加资料文件夹'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(WorkspaceNotice), findsOneWidget);
+    expect(find.text('无法打开资料文件夹选择窗口，请重新尝试。'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, '添加资料文件夹'))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.text('重新尝试'));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(picker.calls, 2);
+    expect(controller.isMutationInProgress, isFalse);
+    expect(controller.errorMessage, isNull);
+    expect(find.byType(WorkspaceNotice), findsNothing);
+  });
+
   testWidgets('job progress and failure details remain textual', (
     tester,
   ) async {
@@ -734,11 +773,20 @@ IndexJob _job(IndexJobStatus status) {
 }
 
 final class _PagePicker implements DirectoryPicker {
+  final List<Object?> results = <Object?>[];
+  int calls = 0;
+
   @override
   bool isSupported = true;
 
   @override
-  Future<String?> pickDirectory() async => null;
+  Future<String?> pickDirectory() async {
+    calls += 1;
+    if (results.isEmpty) return null;
+    final result = results.removeAt(0);
+    if (result is String?) return result;
+    throw result;
+  }
 }
 
 final class _PageService implements IndexLibraryService {

@@ -184,6 +184,7 @@ void main() {
     expect(row, findsOneWidget);
     expect(open, findsOneWidget);
     expect(copy, findsOneWidget);
+    expect(find.textContaining('按相关性排序'), findsOneWidget);
     expect(
       tester.getTopLeft(open).dy,
       greaterThan(tester.getBottomLeft(find.text('accessible.pdf')).dy),
@@ -218,6 +219,7 @@ void main() {
     await harness.search('large text');
 
     expect(find.text('large-text.pdf'), findsOneWidget);
+    expect(find.textContaining('按相关性排序'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -913,6 +915,41 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('retrying a failed filter update retains results while pending', (
+    tester,
+  ) async {
+    final retryPending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(query: 'notes', names: const ['notes.txt']),
+        const ApiException(ApiErrorKind.timeout, 'private timeout detail'),
+        retryPending.future,
+      ]);
+    await harness.search('notes');
+
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(find.byKey(const Key('workspace-notice')), findsOneWidget);
+
+    await tester.tap(find.text('重新尝试'));
+    await tester.pump();
+
+    expect(harness.searchService.calls, hasLength(3));
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(find.text('正在更新结果'), findsOneWidget);
+    expect(
+      find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
+      findsNothing,
+    );
+
+    retryPending.complete(
+      _response(query: 'notes', names: const ['updated.txt']),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('updated.txt'), findsOneWidget);
+  });
+
   testWidgets('success rows show real metadata and active response summary', (
     tester,
   ) async {
@@ -941,6 +978,7 @@ void main() {
     expect(find.text('第 7 页'), findsOneWidget);
     expect(find.text(r'C:\资料\report.pdf'), findsOneWidget);
     expect(find.text('找到 1 条相关资料'), findsOneWidget);
+    expect(find.textContaining('按相关性排序'), findsOneWidget);
     expect(find.text('命中：关键词'), findsOneWidget);
     expect(find.text('命中：文本语义'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '打开文件'), findsOneWidget);
@@ -1513,6 +1551,7 @@ void main() {
         await harness.search('responsive');
 
         expect(find.text('one.txt'), findsOneWidget);
+        expect(find.textContaining('按相关性排序'), findsOneWidget);
         expect(find.widgetWithText(FilledButton, '搜索资料'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },

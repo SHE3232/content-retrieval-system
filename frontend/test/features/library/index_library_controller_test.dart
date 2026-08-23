@@ -43,6 +43,40 @@ void main() {
     expect(controller.isMutationInProgress, isFalse);
   });
 
+  test('directory picker failure becomes a retryable user error', () async {
+    const pickerError = DirectoryPickerException('无法打开资料文件夹选择窗口，请重新尝试。');
+    final picker = _FakeDirectoryPicker()..results.add(pickerError);
+    final controller = IndexLibraryController(
+      service: _FakeLibraryService(),
+      directoryPicker: picker,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.selectDirectoryAndStart();
+
+    expect(picker.calls, 1);
+    expect(controller.isMutationInProgress, isFalse);
+    expect(controller.errorMessage, pickerError.message);
+  });
+
+  test('unexpected directory picker failures still propagate', () async {
+    final unexpectedError = StateError('picker programming error');
+    final picker = _FakeDirectoryPicker()..results.add(unexpectedError);
+    final controller = IndexLibraryController(
+      service: _FakeLibraryService(),
+      directoryPicker: picker,
+    );
+    addTearDown(controller.dispose);
+
+    await expectLater(
+      controller.selectDirectoryAndStart(),
+      throwsA(same(unexpectedError)),
+    );
+
+    expect(controller.isMutationInProgress, isFalse);
+    expect(controller.errorMessage, isNull);
+  });
+
   test(
     'unsupported picker message names supported desktop platforms',
     () async {
@@ -401,7 +435,7 @@ IndexingResult _result({required int indexedFiles}) {
 }
 
 final class _FakeDirectoryPicker implements DirectoryPicker {
-  final List<String?> results = <String?>[];
+  final List<Object?> results = <Object?>[];
   int calls = 0;
 
   @override
@@ -410,7 +444,10 @@ final class _FakeDirectoryPicker implements DirectoryPicker {
   @override
   Future<String?> pickDirectory() async {
     calls += 1;
-    return results.isEmpty ? null : results.removeAt(0);
+    if (results.isEmpty) return null;
+    final result = results.removeAt(0);
+    if (result is String?) return result;
+    throw result;
   }
 }
 

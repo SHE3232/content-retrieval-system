@@ -133,13 +133,21 @@ final class SearchStateView extends StatelessWidget {
       response,
       header: [
         LiveRegionMessage(
-          message: '搜索完成，找到 ${response.hits.length} 条结果。',
-          child: Text(
-            '找到 ${response.hits.length} 条相关资料',
-            key: const Key('search-summary'),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+          message: '搜索完成，找到 ${response.hits.length} 条结果，按相关性排序。',
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                '找到 ${response.hits.length} 条相关资料',
+                key: const Key('search-summary'),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text('按相关性排序', style: theme.textTheme.titleSmall),
+            ],
           ),
         ),
         const SizedBox(height: 10),

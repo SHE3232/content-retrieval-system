@@ -10,6 +10,8 @@ enum LibraryViewState { initial, loading, ready, empty, failure }
 typedef WaitForPoll = Future<void> Function(Duration duration);
 
 final class IndexLibraryController extends ChangeNotifier {
+  static const _directoryPickerFailureMessage = '无法打开资料文件夹选择窗口，请重新尝试。';
+
   IndexLibraryController({
     required this.service,
     required this.directoryPicker,
@@ -40,6 +42,8 @@ final class IndexLibraryController extends ChangeNotifier {
   int _pollGeneration = 0;
 
   bool get isBusy => isRefreshing || isMutationInProgress;
+  bool get hasDirectoryPickerFailure =>
+      errorMessage == _directoryPickerFailureMessage;
 
   Future<void> load({int page = 1, bool preserveError = false}) async {
     if (_disposed || isBusy) return;
@@ -90,6 +94,13 @@ final class IndexLibraryController extends ChangeNotifier {
     String? directory;
     try {
       directory = await directoryPicker.pickDirectory();
+    } on DirectoryPickerException {
+      if (!_disposed) {
+        isMutationInProgress = false;
+        errorMessage = _directoryPickerFailureMessage;
+        _notify();
+      }
+      return;
     } catch (_) {
       if (!_disposed) {
         isMutationInProgress = false;
