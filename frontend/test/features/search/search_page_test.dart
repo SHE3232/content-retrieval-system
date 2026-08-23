@@ -33,10 +33,10 @@ void main() {
     );
     expect(heading, findsOneWidget);
     final headingData = tester.getSemantics(heading).getSemanticsData();
-    expect(headingData.label, '搜索');
+    expect(headingData.label, '搜索本地资料');
     expect(headingData.flagsCollection.isHeader, isTrue);
 
-    final description = find.semantics.byLabel(RegExp('在本地资料中找回你记得的内容'));
+    final description = find.semantics.byLabel(RegExp('描述你记得的内容，找到对应文件和位置'));
     expect(description, findsOneWidget);
     expect(
       description.evaluate().single.getSemanticsData().flagsCollection.isHeader,
@@ -64,14 +64,16 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('search stage leads with the approved task language', (
+  testWidgets('search page exposes exactly one approved task title', (
     tester,
   ) async {
     await _SearchHarness.create(tester);
 
     expect(find.byKey(const Key('search-stage')), findsOneWidget);
-    expect(find.text('找回你记得的内容'), findsOneWidget);
-    expect(find.text('描述一个概念、一段话，或图片中的内容。'), findsOneWidget);
+    expect(find.text('搜索本地资料'), findsOneWidget);
+    expect(find.text('找回你记得的内容'), findsNothing);
+    expect(find.text('描述你记得的内容，找到对应文件和位置'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '搜索资料'), findsOneWidget);
     expect(find.text('Ctrl K'), findsOneWidget);
   });
 
@@ -239,7 +241,16 @@ void main() {
   ) async {
     await _SearchHarness.create(tester);
 
-    expect(find.text('后端在线'), findsOneWidget);
+    expect(find.text('本地检索服务已就绪'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == '本地检索服务已连接，可搜索 0 个文件。' &&
+            widget.properties.liveRegion == true,
+      ),
+      findsOneWidget,
+    );
     expect(find.text('搜索内容'), findsOneWidget);
     expect(find.byKey(const Key('search-query-field')), findsOneWidget);
     expect(
@@ -255,7 +266,7 @@ void main() {
       tester,
     ) async {
       await _SearchHarness.create(tester, themeMode: themeMode);
-      final statusText = find.text('后端在线');
+      final statusText = find.text('本地检索服务已就绪');
       final textColor = tester.widget<Text>(statusText).style!.color!;
       final iconColor = tester
           .widget<Icon>(find.byIcon(Icons.check_circle_outline))
@@ -281,15 +292,33 @@ void main() {
       backendState: BackendConnectionState.checking,
     );
 
-    expect(find.text('正在检测后端'), findsOneWidget);
+    expect(find.text('正在连接本地检索服务'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == '正在连接本地检索服务。' &&
+            widget.properties.liveRegion == true,
+      ),
+      findsOneWidget,
+    );
     expect(harness.submitButton.onPressed, isNull);
 
     harness.statusController.state = BackendConnectionState.offline;
     harness.statusController.notifyListeners();
     await tester.pump();
 
-    expect(find.text('后端离线'), findsOneWidget);
-    expect(find.text('重新检测'), findsOneWidget);
+    expect(find.text('本地检索服务不可用'), findsOneWidget);
+    expect(find.text('重新连接'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == '本地检索服务连接已断开。' &&
+            widget.properties.liveRegion == true,
+      ),
+      findsOneWidget,
+    );
     expect(harness.submitButton.onPressed, isNull);
   });
 
@@ -304,7 +333,7 @@ void main() {
     harness.statusController.notifyListeners();
     await tester.pump();
 
-    expect(find.text('后端离线'), findsOneWidget);
+    expect(find.text('本地检索服务不可用'), findsOneWidget);
     expect(find.text('notes.txt'), findsOneWidget);
     expect(harness.submitButton.onPressed, isNull);
 
@@ -450,6 +479,42 @@ void main() {
     _expectFilterControlsEnabled(tester, true);
   });
 
+  testWidgets('updating criteria retains results until replacement arrives', (
+    tester,
+  ) async {
+    final pending = Completer<SearchResponse>();
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(names: const ['notes.txt']),
+        pending.future,
+      ]);
+    await harness.search('notes');
+
+    await tester.tap(find.text('语义'));
+    await tester.pump();
+
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(find.text('正在更新结果'), findsOneWidget);
+    expect(
+      find.byKey(const Key('search-loading-skeleton'), skipOffstage: false),
+      findsNothing,
+    );
+    final updatingSemantics = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.label == '正在更新结果。' &&
+          widget.properties.liveRegion == true,
+    );
+    expect(updatingSemantics, findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+    pending.complete(_response(names: const ['updated.txt']));
+    await tester.pumpAndSettle();
+
+    expect(find.text('notes.txt'), findsNothing);
+    expect(find.text('updated.txt'), findsOneWidget);
+  });
+
   testWidgets(
     'loading filter lock stays synchronized inside the bottom sheet',
     (tester) async {
@@ -487,7 +552,9 @@ void main() {
       ]);
     await harness.search('missing');
 
-    expect(find.text('未找到匹配内容'), findsOneWidget);
+    expect(find.text('没有找到相关资料'), findsOneWidget);
+    expect(find.text('尝试调整搜索内容，或重置筛选条件'), findsOneWidget);
+    expect(find.text('重置筛选'), findsOneWidget);
     await tester.tap(find.byKey(const Key('clear-search-filters-button')));
     await tester.pumpAndSettle();
 
@@ -517,9 +584,34 @@ void main() {
     await harness.search('bad');
 
     expect(find.text('搜索条件有误，请调整后重试'), findsOneWidget);
+    expect(find.text('重新尝试'), findsOneWidget);
     expect(find.textContaining('backend private'), findsNothing);
     expect(find.textContaining('private stack'), findsNothing);
     expect(find.textContaining('StateError'), findsNothing);
+  });
+
+  testWidgets('422 update keeps results and remains associated with input', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(names: const ['notes.txt']),
+        const ApiException(
+          ApiErrorKind.rejected,
+          'private validation detail',
+          statusCode: 422,
+        ),
+      ]);
+    await harness.search('notes');
+
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(find.text('搜索条件有误，请调整后重试'), findsOneWidget);
+    expect(find.textContaining('请调整搜索条件'), findsOneWidget);
+    expect(find.byKey(const Key('workspace-notice')), findsOneWidget);
+    expect(find.textContaining('private validation detail'), findsNothing);
   });
 
   testWidgets('503 maps to service unavailable with retry', (tester) async {
@@ -534,8 +626,9 @@ void main() {
       ]);
     await harness.search('retry');
 
-    expect(find.text('搜索服务暂时不可用，请稍后重试'), findsOneWidget);
-    expect(find.text('重试'), findsOneWidget);
+    expect(find.text('本地检索服务暂时不可用'), findsOneWidget);
+    expect(find.text('请稍后重新尝试。'), findsOneWidget);
+    expect(find.text('重新尝试'), findsOneWidget);
     expect(find.text('搜索条件有误，请调整后重试'), findsNothing);
     expect(find.text('请调整搜索条件'), findsNothing);
     expect(find.textContaining('nginx secret'), findsNothing);
@@ -594,10 +687,62 @@ void main() {
 
     await harness.search('broken');
 
-    expect(find.text('搜索失败，请稍后重试'), findsOneWidget);
+    expect(find.text('搜索失败'), findsOneWidget);
+    expect(find.text('当前结果未更新，请重新尝试。'), findsOneWidget);
     expect(find.text('搜索条件有误，请调整后重试'), findsNothing);
     expect(find.text('请调整搜索条件'), findsNothing);
     expect(find.textContaining('server body'), findsNothing);
+  });
+
+  for (final errorCase in const [
+    (kind: ApiErrorKind.offline, title: '无法连接本地检索服务', body: '请检查服务地址和运行状态。'),
+    (kind: ApiErrorKind.timeout, title: '搜索用时过长', body: '请重新尝试。'),
+    (
+      kind: ApiErrorKind.invalidResponse,
+      title: '无法读取搜索结果',
+      body: '本地检索服务返回了无法读取的内容。',
+    ),
+  ]) {
+    testWidgets('${errorCase.kind.name} maps to safe user-facing copy', (
+      tester,
+    ) async {
+      final harness = await _SearchHarness.create(tester)
+        ..searchService.results.add(
+          ApiException(errorCase.kind, 'private transport detail'),
+        );
+
+      await harness.search('safe error');
+
+      expect(find.text(errorCase.title), findsOneWidget);
+      expect(find.text(errorCase.body), findsOneWidget);
+      expect(find.text('重新尝试'), findsOneWidget);
+      expect(find.textContaining('private transport'), findsNothing);
+    });
+  }
+
+  testWidgets('failed update retains results and shows a safe live notice', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(names: const ['notes.txt']),
+        const ApiException(ApiErrorKind.timeout, 'private timeout detail'),
+      ]);
+    await harness.search('notes');
+
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('notes.txt'), findsOneWidget);
+    expect(find.textContaining('搜索用时过长'), findsOneWidget);
+    expect(find.textContaining('请重新尝试。'), findsOneWidget);
+    expect(find.text('重新尝试'), findsOneWidget);
+    expect(find.byKey(const Key('workspace-notice')), findsOneWidget);
+    final notice = tester.widget<Semantics>(
+      find.byKey(const Key('workspace-notice')),
+    );
+    expect(notice.properties.liveRegion, isTrue);
+    expect(find.textContaining('private timeout detail'), findsNothing);
   });
 
   testWidgets('success rows show real metadata and active response summary', (
@@ -630,8 +775,8 @@ void main() {
     expect(find.text('找到 1 条相关资料'), findsOneWidget);
     expect(find.text('命中：关键词'), findsOneWidget);
     expect(find.text('命中：文本语义'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '打开'), findsOneWidget);
-    expect(find.byTooltip('复制完整路径'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '打开文件'), findsOneWidget);
+    expect(find.byTooltip('复制路径'), findsOneWidget);
     expect(find.bySemanticsLabel('打开 report.pdf'), findsOneWidget);
     expect(find.bySemanticsLabel('复制 report.pdf 的完整路径'), findsOneWidget);
     expect(find.bySemanticsLabel(r'完整路径 C:\资料\report.pdf'), findsOneWidget);
@@ -975,11 +1120,57 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('search-filter-panel')), findsOneWidget);
+      expect(find.text('筛选结果'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '重置'), findsOneWidget);
       expect(find.text('检索模式'), findsOneWidget);
       expect(find.text('内容类型'), findsOneWidget);
+      expect(find.text('综合'), findsOneWidget);
+      expect(find.text('混合'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('filter reset restores defaults and resubmits active query', (
+    tester,
+  ) async {
+    final harness = await _SearchHarness.create(tester)
+      ..searchService.results.addAll([
+        _response(names: const ['initial.txt']),
+        _response(names: const ['semantic.txt']),
+        _response(names: const ['reset.txt']),
+      ]);
+    await harness.search('filters');
+    await tester.tap(find.text('语义'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, '重置'));
+    await tester.pumpAndSettle();
+
+    expect(harness.searchController.mode, RetrievalMode.hybrid);
+    expect(
+      harness.searchController.contentTypes,
+      SearchContentType.values.toSet(),
+    );
+    expect(harness.searchService.calls, hasLength(3));
+    expect(find.text('reset.txt'), findsOneWidget);
+  });
+
+  testWidgets('Escape closes compact filters and restores button focus', (
+    tester,
+  ) async {
+    await _SearchHarness.create(tester, surfaceSize: const Size(900, 720));
+    final button = find.byKey(const Key('search-filter-button'));
+
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('search-filter-panel')), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('search-filter-panel')), findsNothing);
+    expect(tester.widget<OutlinedButton>(button).focusNode?.hasFocus, isTrue);
+  });
 
   testWidgets('bottom sheet filter selection stays visually synchronized', (
     tester,
@@ -1153,6 +1344,15 @@ void main() {
 }
 
 void _expectFilterControlsEnabled(WidgetTester tester, bool enabled) {
+  final filterPanel = find.byKey(const Key('search-filter-panel'));
+  final reset = find.descendant(
+    of: filterPanel,
+    matching: find.widgetWithText(TextButton, '重置'),
+  );
+  expect(
+    tester.widget<TextButton>(reset).onPressed,
+    enabled ? isNotNull : isNull,
+  );
   expect(
     tester
         .widget<SegmentedButton<RetrievalMode>>(

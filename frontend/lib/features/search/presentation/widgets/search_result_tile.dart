@@ -250,7 +250,7 @@ final class _SearchResultTileState extends State<SearchResultTile> {
           key: Key('open-${widget.hit.fileId}'),
           onPressed: _opening ? null : _open,
           icon: const Icon(Icons.open_in_new, size: 18),
-          label: const Text('打开'),
+          label: const Text('打开文件'),
         ),
       ),
       Semantics(
@@ -261,7 +261,7 @@ final class _SearchResultTileState extends State<SearchResultTile> {
         onTap: _copying ? null : _copyPath,
         excludeSemantics: true,
         child: Tooltip(
-          message: '复制完整路径',
+          message: '复制路径',
           child: IconButton(
             key: Key('copy-path-${widget.hit.fileId}'),
             onPressed: _copying ? null : _copyPath,

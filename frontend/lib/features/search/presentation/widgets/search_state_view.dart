@@ -1,7 +1,9 @@
-import 'package:content_retrieval_app/core/api/api_exception.dart';
 import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
+import 'package:content_retrieval_app/core/api/api_exception.dart';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_notice.dart';
+import 'package:content_retrieval_app/features/search/domain/search_models.dart';
 import 'package:content_retrieval_app/features/search/presentation/search_controller.dart';
 import 'package:content_retrieval_app/features/search/presentation/widgets/search_result_tile.dart';
 import 'package:flutter/material.dart' hide SearchController;
@@ -30,13 +32,16 @@ final class SearchStateView extends StatelessWidget {
       title: '说出你还记得的内容',
       body: '例如：“哪个 PDF 讲过键盘导航？”\n支持文档、文本文件和图片。',
     ),
-    SearchViewState.loading => _loading(context),
-    SearchViewState.success => _success(context),
+    SearchViewState.loading =>
+      controller.response == null
+          ? _initialLoading(context)
+          : _retainedLoading(context, controller.response!),
+    SearchViewState.success => _success(context, controller.response!),
     SearchViewState.empty => _empty(context),
     SearchViewState.failure => _failure(context),
   };
 
-  Widget _loading(BuildContext context) {
+  Widget _initialLoading(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return LiveRegionMessage(
       message: '正在搜索“${controller.query.trim()}”。',
@@ -87,12 +92,41 @@ final class SearchStateView extends StatelessWidget {
     );
   }
 
-  Widget _success(BuildContext context) {
-    final response = controller.response!;
+  Widget _retainedLoading(BuildContext context, SearchResponse response) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return _resultList(
+      context,
+      response,
+      header: [
+        LiveRegionMessage(
+          message: '正在更新结果。',
+          excludeChildSemantics: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '正在更新结果',
+                key: const Key('search-summary'),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const LinearProgressIndicator(minHeight: 2),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _success(BuildContext context, SearchResponse response) {
+    final theme = Theme.of(context);
+    return _resultList(
+      context,
+      response,
+      header: [
         LiveRegionMessage(
           message: '搜索完成，找到 ${response.hits.length} 条结果。',
           child: Text(
@@ -104,6 +138,92 @@ final class SearchStateView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _empty(BuildContext context) => _message(
+    context,
+    icon: Icons.search_off,
+    title: '没有找到相关资料',
+    body: '尝试调整搜索内容，或重置筛选条件',
+    liveMessage: '搜索完成，没有找到相关资料。',
+    action: FilledButton.tonal(
+      key: const Key('clear-search-filters-button'),
+      onPressed: onClearFilters,
+      child: const Text('重置筛选'),
+    ),
+  );
+
+  Widget _failure(BuildContext context) {
+    final error = controller.error;
+    final (title, body) = _safeErrorCopy(error);
+    final retainedResponse = controller.response;
+    if (retainedResponse != null) {
+      final theme = Theme.of(context);
+      return _resultList(
+        context,
+        retainedResponse,
+        header: [
+          WorkspaceNotice(
+            tone: WorkspaceNoticeTone.error,
+            message: '$title\n$body',
+            actionLabel: '重新尝试',
+            onAction: onRetry,
+            announce: true,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '保留上次的 ${retainedResponse.hits.length} 条结果',
+            key: const Key('search-summary'),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+      );
+    }
+
+    return _message(
+      context,
+      icon: _isValidationError(error) ? Icons.tune : Icons.error_outline,
+      title: title,
+      body: body,
+      liveMessage: '$title。$body',
+      action: FilledButton.tonal(
+        key: const Key('search-retry-button'),
+        onPressed: onRetry,
+        child: const Text('重新尝试'),
+      ),
+    );
+  }
+
+  (String, String) _safeErrorCopy(ApiException? error) {
+    if (_isValidationError(error)) {
+      return ('请调整搜索条件', '搜索条件有误，请调整后重新尝试。');
+    }
+    if (error?.statusCode == 503) {
+      return ('本地检索服务暂时不可用', '请稍后重新尝试。');
+    }
+    return switch (error?.kind) {
+      ApiErrorKind.offline => ('无法连接本地检索服务', '请检查服务地址和运行状态。'),
+      ApiErrorKind.timeout => ('搜索用时过长', '请重新尝试。'),
+      ApiErrorKind.invalidResponse => ('无法读取搜索结果', '本地检索服务返回了无法读取的内容。'),
+      ApiErrorKind.rejected || null => ('搜索失败', '当前结果未更新，请重新尝试。'),
+    };
+  }
+
+  Widget _resultList(
+    BuildContext context,
+    SearchResponse response, {
+    required List<Widget> header,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...header,
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -128,45 +248,6 @@ final class SearchStateView extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _empty(BuildContext context) => _message(
-    context,
-    icon: Icons.search_off,
-    title: '未找到匹配内容',
-    body: '尝试更换关键词或恢复完整筛选范围',
-    liveMessage: '搜索完成，没有匹配结果。',
-    action: FilledButton.tonal(
-      key: const Key('clear-search-filters-button'),
-      onPressed: onClearFilters,
-      child: const Text('清除过滤'),
-    ),
-  );
-
-  Widget _failure(BuildContext context) {
-    final error = controller.error;
-    if (_isValidationError(error)) {
-      return _message(
-        context,
-        icon: Icons.tune,
-        title: '请调整搜索条件',
-        body: '修改查询后可重新搜索',
-        liveMessage: '搜索失败：请调整搜索条件。',
-      );
-    }
-    final serviceUnavailable = error?.statusCode == 503;
-    return _message(
-      context,
-      icon: Icons.error_outline,
-      title: serviceUnavailable ? '搜索服务暂时不可用，请稍后重试' : '搜索失败，请稍后重试',
-      body: '当前结果未更新',
-      liveMessage: serviceUnavailable ? '搜索失败：搜索服务暂时不可用，请稍后重试。' : '搜索失败：请稍后重试。',
-      action: FilledButton.tonal(
-        key: const Key('search-retry-button'),
-        onPressed: onRetry,
-        child: const Text('重试'),
-      ),
     );
   }
 

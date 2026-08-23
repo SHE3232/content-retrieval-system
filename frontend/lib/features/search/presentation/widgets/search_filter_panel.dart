@@ -15,11 +15,13 @@ final class SearchFilterPanel extends StatefulWidget {
     required this.controller,
     required this.enabled,
     required this.onChanged,
+    required this.onReset,
   });
 
   final SearchController controller;
   final bool enabled;
   final VoidCallback onChanged;
+  final VoidCallback onReset;
 
   @override
   State<SearchFilterPanel> createState() => _SearchFilterPanelState();
@@ -52,6 +54,11 @@ final class _SearchFilterPanelState extends State<SearchFilterPanel> {
     widget.onChanged();
   }
 
+  void _reset() {
+    setState(() => _channelError = null);
+    widget.onReset();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -65,7 +72,17 @@ final class _SearchFilterPanelState extends State<SearchFilterPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('筛选', style: theme.textTheme.titleMedium),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('筛选结果', style: theme.textTheme.titleMedium),
+                    ),
+                    TextButton(
+                      onPressed: widget.enabled ? _reset : null,
+                      child: const Text('重置'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 20),
                 Text('检索模式', style: theme.textTheme.labelLarge),
                 const SizedBox(height: 10),
@@ -80,7 +97,7 @@ final class _SearchFilterPanelState extends State<SearchFilterPanel> {
                       ),
                       ButtonSegment(
                         value: RetrievalMode.hybrid,
-                        label: Text('混合'),
+                        label: Text('综合'),
                       ),
                       ButtonSegment(
                         value: RetrievalMode.semantic,

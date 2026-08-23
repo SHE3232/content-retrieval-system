@@ -5,6 +5,7 @@ final class SearchStage extends StatelessWidget {
     super.key,
     required this.queryController,
     required this.queryFocusNode,
+    required this.filterButtonFocusNode,
     required this.canSubmit,
     required this.showFilterButton,
     required this.activeFilterCount,
@@ -16,6 +17,7 @@ final class SearchStage extends StatelessWidget {
 
   final TextEditingController queryController;
   final FocusNode queryFocusNode;
+  final FocusNode filterButtonFocusNode;
   final bool canSubmit;
   final bool showFilterButton;
   final int activeFilterCount;
@@ -38,20 +40,6 @@ final class SearchStage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              '找回你记得的内容',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '描述一个概念、一段话，或图片中的内容。',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
             LayoutBuilder(
               builder: (context, constraints) {
                 final largeText =
@@ -94,6 +82,7 @@ final class SearchStage extends StatelessWidget {
                           label: Text('$activeFilterCount'),
                           child: OutlinedButton.icon(
                             key: const Key('search-filter-button'),
+                            focusNode: filterButtonFocusNode,
                             onPressed: onShowFilters,
                             icon: const Icon(Icons.tune),
                             label: const Text('筛选'),
@@ -104,7 +93,7 @@ final class SearchStage extends StatelessWidget {
                       key: const Key('search-submit-button'),
                       onPressed: canSubmit ? onSubmit : null,
                       icon: const Icon(Icons.search),
-                      label: const Text('搜索'),
+                      label: const Text('搜索资料'),
                     ),
                   ],
                 );

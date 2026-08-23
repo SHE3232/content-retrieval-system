@@ -37,18 +37,21 @@ final class _SearchPageState extends State<SearchPage> {
 
   late final TextEditingController _queryController;
   late final FocusNode _queryFocusNode;
+  late final FocusNode _filterButtonFocusNode;
 
   @override
   void initState() {
     super.initState();
     _queryController = TextEditingController(text: widget.controller.query);
     _queryFocusNode = FocusNode(debugLabel: 'search query');
+    _filterButtonFocusNode = FocusNode(debugLabel: 'search filters');
   }
 
   @override
   void dispose() {
     _queryController.dispose();
     _queryFocusNode.dispose();
+    _filterButtonFocusNode.dispose();
     super.dispose();
   }
 
@@ -87,28 +90,42 @@ final class _SearchPageState extends State<SearchPage> {
     _filtersChanged();
   }
 
-  void _showFilters() {
-    showModalBottomSheet<void>(
+  Future<void> _showFilters() async {
+    await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.82,
-          ),
-          child: ListenableBuilder(
-            listenable: widget.controller,
-            builder: (context, _) => SearchFilterPanel(
-              key: const Key('search-filter-panel'),
-              controller: widget.controller,
-              enabled: widget.controller.state != SearchViewState.loading,
-              onChanged: _filtersChanged,
+      builder: (sheetContext) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () {
+            Navigator.of(sheetContext).pop();
+          },
+        },
+        child: Focus(
+          autofocus: true,
+          child: SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
+              ),
+              child: ListenableBuilder(
+                listenable: widget.controller,
+                builder: (context, _) => SearchFilterPanel(
+                  key: const Key('search-filter-panel'),
+                  controller: widget.controller,
+                  enabled: widget.controller.state != SearchViewState.loading,
+                  onChanged: _filtersChanged,
+                  onReset: _clearFilters,
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
+    if (mounted) {
+      _filterButtonFocusNode.requestFocus();
+    }
   }
 
   @override
@@ -131,8 +148,8 @@ final class _SearchPageState extends State<SearchPage> {
             builder: (context, _) => Column(
               children: [
                 WorkspaceHeader(
-                  title: '搜索',
-                  description: '在本地资料中找回你记得的内容',
+                  title: '搜索本地资料',
+                  description: '描述你记得的内容，找到对应文件和位置',
                   actions: [
                     BackendStatusIndicator(controller: widget.statusController),
                   ],
@@ -149,6 +166,7 @@ final class _SearchPageState extends State<SearchPage> {
                         pathClipboard: widget.pathClipboard,
                         queryController: _queryController,
                         queryFocusNode: _queryFocusNode,
+                        filterButtonFocusNode: _filterButtonFocusNode,
                         canSubmit: _canSubmit,
                         showFilterButton: !showPersistentFilters,
                         onSubmit: _submit,
@@ -171,6 +189,7 @@ final class _SearchPageState extends State<SearchPage> {
                                   widget.controller.state !=
                                   SearchViewState.loading,
                               onChanged: _filtersChanged,
+                              onReset: _clearFilters,
                             ),
                           ),
                         ],
@@ -194,6 +213,7 @@ final class _SearchMainColumn extends StatelessWidget {
     required this.pathClipboard,
     required this.queryController,
     required this.queryFocusNode,
+    required this.filterButtonFocusNode,
     required this.canSubmit,
     required this.showFilterButton,
     required this.onSubmit,
@@ -206,6 +226,7 @@ final class _SearchMainColumn extends StatelessWidget {
   final PathClipboard pathClipboard;
   final TextEditingController queryController;
   final FocusNode queryFocusNode;
+  final FocusNode filterButtonFocusNode;
   final bool canSubmit;
   final bool showFilterButton;
   final Future<void> Function() onSubmit;
@@ -227,6 +248,7 @@ final class _SearchMainColumn extends StatelessWidget {
           SearchStage(
             queryController: queryController,
             queryFocusNode: queryFocusNode,
+            filterButtonFocusNode: filterButtonFocusNode,
             canSubmit: canSubmit,
             showFilterButton: showFilterButton,
             activeFilterCount: activeSearchFilterCount(controller),

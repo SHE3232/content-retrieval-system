@@ -15,28 +15,28 @@ final class BackendStatusIndicator extends StatelessWidget {
     final theme = Theme.of(context);
     final (label, icon, color) = switch (controller.state) {
       BackendConnectionState.checking => (
-        '正在检测后端',
+        '正在连接本地检索服务',
         Icons.sync,
         theme.colorScheme.onSurfaceVariant,
       ),
       BackendConnectionState.online => (
-        '后端在线',
+        '本地检索服务已就绪',
         Icons.check_circle_outline,
         theme.brightness == Brightness.dark
             ? Colors.green.shade300
             : Colors.green.shade800,
       ),
       BackendConnectionState.offline => (
-        '后端离线',
+        '本地检索服务不可用',
         Icons.error_outline,
         theme.colorScheme.error,
       ),
     };
     final announcement = switch (controller.state) {
-      BackendConnectionState.checking => '正在检测后端。',
+      BackendConnectionState.checking => '正在连接本地检索服务。',
       BackendConnectionState.online =>
-        '后端已连接，共索引 ${controller.stats?.fileCount ?? 0} 个文件。',
-      BackendConnectionState.offline => '后端连接已断开。',
+        '本地检索服务已连接，可搜索 ${controller.stats?.fileCount ?? 0} 个文件。',
+      BackendConnectionState.offline => '本地检索服务连接已断开。',
     };
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -62,7 +62,7 @@ final class BackendStatusIndicator extends StatelessWidget {
                     key: const Key('backend-refresh-button'),
                     onPressed: () => unawaited(controller.refresh()),
                     icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('重新检测'),
+                    label: const Text('重新连接'),
                   ),
               ],
             ),
