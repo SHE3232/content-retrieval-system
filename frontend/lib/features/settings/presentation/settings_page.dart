@@ -1,4 +1,3 @@
-import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
 import 'package:content_retrieval_app/core/presentation/workspace_header.dart';
 import 'package:content_retrieval_app/core/presentation/workspace_notice.dart';
 import 'package:content_retrieval_app/features/settings/domain/app_settings.dart';
@@ -21,6 +20,9 @@ final class SettingsPage extends StatefulWidget {
 
 final class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _backendUrlController;
+  late final FocusNode _resetFocusNode;
+  late final FocusNode _saveFocusNode;
+  bool _isPageActive = true;
 
   @override
   void initState() {
@@ -28,16 +30,21 @@ final class _SettingsPageState extends State<SettingsPage> {
     _backendUrlController = TextEditingController(
       text: widget.controller.draft.backendBaseUrl,
     );
+    _resetFocusNode = FocusNode(debugLabel: 'settings-reset-action');
+    _saveFocusNode = FocusNode(debugLabel: 'settings-save-action');
   }
 
   @override
   void dispose() {
     _backendUrlController.dispose();
+    _resetFocusNode.dispose();
+    _saveFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    _isPageActive = Visibility.of(context);
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
@@ -65,6 +72,7 @@ final class _SettingsPageState extends State<SettingsPage> {
                           message: controller.recoveryWarning!,
                           actionLabel: '知道了',
                           onAction: controller.dismissRecoveryWarning,
+                          announce: true,
                         ),
                       ),
                     if (controller.saveError != null)
@@ -180,12 +188,14 @@ final class _SettingsPageState extends State<SettingsPage> {
                           runSpacing: 12,
                           children: [
                             OutlinedButton(
+                              focusNode: _resetFocusNode,
                               onPressed: controller.isBusy
                                   ? null
                                   : _confirmReset,
                               child: const Text('恢复默认设置'),
                             ),
                             FilledButton(
+                              focusNode: _saveFocusNode,
                               onPressed:
                                   controller.isBusy ||
                                       controller.backendUrlError != null ||
@@ -224,7 +234,9 @@ final class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _save() async {
     final saved = await widget.controller.save();
-    if (!mounted || !saved) return;
+    if (!mounted) return;
+    _restoreActionFocus(_saveFocusNode);
+    if (!saved) return;
     _backendUrlController.text = widget.controller.settings.backendBaseUrl;
     _showConfirmation('设置已保存');
     widget.onSettingsSaved?.call();
@@ -253,7 +265,9 @@ final class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _reset() async {
     final reset = await widget.controller.reset();
-    if (!mounted || !reset) return;
+    if (!mounted) return;
+    _restoreActionFocus(_resetFocusNode);
+    if (!reset) return;
     _backendUrlController.text = widget.controller.settings.backendBaseUrl;
     _showConfirmation('已恢复默认设置');
     widget.onSettingsSaved?.call();
@@ -262,14 +276,18 @@ final class _SettingsPageState extends State<SettingsPage> {
   void _showConfirmation(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: LiveRegionMessage(
-            message: '$message。',
-            child: Text(message),
-          ),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _restoreActionFocus(FocusNode focusNode) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          _isPageActive &&
+          !widget.controller.isBusy &&
+          focusNode.canRequestFocus) {
+        focusNode.requestFocus();
+      }
+    });
   }
 }
 

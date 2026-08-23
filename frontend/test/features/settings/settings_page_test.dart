@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:content_retrieval_app/features/settings/data/settings_repository.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_controller.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_page.dart';
@@ -98,6 +100,7 @@ void main() {
     expect(saveNotifications, 1);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.text('设置已保存'), findsOneWidget);
+    expect(_liveRegions(), findsOneWidget);
     expect(find.text('已保存'), findsOneWidget);
   });
 
@@ -130,6 +133,7 @@ void main() {
 
     expect(find.textContaining('已恢复安全默认值'), findsOneWidget);
     expect(find.byKey(const Key('workspace-notice')), findsOneWidget);
+    expect(_liveRegions(), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, '知道了'));
     await tester.pump();
     expect(find.textContaining('已恢复安全默认值'), findsNothing);
@@ -195,6 +199,146 @@ void main() {
     expect(find.text('设置已保存'), findsNothing);
   });
 
+  testWidgets('delayed save failure restores focus to the save button', (
+    tester,
+  ) async {
+    final saveWait = Completer<void>();
+    final store = _PageSettingsStore()
+      ..saveWait = saveWait
+      ..saveError = StateError('disk full');
+    final controller = SettingsController(SettingsRepository(store));
+    addTearDown(controller.dispose);
+    await controller.load();
+    controller.setTextScale(1.5);
+    await tester.pumpWidget(_app(controller));
+
+    final saveFinder = find.widgetWithText(FilledButton, '保存设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    final saveButton = tester.widget<FilledButton>(saveFinder);
+    expect(saveButton.focusNode, isNotNull);
+    saveButton.focusNode!.requestFocus();
+    await tester.pump();
+    expect(saveButton.focusNode!.hasFocus, isTrue);
+
+    await tester.tap(saveFinder);
+    await tester.pump();
+    expect(controller.isBusy, isTrue);
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+
+    saveWait.complete();
+    await tester.pumpAndSettle();
+    expect(saveButton.focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('delayed reset failure restores focus to the reset button', (
+    tester,
+  ) async {
+    final saveWait = Completer<void>();
+    final store = _PageSettingsStore()
+      ..saveWait = saveWait
+      ..saveError = StateError('disk full');
+    final controller = SettingsController(SettingsRepository(store));
+    addTearDown(controller.dispose);
+    await controller.load();
+    controller.setTextScale(1.5);
+    await tester.pumpWidget(_app(controller));
+
+    final resetFinder = find.widgetWithText(OutlinedButton, '恢复默认设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    final resetButton = tester.widget<OutlinedButton>(resetFinder);
+    expect(resetButton.focusNode, isNotNull);
+    resetButton.focusNode!.requestFocus();
+    await tester.pump();
+    expect(resetButton.focusNode!.hasFocus, isTrue);
+
+    await tester.tap(resetFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '恢复默认设置'));
+    await tester.pump();
+    expect(controller.isBusy, isTrue);
+    expect(tester.widget<OutlinedButton>(resetFinder).onPressed, isNull);
+
+    saveWait.complete();
+    await tester.pumpAndSettle();
+    expect(resetButton.focusNode!.hasFocus, isTrue);
+  });
+
+  testWidgets('hidden settings never reclaim focus after a delayed save', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final saveWait = Completer<void>();
+    final store = _PageSettingsStore()
+      ..saveWait = saveWait
+      ..saveError = StateError('disk full');
+    final controller = SettingsController(SettingsRepository(store));
+    final settingsVisible = ValueNotifier<bool>(true);
+    final outsideFocus = FocusNode(debugLabel: 'outside-settings');
+    addTearDown(controller.dispose);
+    addTearDown(settingsVisible.dispose);
+    addTearDown(outsideFocus.dispose);
+    await controller.load();
+    controller.setTextScale(1.5);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              Expanded(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: settingsVisible,
+                  builder: (context, visible, _) => Visibility(
+                    visible: visible,
+                    maintainState: true,
+                    maintainAnimation: true,
+                    maintainSize: true,
+                    maintainSemantics: true,
+                    maintainInteractivity: true,
+                    maintainFocusability: true,
+                    child: SettingsPage(controller: controller),
+                  ),
+                ),
+              ),
+              FilledButton(
+                focusNode: outsideFocus,
+                onPressed: () {},
+                child: const Text('设置页外操作'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final saveFinder = find.widgetWithText(FilledButton, '保存设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    final saveFocus = tester.widget<FilledButton>(saveFinder).focusNode!;
+    saveFocus.requestFocus();
+    await tester.pump();
+    await tester.tap(saveFinder);
+    await tester.pump();
+    expect(controller.isBusy, isTrue);
+
+    settingsVisible.value = false;
+    await tester.pump();
+    outsideFocus.requestFocus();
+    await tester.pump();
+    expect(outsideFocus.hasFocus, isTrue);
+
+    saveWait.complete();
+    await tester.pumpAndSettle();
+    expect(outsideFocus.hasFocus, isTrue);
+    expect(saveFocus.hasFocus, isFalse);
+  });
+
   testWidgets('confirmed reset persists defaults and uses a SnackBar', (
     tester,
   ) async {
@@ -218,6 +362,7 @@ void main() {
     expect(controller.hasUnsavedChanges, isFalse);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.text('已恢复默认设置'), findsOneWidget);
+    expect(_liveRegions(), findsOneWidget);
   });
 
   testWidgets('settings page has no overflow at 200 percent text scale', (
@@ -247,6 +392,10 @@ void main() {
   });
 }
 
+Finder _liveRegions() => find.byWidgetPredicate(
+  (widget) => widget is Semantics && widget.properties.liveRegion == true,
+);
+
 Widget _app(SettingsController controller, {VoidCallback? onSettingsSaved}) {
   return MaterialApp(
     home: Scaffold(
@@ -269,12 +418,14 @@ final class _PageSettingsStore implements SettingsStore {
   final SettingsStoreSnapshot snapshot;
   Map<String, Object?>? saved;
   Object? saveError;
+  Completer<void>? saveWait;
 
   @override
   Future<SettingsStoreSnapshot> load() async => snapshot;
 
   @override
   Future<void> save(Map<String, Object?> values) async {
+    await saveWait?.future;
     if (saveError != null) throw saveError!;
     saved = Map<String, Object?>.from(values);
   }

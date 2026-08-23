@@ -4,6 +4,9 @@ import 'package:content_retrieval_app/core/platform/directory_picker.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_controller.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_page.dart';
+import 'package:content_retrieval_app/features/settings/data/settings_repository.dart';
+import 'package:content_retrieval_app/features/settings/presentation/settings_controller.dart';
+import 'package:content_retrieval_app/features/settings/presentation/settings_page.dart';
 import 'package:content_retrieval_app/features/shell/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -142,6 +145,62 @@ void main() {
       'more-actions-file-1',
     );
   });
+
+  testWidgets('hidden settings cannot reclaim focus after a delayed save', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final saveWait = Completer<void>();
+    final controller = SettingsController(
+      SettingsRepository(_ShellSettingsStore(saveWait)),
+    );
+    final searchFocus = FocusNode(debugLabel: 'visible-search-action');
+    addTearDown(controller.dispose);
+    addTearDown(searchFocus.dispose);
+    await controller.load();
+    controller.setTextScale(1.5);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShell(
+          searchPage: Center(
+            child: FilledButton(
+              focusNode: searchFocus,
+              onPressed: () {},
+              child: const Text('搜索页操作'),
+            ),
+          ),
+          indexLibraryPage: const Text('LIBRARY_PAGE'),
+          settingsPage: SettingsPage(controller: controller),
+        ),
+      ),
+    );
+    await _controlShortcut(tester, LogicalKeyboardKey.digit3);
+    await tester.pump();
+
+    final saveFinder = find.widgetWithText(FilledButton, '保存设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    final saveFocus = tester.widget<FilledButton>(saveFinder).focusNode!;
+    saveFocus.requestFocus();
+    await tester.pump();
+    await tester.tap(saveFinder);
+    await tester.pump();
+    expect(controller.isBusy, isTrue);
+
+    await _controlShortcut(tester, LogicalKeyboardKey.digit1);
+    await tester.pump();
+    searchFocus.requestFocus();
+    await tester.pump();
+    expect(searchFocus.hasFocus, isTrue);
+
+    saveWait.complete();
+    await tester.pumpAndSettle();
+    expect(searchFocus.hasFocus, isTrue);
+    expect(saveFocus.hasFocus, isFalse);
+    expect(saveFocus.canRequestFocus, isFalse);
+  });
 }
 
 Widget _app({VoidCallback? onRefreshSearch, VoidCallback? onRefreshLibrary}) {
@@ -188,6 +247,24 @@ final _libraryPage = IndexedFilePage(
   total: 1,
   totalPages: 1,
 );
+
+final class _ShellSettingsStore implements SettingsStore {
+  _ShellSettingsStore(this.saveWait);
+
+  final Completer<void> saveWait;
+
+  @override
+  Future<SettingsStoreSnapshot> load() async => const SettingsStoreSnapshot(
+    values: <String, Object?>{},
+    storageRecovered: false,
+  );
+
+  @override
+  Future<void> save(Map<String, Object?> values) async {
+    await saveWait.future;
+    throw StateError('disk full');
+  }
+}
 
 final class _ShellLibraryService implements IndexLibraryService {
   final List<IndexedFilePage> pages = [];

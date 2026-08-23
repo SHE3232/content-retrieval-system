@@ -115,6 +115,40 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('recovered settings announce exactly one live region', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final controller = SettingsController(
+      SettingsRepository(
+        _SemanticsSettingsStore(
+          values: const {SettingsKeys.themeMode: 'ultraviolet'},
+        ),
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SettingsPage(controller: controller)),
+      ),
+    );
+
+    final liveRegions = find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.liveRegion == true,
+    );
+    expect(liveRegions, findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('workspace-notice')))
+          .flagsCollection
+          .isLiveRegion,
+      isTrue,
+    );
+    semantics.dispose();
+  });
+
   testWidgets('index library exposes a heading and labeled primary actions', (
     tester,
   ) async {
@@ -150,11 +184,13 @@ void main() {
 }
 
 final class _SemanticsSettingsStore implements SettingsStore {
+  _SemanticsSettingsStore({this.values = const <String, Object?>{}});
+
+  final Map<String, Object?> values;
+
   @override
-  Future<SettingsStoreSnapshot> load() async => const SettingsStoreSnapshot(
-    values: <String, Object?>{},
-    storageRecovered: false,
-  );
+  Future<SettingsStoreSnapshot> load() async =>
+      SettingsStoreSnapshot(values: values, storageRecovered: false);
 
   @override
   Future<void> save(Map<String, Object?> values) async {}
