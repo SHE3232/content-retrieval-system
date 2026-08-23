@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('settings uses tonal sections instead of elevated cards', (
+  testWidgets('settings separates connection appearance and accessibility', (
     tester,
   ) async {
     final controller = SettingsController(
@@ -16,16 +16,47 @@ void main() {
 
     await tester.pumpWidget(_app(controller));
 
-    expect(find.text('偏好设置只保存在这台设备上'), findsOneWidget);
+    expect(find.text('这些偏好只保存在当前设备上'), findsOneWidget);
     expect(
       find.byKey(const Key('settings-connection-section')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('settings-appearance-section')),
       findsOneWidget,
     );
     expect(
       find.byKey(const Key('settings-accessibility-section')),
       findsOneWidget,
     );
+    expect(find.text('已保存'), findsOneWidget);
     expect(find.byType(Card), findsNothing);
+  });
+
+  testWidgets('settings reports unsaved changes and confirms reset', (
+    tester,
+  ) async {
+    final controller = SettingsController(
+      SettingsRepository(_PageSettingsStore()),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    await tester.tap(find.text('150%'));
+    await tester.pump();
+    expect(find.text('尚未保存更改'), findsOneWidget);
+
+    final resetButton = find.widgetWithText(OutlinedButton, '恢复默认设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(resetButton);
+    await tester.pumpAndSettle();
+    expect(find.text('恢复默认设置？'), findsOneWidget);
+    expect(find.text('当前未保存的更改将被替换。'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '取消'));
+    await tester.pumpAndSettle();
+    expect(controller.draft.textScale, 1.5);
   });
 
   testWidgets('edits and persists every Week 5 preference', (tester) async {
@@ -42,7 +73,8 @@ void main() {
     );
 
     expect(find.text('设置'), findsOneWidget);
-    expect(find.text('外观与无障碍'), findsOneWidget);
+    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('无障碍'), findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('backend-base-url')),
       'https://localhost:9443/',
@@ -51,7 +83,11 @@ void main() {
     await tester.tap(find.text('高对比度'));
     await tester.tap(find.text('减少动态效果'));
     await tester.tap(find.text('200%'));
-    await tester.tap(find.widgetWithText(FilledButton, '保存设置'));
+    await tester.pump();
+    final saveButton = find.widgetWithText(FilledButton, '保存设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(saveButton);
     await tester.pumpAndSettle();
 
     expect(controller.settings.backendBaseUrl, 'https://localhost:9443');
@@ -60,7 +96,23 @@ void main() {
     expect(controller.settings.reduceMotion, isTrue);
     expect(controller.settings.textScale, 2);
     expect(saveNotifications, 1);
+    expect(find.byType(SnackBar), findsOneWidget);
     expect(find.text('设置已保存'), findsOneWidget);
+    expect(find.text('已保存'), findsOneWidget);
+  });
+
+  testWidgets('unchanged settings cannot be saved', (tester) async {
+    final controller = SettingsController(
+      SettingsRepository(_PageSettingsStore()),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    final saveButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '保存设置'),
+    );
+    expect(saveButton.onPressed, isNull);
   });
 
   testWidgets('shows a dismissible recovery warning', (tester) async {
@@ -77,6 +129,7 @@ void main() {
     await tester.pumpWidget(_app(controller));
 
     expect(find.textContaining('已恢复安全默认值'), findsOneWidget);
+    expect(find.byKey(const Key('workspace-notice')), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, '知道了'));
     await tester.pump();
     expect(find.textContaining('已恢复安全默认值'), findsNothing);
@@ -99,10 +152,72 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('HTTP(S)'), findsOneWidget);
+    expect(find.text('尚未保存更改'), findsOneWidget);
     final saveButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, '保存设置'),
     );
     expect(saveButton.onPressed, isNull);
+  });
+
+  testWidgets('save failure keeps the draft and uses a persistent notice', (
+    tester,
+  ) async {
+    final store = _PageSettingsStore()..saveError = StateError('disk full');
+    final controller = SettingsController(SettingsRepository(store));
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    await tester.enterText(
+      find.byKey(const Key('backend-base-url')),
+      'https://localhost:9443/',
+    );
+    await tester.pump();
+    final saveButton = find.widgetWithText(FilledButton, '保存设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(controller.draft.backendBaseUrl, 'https://localhost:9443/');
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('backend-base-url')))
+          .controller!
+          .text,
+      'https://localhost:9443/',
+    );
+    expect(find.text('尚未保存更改'), findsOneWidget);
+    expect(find.text('无法保存设置，请重试。'), findsOneWidget);
+    final notice = find.byKey(const Key('workspace-notice'));
+    expect(notice, findsOneWidget);
+    expect(tester.widget<Semantics>(notice).properties.liveRegion, isTrue);
+    expect(find.text('设置已保存'), findsNothing);
+  });
+
+  testWidgets('confirmed reset persists defaults and uses a SnackBar', (
+    tester,
+  ) async {
+    final controller = SettingsController(
+      SettingsRepository(_PageSettingsStore()),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    controller.setTextScale(1.5);
+    await tester.pumpWidget(_app(controller));
+
+    final resetButton = find.widgetWithText(OutlinedButton, '恢复默认设置');
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(resetButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '恢复默认设置'));
+    await tester.pumpAndSettle();
+
+    expect(controller.settings.textScale, 1);
+    expect(controller.hasUnsavedChanges, isFalse);
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('已恢复默认设置'), findsOneWidget);
   });
 
   testWidgets('settings page has no overflow at 200 percent text scale', (
@@ -125,7 +240,10 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('外观与无障碍'), findsOneWidget);
+    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('无障碍'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '保存设置'), findsOneWidget);
+    expect(find.text('已保存'), findsOneWidget);
   });
 }
 
@@ -150,12 +268,14 @@ final class _PageSettingsStore implements SettingsStore {
 
   final SettingsStoreSnapshot snapshot;
   Map<String, Object?>? saved;
+  Object? saveError;
 
   @override
   Future<SettingsStoreSnapshot> load() async => snapshot;
 
   @override
   Future<void> save(Map<String, Object?> values) async {
+    if (saveError != null) throw saveError!;
     saved = Map<String, Object?>.from(values);
   }
 }

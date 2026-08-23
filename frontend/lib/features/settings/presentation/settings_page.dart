@@ -1,5 +1,6 @@
 import 'package:content_retrieval_app/core/accessibility/live_region_message.dart';
 import 'package:content_retrieval_app/core/presentation/workspace_header.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_notice.dart';
 import 'package:content_retrieval_app/features/settings/domain/app_settings.dart';
 import 'package:content_retrieval_app/features/settings/presentation/settings_controller.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,6 @@ final class SettingsPage extends StatefulWidget {
 
 final class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _backendUrlController;
-  String? _successMessage;
 
   @override
   void initState() {
@@ -54,26 +54,31 @@ final class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     const WorkspaceHeader(
                       title: '设置',
-                      description: '偏好设置只保存在这台设备上',
+                      description: '这些偏好只保存在当前设备上',
                     ),
                     const SizedBox(height: 20),
                     if (controller.recoveryWarning != null)
-                      _MessageBanner(
-                        message: controller.recoveryWarning!,
-                        actionLabel: '知道了',
-                        onAction: controller.dismissRecoveryWarning,
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: WorkspaceNotice(
+                          tone: WorkspaceNoticeTone.warning,
+                          message: controller.recoveryWarning!,
+                          actionLabel: '知道了',
+                          onAction: controller.dismissRecoveryWarning,
+                        ),
                       ),
                     if (controller.saveError != null)
-                      _MessageBanner(message: controller.saveError!),
-                    if (_successMessage != null)
-                      _MessageBanner(
-                        message: _successMessage!,
-                        actionLabel: '关闭',
-                        onAction: () => setState(() => _successMessage = null),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: WorkspaceNotice(
+                          tone: WorkspaceNoticeTone.error,
+                          message: controller.saveError!,
+                          announce: true,
+                        ),
                       ),
                     _SettingsSection(
                       sectionKey: const Key('settings-connection-section'),
-                      title: '后端连接',
+                      title: '连接',
                       children: [
                         TextField(
                           key: const Key('backend-base-url'),
@@ -82,22 +87,18 @@ final class _SettingsPageState extends State<SettingsPage> {
                           keyboardType: TextInputType.url,
                           autocorrect: false,
                           decoration: InputDecoration(
-                            labelText: '后端地址',
+                            labelText: '服务地址',
                             hintText: 'http://127.0.0.1:8000',
                             errorText: controller.backendUrlError,
-                            helperText: '仅支持 HTTP 或 HTTPS 根地址。',
+                            helperText: '用于连接这台设备上的本地检索服务。',
                           ),
-                          onChanged: (value) {
-                            _successMessage = null;
-                            controller.setBackendBaseUrl(value);
-                          },
+                          onChanged: controller.setBackendBaseUrl,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
                     _SettingsSection(
-                      sectionKey: const Key('settings-accessibility-section'),
-                      title: '外观与无障碍',
+                      sectionKey: const Key('settings-appearance-section'),
+                      title: '外观',
                       children: [
                         const Text('主题'),
                         const SizedBox(height: 8),
@@ -122,20 +123,7 @@ final class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Material(
-                          type: MaterialType.transparency,
-                          child: SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('高对比度'),
-                            subtitle: const Text('增强边框和文字与背景的区分度'),
-                            value: controller.draft.highContrast,
-                            onChanged: controller.isBusy
-                                ? null
-                                : controller.setHighContrast,
-                          ),
-                        ),
-                        const Divider(),
+                        const SizedBox(height: 16),
                         const Text('文字大小'),
                         const SizedBox(height: 8),
                         Wrap(
@@ -152,38 +140,61 @@ final class _SettingsPageState extends State<SettingsPage> {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Material(
-                          type: MaterialType.transparency,
-                          child: SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('减少动态效果'),
-                            subtitle: const Text('关闭非必要动画和过渡效果'),
-                            value: controller.draft.reduceMotion,
-                            onChanged: controller.isBusy
-                                ? null
-                                : controller.setReduceMotion,
-                          ),
+                      ],
+                    ),
+                    _SettingsSection(
+                      sectionKey: const Key('settings-accessibility-section'),
+                      title: '无障碍',
+                      children: [
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('高对比度'),
+                          subtitle: const Text('增强文字、边框与背景的区分'),
+                          value: controller.draft.highContrast,
+                          onChanged: controller.isBusy
+                              ? null
+                              : controller.setHighContrast,
+                        ),
+                        const Divider(),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('减少动态效果'),
+                          subtitle: const Text('减少非必要的动画和过渡'),
+                          value: controller.draft.reduceMotion,
+                          onChanged: controller.isBusy
+                              ? null
+                              : controller.setReduceMotion,
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     Wrap(
-                      alignment: WrapAlignment.end,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        OutlinedButton(
-                          onPressed: controller.isBusy ? null : _reset,
-                          child: const Text('恢复默认设置'),
-                        ),
-                        FilledButton(
-                          onPressed:
-                              controller.isBusy ||
-                                  controller.backendUrlError != null
-                              ? null
-                              : _save,
-                          child: Text(controller.isBusy ? '正在保存…' : '保存设置'),
+                        Text(controller.hasUnsavedChanges ? '尚未保存更改' : '已保存'),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            OutlinedButton(
+                              onPressed: controller.isBusy
+                                  ? null
+                                  : _confirmReset,
+                              child: const Text('恢复默认设置'),
+                            ),
+                            FilledButton(
+                              onPressed:
+                                  controller.isBusy ||
+                                      controller.backendUrlError != null ||
+                                      !controller.hasUnsavedChanges
+                                  ? null
+                                  : _save,
+                              child: Text(controller.isBusy ? '正在保存…' : '保存设置'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -215,16 +226,50 @@ final class _SettingsPageState extends State<SettingsPage> {
     final saved = await widget.controller.save();
     if (!mounted || !saved) return;
     _backendUrlController.text = widget.controller.settings.backendBaseUrl;
-    setState(() => _successMessage = '设置已保存');
+    _showConfirmation('设置已保存');
     widget.onSettingsSaved?.call();
+  }
+
+  Future<void> _confirmReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('恢复默认设置？'),
+        content: const Text('当前未保存的更改将被替换。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('恢复默认设置'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _reset();
   }
 
   Future<void> _reset() async {
     final reset = await widget.controller.reset();
     if (!mounted || !reset) return;
     _backendUrlController.text = widget.controller.settings.backendBaseUrl;
-    setState(() => _successMessage = '已恢复默认设置');
+    _showConfirmation('已恢复默认设置');
     widget.onSettingsSaved?.call();
+  }
+
+  void _showConfirmation(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: LiveRegionMessage(
+            message: '$message。',
+            child: Text(message),
+          ),
+        ),
+      );
   }
 }
 
@@ -241,53 +286,25 @@ final class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
       key: sectionKey,
+      padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
       ),
-    );
-  }
-}
-
-final class _MessageBanner extends StatelessWidget {
-  const _MessageBanner({
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: MaterialBanner(
-        content: LiveRegionMessage(
-          message: message.endsWith('。') ? message : '$message。',
-          child: Text(message),
-        ),
-        actions: [
-          if (actionLabel != null && onAction != null)
-            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+          ),
+          const SizedBox(height: 16),
+          ...children,
         ],
       ),
     );

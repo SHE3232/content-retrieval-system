@@ -16,6 +16,8 @@ final class SettingsController extends ChangeNotifier {
   bool isBusy = false;
   bool _disposed = false;
 
+  bool get hasUnsavedChanges => draft != settings;
+
   Future<void> load() async {
     isBusy = true;
     _notify();

@@ -40,6 +40,20 @@ void main() {
     );
   });
 
+  test('hasUnsavedChanges follows draft and persisted settings', () async {
+    final controller = SettingsController(
+      SettingsRepository(_ControllerStore()),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+
+    expect(controller.hasUnsavedChanges, isFalse);
+    controller.setTextScale(1.5);
+    expect(controller.hasUnsavedChanges, isTrue);
+    expect(await controller.save(), isTrue);
+    expect(controller.hasUnsavedChanges, isFalse);
+  });
+
   test('rejects credentials query fragment and unsupported schemes', () async {
     final controller = SettingsController(
       SettingsRepository(_ControllerStore()),
@@ -70,6 +84,9 @@ void main() {
     expect(await controller.save(), isFalse);
 
     expect(controller.settings, defaultSettings);
+    expect(controller.draft.highContrast, isTrue);
+    expect(controller.draft.textScale, 2);
+    expect(controller.hasUnsavedChanges, isTrue);
     expect(controller.saveError, '无法保存设置，请重试。');
   });
 

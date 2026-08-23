@@ -98,10 +98,18 @@ void main() {
       isTrue,
     );
     expect(
-      tester.getSemantics(find.text('外观与无障碍')).flagsCollection.isHeader,
+      tester.getSemantics(find.text('连接')).flagsCollection.isHeader,
       isTrue,
     );
-    expect(find.bySemanticsLabel(RegExp('后端地址')), findsOneWidget);
+    expect(
+      tester.getSemantics(find.text('外观')).flagsCollection.isHeader,
+      isTrue,
+    );
+    expect(
+      tester.getSemantics(find.text('无障碍')).flagsCollection.isHeader,
+      isTrue,
+    );
+    expect(find.bySemanticsLabel(RegExp('服务地址')), findsOneWidget);
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     semantics.dispose();
