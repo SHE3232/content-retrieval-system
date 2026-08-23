@@ -18,15 +18,16 @@ final class IndexJobPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final result = job.result;
     final label = switch (job.status) {
-      IndexJobStatus.queued => '索引任务已排队',
-      IndexJobStatus.running => '正在建立索引',
-      IndexJobStatus.completed => '索引完成',
-      IndexJobStatus.completedWithErrors => '索引完成，但有部分失败',
-      IndexJobStatus.failed => '索引任务失败',
+      IndexJobStatus.queued => '资料正在等待处理',
+      IndexJobStatus.running => '正在添加资料',
+      IndexJobStatus.completed => '资料已可搜索',
+      IndexJobStatus.completedWithErrors => '部分文件未能加入索引库',
+      IndexJobStatus.failed => '未能添加资料',
     };
     final announcement = result == null
         ? label
-        : '索引完成，成功 ${result.indexedFiles}，失败 ${result.failedFiles}。';
+        : '$label。已添加 ${result.indexedFiles} 个文件，'
+              '${result.failedFiles} 个文件需要处理。';
     return LiveRegionMessage(
       message: announcement,
       excludeChildSemantics: false,
@@ -67,8 +68,8 @@ final class IndexJobPanel extends StatelessWidget {
                 if (result != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    '成功 ${result.indexedFiles}，失败 ${result.failedFiles}，'
-                    '生成 ${result.indexedRecords} 条记录',
+                    '已添加 ${result.indexedFiles} 个文件，'
+                    '${result.failedFiles} 个文件需要处理',
                   ),
                 ],
                 if (failureDetails != null) ...[

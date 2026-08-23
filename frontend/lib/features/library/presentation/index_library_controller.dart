@@ -79,7 +79,7 @@ final class IndexLibraryController extends ChangeNotifier {
   Future<void> selectDirectoryAndStart() async {
     if (_disposed || isMutationInProgress) return;
     if (!directoryPicker.isSupported) {
-      errorMessage = '当前平台不能把文件夹路径交给桌面后端，请使用桌面版管理索引。';
+      errorMessage = '当前平台不支持添加本地资料文件夹，请使用 Windows、macOS 或 Linux 桌面版。';
       _notify();
       return;
     }
@@ -180,7 +180,7 @@ final class IndexLibraryController extends ChangeNotifier {
       }
     }
     if (job.status == IndexJobStatus.failed) {
-      errorMessage = '索引任务失败，请查看失败详情后重试。';
+      errorMessage = '任务未完成，请重新尝试；若问题持续，请检查本地检索服务。';
     }
     isMutationInProgress = false;
     _notify();
@@ -193,10 +193,10 @@ final class IndexLibraryController extends ChangeNotifier {
       'FILE_NOT_INDEXED' => '此文件已不在索引中，列表将刷新。',
       'SOURCE_FILE_NOT_FOUND' => '源文件不存在，无法重新索引。',
       'STORAGE_UNAVAILABLE' => '索引存储暂时不可用，请稍后刷新。',
-      'RETRIEVAL_UNAVAILABLE' => '索引已变更，但搜索刷新失败，请重启后端后重试。',
-      'SERVICE_UNAVAILABLE' => '后端服务暂时不可用，请检查服务状态后重试。',
-      _ when error.kind == ApiErrorKind.offline => '后端无法连接，请检查地址和服务状态。',
-      _ when error.kind == ApiErrorKind.timeout => '请求超时，请稍后重试。',
+      'RETRIEVAL_UNAVAILABLE' => '索引已更新，但搜索服务刷新失败，请重新启动本地检索服务后重试。',
+      'SERVICE_UNAVAILABLE' => '本地检索服务暂时不可用，请检查运行状态后重新尝试。',
+      _ when error.kind == ApiErrorKind.offline => '无法连接本地检索服务，请检查服务地址和运行状态。',
+      _ when error.kind == ApiErrorKind.timeout => '请求用时过长，请重新尝试。',
       _ => '操作失败，请刷新后重试。',
     };
   }

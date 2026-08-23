@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:content_retrieval_app/core/platform/file_launcher.dart';
 import 'package:content_retrieval_app/core/platform/path_clipboard.dart';
 import 'package:content_retrieval_app/core/presentation/workspace_header.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_notice.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_controller.dart';
 import 'package:content_retrieval_app/features/library/presentation/widgets/index_job_panel.dart';
 import 'package:content_retrieval_app/features/library/presentation/widgets/indexed_file_tile.dart';
+import 'package:content_retrieval_app/features/library/presentation/widgets/library_summary.dart';
 import 'package:flutter/material.dart';
 
 final class IndexLibraryPage extends StatefulWidget {
@@ -28,6 +30,8 @@ final class IndexLibraryPage extends StatefulWidget {
 }
 
 final class _IndexLibraryPageState extends State<IndexLibraryPage> {
+  String? _scheduledSuccessMessage;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +46,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
       listenable: widget.controller,
       builder: (context, _) {
         final controller = widget.controller;
+        _scheduleSuccessFeedback(controller);
         return Column(
           children: [
             WorkspaceHeader(
@@ -63,7 +68,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                   ),
                 ),
                 Semantics(
-                  label: '添加文件夹',
+                  label: '添加资料文件夹',
                   button: true,
                   enabled:
                       controller.directoryPicker.isSupported &&
@@ -76,7 +81,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                           ? controller.selectDirectoryAndStart
                           : null,
                       icon: const Icon(Icons.create_new_folder_outlined),
-                      label: const Text('添加文件夹'),
+                      label: const Text('添加资料文件夹'),
                     ),
                   ),
                 ),
@@ -89,9 +94,17 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('共 ${controller.total} 个文件'),
-                    if (!controller.directoryPicker.isSupported)
-                      const Text('当前验证平台不支持桌面路径，请使用桌面版管理索引。'),
+                    LibrarySummary(
+                      totalFiles: controller.total,
+                      currentTaskFailures:
+                          controller.activeJob?.result?.failedFiles ?? 0,
+                    ),
+                    if (!controller.directoryPicker.isSupported) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        '当前平台不支持添加本地资料文件夹，请使用 Windows、macOS 或 Linux 桌面版。',
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -105,34 +118,13 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
             if (controller.errorMessage != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: MaterialBanner(
-                  content: Text(controller.errorMessage!),
-                  actions: [
-                    TextButton(
-                      onPressed: controller.refresh,
-                      child: const Text('刷新重试'),
-                    ),
-                    TextButton(
-                      onPressed: controller.clearError,
-                      child: const Text('关闭'),
-                    ),
-                  ],
-                ),
-              ),
-            if (controller.successMessage != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: Semantics(
-                  liveRegion: true,
-                  child: MaterialBanner(
-                    content: Text(controller.successMessage!),
-                    actions: [
-                      TextButton(
-                        onPressed: controller.clearSuccess,
-                        child: const Text('关闭'),
-                      ),
-                    ],
-                  ),
+                child: WorkspaceNotice(
+                  tone: WorkspaceNoticeTone.error,
+                  message: controller.errorMessage!,
+                  actionLabel: '重新尝试',
+                  onAction: controller.refresh,
+                  onDismiss: controller.clearError,
+                  announce: true,
                 ),
               ),
             Expanded(child: _body(controller)),
@@ -167,19 +159,54 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
     );
   }
 
+  void _scheduleSuccessFeedback(IndexLibraryController controller) {
+    final message = controller.successMessage;
+    if (message == null || message == _scheduledSuccessMessage) return;
+    _scheduledSuccessMessage = message;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.successMessage != message) {
+        if (_scheduledSuccessMessage == message) {
+          _scheduledSuccessMessage = null;
+        }
+        return;
+      }
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+      _scheduledSuccessMessage = null;
+      controller.clearSuccess();
+    });
+  }
+
   Widget _body(IndexLibraryController controller) {
     if (controller.state == LibraryViewState.loading &&
         controller.files.isEmpty) {
-      return ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: 3,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (_, _) => const Card(child: SizedBox(height: 112)),
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Column(
+              children: [
+                SizedBox(height: 112),
+                Divider(height: 1),
+                SizedBox(height: 112),
+                Divider(height: 1),
+                SizedBox(height: 112),
+              ],
+            ),
+          ),
+        ],
       );
     }
     if (controller.state == LibraryViewState.failure &&
         controller.files.isEmpty) {
-      return const Center(child: Text('无法加载索引库，请刷新重试。'));
+      return const Center(child: Text('暂时无法显示索引库，请使用上方的“重新尝试”。'));
     }
     if (controller.files.isEmpty) {
       return const Center(
@@ -189,7 +216,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
             Icon(Icons.folder_off_outlined, size: 48),
             SizedBox(height: 8),
             Text('索引库为空'),
-            Text('在桌面版添加文件夹后，文件会显示在这里。'),
+            Text('添加资料文件夹后，可搜索文件会显示在这里。'),
           ],
         ),
       );
@@ -228,7 +255,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('重新索引'),
+            child: const Text('重新索引文件'),
           ),
         ],
       ),
@@ -246,7 +273,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('从索引移除 ${file.name}？'),
+        title: Text('从索引库移除 ${file.name}？'),
         content: const Text('不会删除磁盘上的原文件。'),
         actions: [
           TextButton(
@@ -259,25 +286,20 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('从索引移除'),
+            child: const Text('从索引库移除'),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
-    final deleted = await widget.controller.remove(file.sourceKey);
-    if (mounted && deleted != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已从索引移除 ${deleted.deletedRecords} 条记录')),
-      );
-    }
+    await widget.controller.remove(file.sourceKey);
   }
 
   Future<void> _showFailures(IndexFailureDetails details) {
     return showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('索引失败详情'),
+        title: const Text('未处理文件详情'),
         content: SizedBox(
           width: 560,
           child: ListView(
@@ -286,12 +308,12 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
               for (final failure in details.failures)
                 ListTile(
                   title: Text(failure.path),
-                  subtitle: Text('${failure.code} · ${failure.stage}'),
+                  subtitle: Text(_failureStageLabel(failure.stage)),
                 ),
               if (details.error != null)
-                ListTile(
-                  title: Text(details.error!.code),
-                  subtitle: const Text('任务异常结束，请重试或检查后端日志。'),
+                const ListTile(
+                  title: Text('任务未完成'),
+                  subtitle: Text('任务未完成，请重新尝试；若问题持续，请检查本地检索服务。'),
                 ),
             ],
           ),
@@ -305,4 +327,14 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
       ),
     );
   }
+}
+
+String _failureStageLabel(String stage) {
+  return switch (stage) {
+    'discover' => '查找文件时失败',
+    'parse' => '解析文件时失败',
+    'embed' => '处理文件内容时失败',
+    'persist' => '保存索引时失败',
+    _ => '处理文件时失败',
+  };
 }

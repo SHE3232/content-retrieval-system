@@ -2,6 +2,7 @@ import 'package:content_retrieval_app/core/platform/directory_picker.dart';
 import 'package:content_retrieval_app/features/library/domain/index_library_models.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_controller.dart';
 import 'package:content_retrieval_app/features/library/presentation/index_library_page.dart';
+import 'package:content_retrieval_app/core/presentation/workspace_notice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -49,12 +50,14 @@ void main() {
     );
 
     expect(find.text('索引库'), findsOneWidget);
-    expect(find.text('共 1 个文件'), findsOneWidget);
+    expect(find.byKey(const Key('library-total-files')), findsOneWidget);
+    expect(find.text('1 个可搜索文件'), findsOneWidget);
+    expect(find.textContaining('后端'), findsNothing);
     expect(find.text('guide.pdf'), findsOneWidget);
     expect(find.text('application/pdf'), findsOneWidget);
     expect(find.textContaining('4 条记录'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('打开 guide.pdf'));
+    await tester.tap(find.widgetWithText(FilledButton, '打开文件'));
     await tester.pump();
     expect(launcher.paths, [r'C:\docs\guide.pdf']);
 
@@ -62,6 +65,41 @@ void main() {
     await tester.pump();
     expect(clipboard.paths, [r'C:\docs\guide.pdf']);
     expect(find.text('路径已复制'), findsOneWidget);
+  });
+
+  testWidgets('header has one primary add action', (tester) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+
+    await tester.pumpWidget(_app(controller));
+
+    expect(find.widgetWithText(FilledButton, '添加资料文件夹'), findsOneWidget);
+    expect(find.byTooltip('刷新索引库'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '添加文件夹'), findsNothing);
+  });
+
+  testWidgets('secondary file mutations live in the more menu', (tester) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    expect(find.text('打开文件'), findsOneWidget);
+    expect(find.byTooltip('重新索引 guide.pdf'), findsNothing);
+    expect(find.byTooltip('从索引移除 guide.pdf'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('more-actions-file-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('重新索引文件'), findsOneWidget);
+    expect(find.text('从索引库移除'), findsOneWidget);
   });
 
   testWidgets('reindex and remove require named confirmations', (tester) async {
@@ -81,25 +119,56 @@ void main() {
     await controller.load();
     await tester.pumpWidget(_app(controller));
 
-    await tester.tap(find.byTooltip('重新索引 guide.pdf'));
+    await tester.tap(find.byKey(const Key('more-actions-file-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('重新索引文件'));
     await tester.pumpAndSettle();
     expect(find.text('重新索引 guide.pdf？'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, '重新索引'));
+    await tester.tap(find.widgetWithText(FilledButton, '重新索引文件'));
     await tester.pumpAndSettle();
     expect(service.reindexCalls, [_sourceKey]);
 
-    await tester.tap(find.byTooltip('从索引移除 guide.pdf'));
+    await tester.tap(find.byKey(const Key('more-actions-file-1')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('从索引库移除'));
+    await tester.pumpAndSettle();
+    expect(find.text('从索引库移除 guide.pdf？'), findsOneWidget);
     expect(find.text('不会删除磁盘上的原文件。'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, '从索引移除'));
-    for (var attempt = 0; attempt < 10; attempt += 1) {
+    await tester.tap(find.widgetWithText(FilledButton, '从索引库移除'));
+    for (var attempt = 0; attempt < 30; attempt += 1) {
       await tester.pump(const Duration(milliseconds: 20));
       if (find.textContaining('已从索引移除').evaluate().isNotEmpty) break;
     }
 
     expect(service.removeCalls, [_sourceKey]);
     expect(find.textContaining('已从索引移除'), findsOneWidget);
+    expect(find.byType(MaterialBanner), findsNothing);
     expect(find.text('索引库为空'), findsOneWidget);
+  });
+
+  testWidgets('cancelling reindex returns focus to the same more menu', (
+    tester,
+  ) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    await tester.pumpWidget(_app(controller));
+
+    final menuFinder = find.byKey(const Key('more-actions-file-1'));
+    await tester.tap(menuFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('重新索引文件'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'more-actions-file-1',
+    );
   });
 
   testWidgets('unsupported directory selection is disabled with explanation', (
@@ -117,10 +186,11 @@ void main() {
     await tester.pumpWidget(_app(controller));
 
     final addButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '添加文件夹'),
+      find.widgetWithText(FilledButton, '添加资料文件夹'),
     );
     expect(addButton.onPressed, isNull);
-    expect(find.textContaining('请使用桌面版管理索引'), findsOneWidget);
+    expect(find.textContaining('Windows、macOS 或 Linux 桌面版'), findsOneWidget);
+    expect(find.textContaining('后端'), findsNothing);
   });
 
   testWidgets('job progress and failure details remain textual', (
@@ -155,12 +225,55 @@ void main() {
 
     await tester.pumpWidget(_app(controller));
 
-    expect(find.textContaining('成功 1'), findsOneWidget);
-    expect(find.textContaining('失败 1'), findsOneWidget);
+    expect(find.text('部分文件未能加入索引库'), findsOneWidget);
+    expect(find.textContaining('已添加 1 个文件，1 个文件需要处理'), findsOneWidget);
+    expect(find.text('本次任务有 1 个文件需要处理'), findsOneWidget);
     await tester.tap(find.text('查看失败详情'));
     await tester.pumpAndSettle();
     expect(find.textContaining('broken.pdf'), findsOneWidget);
-    expect(find.textContaining('PARSE_FAILED'), findsOneWidget);
+    expect(find.text('解析文件时失败'), findsOneWidget);
+    expect(find.textContaining('PARSE_FAILED'), findsNothing);
+    expect(find.textContaining('Could not parse file'), findsNothing);
+  });
+
+  testWidgets('persistent errors use one dismissible workspace notice', (
+    tester,
+  ) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    controller.errorMessage = '无法加载索引库。';
+
+    await tester.pumpWidget(_app(controller));
+
+    expect(find.byType(WorkspaceNotice), findsOneWidget);
+    expect(find.text('重新尝试'), findsOneWidget);
+    expect(find.byTooltip('关闭提示'), findsOneWidget);
+    expect(find.byType(MaterialBanner), findsNothing);
+  });
+
+  testWidgets('controller success is shown once as a snackbar', (tester) async {
+    final controller = IndexLibraryController(
+      service: _PageService()..pages.add(_page()),
+      directoryPicker: _PagePicker(),
+    );
+    addTearDown(controller.dispose);
+    await controller.load();
+    controller.successMessage = '资料已从索引库移除';
+
+    await tester.pumpWidget(_app(controller));
+    await tester.pump();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('资料已从索引库移除'), findsOneWidget);
+    expect(find.byType(MaterialBanner), findsNothing);
+    expect(controller.successMessage, isNull);
+
+    await tester.pump();
+    expect(find.byType(SnackBar), findsOneWidget);
   });
 
   testWidgets('catalog has no overflow at 200 percent text scale', (
@@ -186,6 +299,22 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('guide.pdf'), findsOneWidget);
+    expect(
+      tester.getSize(find.widgetWithText(FilledButton, '打开文件')).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('more-actions-file-1'))).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(
+      tester.getSize(find.widgetWithText(FilledButton, '添加资料文件夹')).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(
+      tester.getSize(find.byTooltip('复制 guide.pdf 的路径')).height,
+      greaterThanOrEqualTo(48),
+    );
   });
 }
 

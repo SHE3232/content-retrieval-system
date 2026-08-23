@@ -18,8 +18,8 @@ final class IndexedFileTile extends StatefulWidget {
   final IndexedFile file;
   final FileLauncher fileLauncher;
   final PathClipboard pathClipboard;
-  final VoidCallback onReindex;
-  final VoidCallback onRemove;
+  final Future<void> Function() onReindex;
+  final Future<void> Function() onRemove;
   final bool actionsEnabled;
   final bool fileOpenSupported;
 
@@ -31,6 +31,21 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
   bool _opening = false;
   bool _copying = false;
   String? _error;
+  late final FocusNode _moreActionsFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _moreActionsFocusNode = FocusNode(
+      debugLabel: 'more-actions-${widget.file.fileId}',
+    );
+  }
+
+  @override
+  void dispose() {
+    _moreActionsFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,18 +54,23 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
       key: Key('indexed-file-row-${file.fileId}'),
       color: Colors.transparent,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(file.name, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
-            Tooltip(
-              message: file.path,
-              child: Text(
-                file.path,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+            Semantics(
+              label: file.path,
+              child: Tooltip(
+                message: file.path,
+                child: ExcludeSemantics(
+                  child: Text(
+                    file.path,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -74,6 +94,9 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
                       ? '打开 ${file.name}'
                       : '当前平台不支持打开桌面文件',
                   child: FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
                     onPressed:
                         widget.actionsEnabled &&
                             widget.fileOpenSupported &&
@@ -81,30 +104,47 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
                         ? _open
                         : null,
                     icon: const Icon(Icons.open_in_new),
-                    label: const Text('打开'),
+                    label: const Text('打开文件'),
                   ),
                 ),
                 Tooltip(
                   message: '复制 ${file.name} 的路径',
                   child: IconButton(
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
                     onPressed: widget.actionsEnabled && !_copying
                         ? _copy
                         : null,
                     icon: const Icon(Icons.content_copy),
                   ),
                 ),
-                Tooltip(
-                  message: '重新索引 ${file.name}',
-                  child: IconButton(
-                    onPressed: widget.actionsEnabled ? widget.onReindex : null,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ),
-                Tooltip(
-                  message: '从索引移除 ${file.name}',
-                  child: IconButton(
-                    onPressed: widget.actionsEnabled ? widget.onRemove : null,
-                    icon: const Icon(Icons.delete_outline),
+                Focus(
+                  focusNode: _moreActionsFocusNode,
+                  child: PopupMenuButton<_IndexedFileAction>(
+                    key: Key('more-actions-${file.fileId}'),
+                    enabled: widget.actionsEnabled,
+                    tooltip: '${file.name} 的更多操作',
+                    padding: const EdgeInsets.all(12),
+                    icon: const Icon(Icons.more_vert),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: _IndexedFileAction.reindex,
+                        child: ListTile(
+                          leading: Icon(Icons.refresh),
+                          title: Text('重新索引文件'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: _IndexedFileAction.remove,
+                        child: ListTile(
+                          leading: Icon(Icons.delete_outline),
+                          title: Text('从索引库移除'),
+                        ),
+                      ),
+                    ],
+                    onSelected: _performAction,
                   ),
                 ),
               ],
@@ -120,6 +160,15 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
         ),
       ),
     );
+  }
+
+  Future<void> _performAction(_IndexedFileAction action) async {
+    final callback = switch (action) {
+      _IndexedFileAction.reindex => widget.onReindex,
+      _IndexedFileAction.remove => widget.onRemove,
+    };
+    await callback();
+    if (mounted) _moreActionsFocusNode.requestFocus();
   }
 
   Future<void> _open() async {
@@ -168,3 +217,5 @@ final class _IndexedFileTileState extends State<IndexedFileTile> {
         '${two(local.hour)}:${two(local.minute)}';
   }
 }
+
+enum _IndexedFileAction { reindex, remove }

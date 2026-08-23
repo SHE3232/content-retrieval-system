@@ -43,6 +43,47 @@ void main() {
     expect(controller.isMutationInProgress, isFalse);
   });
 
+  test(
+    'unsupported picker message names supported desktop platforms',
+    () async {
+      final picker = _FakeDirectoryPicker()..isSupported = false;
+      final controller = IndexLibraryController(
+        service: _FakeLibraryService(),
+        directoryPicker: picker,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.selectDirectoryAndStart();
+
+      expect(
+        controller.errorMessage,
+        '当前平台不支持添加本地资料文件夹，请使用 Windows、macOS 或 Linux 桌面版。',
+      );
+      expect(controller.errorMessage, isNot(contains('后端')));
+    },
+  );
+
+  test('service errors use local retrieval service language', () async {
+    final service = _FakeLibraryService()
+      ..reindexResults.add(
+        const ApiException(
+          ApiErrorKind.rejected,
+          'raw',
+          code: 'SERVICE_UNAVAILABLE',
+        ),
+      );
+    final controller = IndexLibraryController(
+      service: service,
+      directoryPicker: _FakeDirectoryPicker(),
+    );
+    addTearDown(controller.dispose);
+
+    await controller.reindex(_sourceKey);
+
+    expect(controller.errorMessage, '本地检索服务暂时不可用，请检查运行状态后重新尝试。');
+    expect(controller.errorMessage, isNot(contains('后端')));
+  });
+
   test('running job polls to completion and refreshes page one', () async {
     final service = _FakeLibraryService()
       ..startedJobs.add(_job(IndexJobStatus.queued))
@@ -115,7 +156,7 @@ void main() {
     await _flush();
 
     expect(controller.failureDetails?.error?.code, 'INDEXING_JOB_FAILED');
-    expect(controller.errorMessage, '索引任务失败，请查看失败详情后重试。');
+    expect(controller.errorMessage, '任务未完成，请重新尝试；若问题持续，请检查本地检索服务。');
     expect(controller.isMutationInProgress, isFalse);
   });
 
