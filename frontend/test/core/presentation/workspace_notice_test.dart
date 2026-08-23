@@ -83,6 +83,7 @@ void main() {
 
         final notice = find.byKey(const Key('workspace-notice'));
         expect(notice, findsOneWidget);
+        expect(find.text('无法加载索引库。'), findsOneWidget);
         expect(
           tester.getSemantics(notice).flagsCollection.isLiveRegion,
           isTrue,
