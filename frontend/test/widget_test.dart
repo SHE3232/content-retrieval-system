@@ -371,6 +371,16 @@ void main() {
       const Size(48, 48),
     );
     expect(light.snackBarTheme.behavior, SnackBarBehavior.floating);
+    expect(light.snackBarTheme.shape, isA<RoundedRectangleBorder>());
+    expect(
+      (light.snackBarTheme.shape! as RoundedRectangleBorder).borderRadius,
+      BorderRadius.circular(12),
+    );
+    expect(light.popupMenuTheme.shape, isA<RoundedRectangleBorder>());
+    expect(
+      (light.popupMenuTheme.shape! as RoundedRectangleBorder).borderRadius,
+      BorderRadius.circular(12),
+    );
 
     for (final theme in [light, dark]) {
       final scheme = theme.colorScheme;
