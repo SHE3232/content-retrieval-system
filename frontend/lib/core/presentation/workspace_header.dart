@@ -37,6 +37,7 @@ final class WorkspaceHeader extends StatelessWidget {
             constraints.maxWidth < 620 ||
             MediaQuery.textScalerOf(context).scale(14) >= 21;
         return Padding(
+          key: const Key('workspace-header'),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
           child: stacked
               ? Column(
@@ -50,9 +51,19 @@ final class WorkspaceHeader extends StatelessWidget {
                   ],
                 )
               : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: text),
-                    if (actions.isNotEmpty) ...actions,
+                    if (actions.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      Flexible(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: actions,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
         );

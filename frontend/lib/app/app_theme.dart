@@ -108,6 +108,13 @@ abstract final class AppTheme {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         labelPadding: const EdgeInsets.symmetric(horizontal: 4),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          shape: controlShape,
+        ),
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
@@ -157,6 +164,17 @@ abstract final class AppTheme {
         waitDuration: const Duration(milliseconds: 500),
         showDuration: const Duration(seconds: 2),
         preferBelow: true,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_controlRadius),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_controlRadius),
+        ),
       ),
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant,

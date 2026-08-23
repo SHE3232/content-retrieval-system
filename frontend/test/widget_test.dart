@@ -366,6 +366,11 @@ void main() {
       theme.iconButtonTheme.style!.minimumSize!.resolve({}),
       const Size.square(48),
     );
+    expect(
+      light.textButtonTheme.style!.minimumSize!.resolve(<WidgetState>{}),
+      const Size(48, 48),
+    );
+    expect(light.snackBarTheme.behavior, SnackBarBehavior.floating);
 
     for (final theme in [light, dark]) {
       final scheme = theme.colorScheme;
