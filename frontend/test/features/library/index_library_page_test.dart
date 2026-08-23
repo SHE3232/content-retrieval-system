@@ -13,6 +13,8 @@ import '../../support/fakes.dart';
 
 const _sourceKey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _otherSourceKey =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
 void main() {
   testWidgets('library uses a workspace header and continuous catalog', (
@@ -290,6 +292,61 @@ void main() {
       'library-refresh-action',
     );
   });
+
+  testWidgets(
+    'page two reindex falls back to refresh and clears pending focus',
+    (tester) async {
+      final pageTwo = _page(
+        page: 2,
+        total: 21,
+        totalPages: 2,
+        fileId: 'file-2',
+        name: 'page-two.pdf',
+      );
+      final service = _PageService()
+        ..pages.add(pageTwo)
+        ..reindexJobs.add(_completedJob())
+        ..pages.add(
+          _page(
+            total: 21,
+            totalPages: 2,
+            sourceKey: _otherSourceKey,
+            name: 'page-one.pdf',
+          ),
+        )
+        ..pages.add(pageTwo);
+      final controller = IndexLibraryController(
+        service: service,
+        directoryPicker: _PagePicker(),
+      );
+      addTearDown(controller.dispose);
+      await controller.load(page: 2);
+      await tester.pumpWidget(_app(controller));
+
+      await tester.tap(find.byKey(const Key('more-actions-file-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('重新索引文件'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '重新索引文件'));
+      await tester.pumpAndSettle();
+
+      expect(controller.page, 1);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'library-refresh-action',
+      );
+
+      await controller.nextPage();
+      await tester.pumpAndSettle();
+
+      expect(controller.page, 2);
+      expect(find.text('page-two.pdf'), findsOneWidget);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'library-refresh-action',
+      );
+    },
+  );
 
   testWidgets('disabled more menu cannot receive focus or open', (
     tester,
@@ -614,14 +671,21 @@ Widget _app(
   );
 }
 
-IndexedFilePage _page({int total = 1, int totalPages = 1}) {
+IndexedFilePage _page({
+  int page = 1,
+  int total = 1,
+  int totalPages = 1,
+  String sourceKey = _sourceKey,
+  String fileId = 'file-1',
+  String name = 'guide.pdf',
+}) {
   return IndexedFilePage(
     items: [
       IndexedFile(
-        sourceKey: _sourceKey,
-        fileId: 'file-1',
-        path: r'C:\docs\guide.pdf',
-        name: 'guide.pdf',
+        sourceKey: sourceKey,
+        fileId: fileId,
+        path: 'C:\\docs\\$name',
+        name: name,
         mimeType: 'application/pdf',
         modality: 'text',
         sizeBytes: 4096,
@@ -629,7 +693,7 @@ IndexedFilePage _page({int total = 1, int totalPages = 1}) {
         recordCount: 4,
       ),
     ],
-    page: 1,
+    page: page,
     pageSize: 20,
     total: total,
     totalPages: totalPages,

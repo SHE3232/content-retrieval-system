@@ -32,6 +32,7 @@ final class IndexLibraryPage extends StatefulWidget {
 final class _IndexLibraryPageState extends State<IndexLibraryPage> {
   String? _scheduledSuccessMessage;
   String? _pendingReindexFocusSourceKey;
+  bool _isPageActive = true;
   late final FocusNode _refreshFocusNode;
 
   @override
@@ -51,11 +52,13 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
 
   @override
   Widget build(BuildContext context) {
+    _isPageActive = Visibility.of(context);
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
         final controller = widget.controller;
         _scheduleSuccessFeedback(controller);
+        _reconcilePendingFocus(controller);
         return Column(
           children: [
             WorkspaceHeader(
@@ -249,7 +252,7 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
           fileOpenSupported: widget.fileOpenSupported,
           actionsEnabled: !controller.isBusy,
           restoreMoreActionsFocus:
-              _pendingReindexFocusSourceKey == file.sourceKey,
+              _isPageActive && _pendingReindexFocusSourceKey == file.sourceKey,
           onMoreActionsFocusRestored: () {
             if (!mounted || _pendingReindexFocusSourceKey != file.sourceKey) {
               return;
@@ -315,10 +318,23 @@ final class _IndexLibraryPageState extends State<IndexLibraryPage> {
 
   void _focusRefreshAction() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !widget.controller.isBusy) {
+      if (mounted &&
+          _isPageActive &&
+          !widget.controller.isBusy &&
+          _refreshFocusNode.canRequestFocus) {
         _refreshFocusNode.requestFocus();
       }
     });
+  }
+
+  void _reconcilePendingFocus(IndexLibraryController controller) {
+    final pendingSourceKey = _pendingReindexFocusSourceKey;
+    if (pendingSourceKey == null || controller.isBusy) return;
+    if (controller.files.any((file) => file.sourceKey == pendingSourceKey)) {
+      return;
+    }
+    _pendingReindexFocusSourceKey = null;
+    _focusRefreshAction();
   }
 
   Future<void> _showFailures(IndexFailureDetails details) {
