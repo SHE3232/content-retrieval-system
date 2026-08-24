@@ -9,7 +9,7 @@
 
 本次扫描覆盖四套 Python `uv.lock` 和一套 Flutter `pubspec.lock`：
 
-- 246 个唯一的“生态 + 名称 + 版本”审核项；
+- 252 个唯一的“生态 + 名称 + 版本”审核项；
 - 383 条按环境保留的依赖记录，其中 345 条 `approved`、34 条 `restricted`、4 条 `project-owned`；
 - 0 条缺失许可证、0 条缺失证据、0 条 `review-required`；
 - 17 个唯一受限组件，均为 Linux CUDA 路径下的 NVIDIA 专有传递依赖。
@@ -23,8 +23,8 @@
 | 环境 | 锁文件 | 记录数 |
 |---|---|---:|
 | 后端 Python | `backend/uv.lock` | 152 |
-| 模型工具 Python | `model-tools/uv.lock` | 84 |
-| 转换工具 Python | `conversion-tools/uv.lock` | 99 |
+| 模型工具 Python | `model-tools/uv.lock` | 99 |
+| 转换工具 Python | `conversion-tools/uv.lock` | 84 |
 | 演示工具 Python | `tools/demo/uv.lock` | 9 |
 | Flutter/Dart | `frontend/pubspec.lock` | 39 |
 | **合计** |  | **383** |

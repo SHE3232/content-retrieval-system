@@ -94,3 +94,10 @@ def test_repository_inventory_covers_every_locked_component() -> None:
     assert not [
         row for row in rows if row["review_status"] == "review-required"
     ]
+
+
+def test_compliance_summary_matches_lock_record_counts() -> None:
+    report = (REPOSITORY / "docs/OPEN_SOURCE_COMPLIANCE.md").read_text(encoding="utf-8")
+    assert "252 个唯一的" in report
+    assert "| 模型工具 Python | `model-tools/uv.lock` | 99 |" in report
+    assert "| 转换工具 Python | `conversion-tools/uv.lock` | 84 |" in report
