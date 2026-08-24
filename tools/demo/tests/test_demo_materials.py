@@ -6,6 +6,29 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = REPOSITORY_ROOT / "docs" / "demo" / "PROJECT_DEMO_VIDEO_SCRIPT.md"
 README_PATH = REPOSITORY_ROOT / "docs" / "demo" / "README.md"
+EXPECTED_TIMELINE = (
+    "0:00–0:25",
+    "0:25–1:05",
+    "1:05–1:50",
+    "1:50–2:40",
+    "2:40–3:25",
+    "3:25–3:55",
+    "3:55–4:25",
+    "4:25–4:45",
+    "4:45–5:00",
+)
+RESERVE_SECONDS = {
+    "0:00–0:25": 1,
+    "0:25–1:05": 4,
+    "1:05–1:50": 4,
+    "1:50–2:40": 4,
+    "2:40–3:25": 4,
+    "3:25–3:55": 3,
+    "3:55–4:25": 3,
+    "4:25–4:45": 5,
+    "4:45–5:00": 3,
+}
+MAX_HAN_CHARACTERS_PER_MINUTE = 260
 
 
 class DemoMaterialsTests(unittest.TestCase):
@@ -21,6 +44,20 @@ class DemoMaterialsTests(unittest.TestCase):
     def assertContainsAll(self, text: str, values: tuple[str, ...], subject: str):
         missing = [value for value in values if value not in text]
         self.assertFalse(missing, f"{subject} 缺少以下必需内容：{missing}")
+
+    def _timed_rows(self):
+        rows = []
+        for line in self.script.splitlines():
+            cells = [cell.strip() for cell in line.strip().split("|")]
+            if len(cells) < 7:
+                continue
+            match = re.fullmatch(r"(\d):(\d{2})–(\d):(\d{2})", cells[1])
+            if match is None:
+                continue
+            start = int(match.group(1)) * 60 + int(match.group(2))
+            end = int(match.group(3)) * 60 + int(match.group(4))
+            rows.append((cells[1], start, end, cells[3]))
+        return rows
 
     def test_required_material_files_exist(self):
         for path in (SCRIPT_PATH, README_PATH):
@@ -44,26 +81,30 @@ class DemoMaterialsTests(unittest.TestCase):
             self.script,
             "逐秒脚本表格必须提供全部五列",
         )
-        anchors = (
-            "0:00–0:25",
-            "0:25–1:05",
-            "1:05–1:50",
-            "1:50–2:40",
-            "2:40–3:25",
-            "3:25–3:55",
-            "3:55–4:25",
-            "4:25–4:45",
-            "4:45–5:00",
+        self.assertContainsAll(self.script, EXPECTED_TIMELINE, "逐秒脚本时间锚点")
+
+    def test_timeline_has_exactly_nine_contiguous_nonoverlapping_segments(self):
+        rows = self._timed_rows()
+        labels = tuple(row[0] for row in rows)
+        self.assertEqual(
+            labels,
+            EXPECTED_TIMELINE,
+            f"时间轴必须恰好按规定顺序包含九段；实际为 {labels}",
         )
-        self.assertContainsAll(self.script, anchors, "逐秒脚本时间锚点")
+        self.assertEqual(len(set(labels)), 9, "时间轴不得含重复时段")
+        self.assertEqual(rows[0][1], 0, "时间轴必须从 0:00 开始")
+        self.assertEqual(rows[-1][2], 300, "时间轴必须在 5:00 结束")
+        for current, following in zip(rows, rows[1:]):
+            self.assertGreater(current[2], current[1], f"时段 {current[0]} 的时长必须为正")
+            self.assertEqual(
+                current[2],
+                following[1],
+                f"时段 {current[0]} 与 {following[0]} 之间存在空隙、重复或重叠",
+            )
 
     def test_narration_is_recordable_and_within_target_length(self):
-        narration_cells = []
-        for line in self.script.splitlines():
-            cells = [cell.strip() for cell in line.strip().split("|")]
-            if len(cells) >= 7 and re.fullmatch(r"\d:\d{2}–\d:\d{2}", cells[1]):
-                narration_cells.append(cells[3])
-        self.assertGreaterEqual(len(narration_cells), 9, "每个时间锚点都应有可直接朗读的讲解词")
+        narration_cells = [row[3] for row in self._timed_rows()]
+        self.assertEqual(len(narration_cells), 9, "九个时间段都应有可直接朗读的讲解词")
         narration = "".join(narration_cells)
         han_count = len(re.findall(r"[\u3400-\u9fff]", narration))
         self.assertGreaterEqual(han_count, 850, f"逐字讲解词仅 {han_count} 个汉字，低于 850")
@@ -75,6 +116,25 @@ class DemoMaterialsTests(unittest.TestCase):
                 f"第 {index} 段讲解词过短，疑似只有要点",
             )
 
+    def test_each_segment_respects_speaking_budget_after_operation_pauses(self):
+        counts = {}
+        for label, start, end, narration in self._timed_rows():
+            count = len(re.findall(r"[\u3400-\u9fff]", narration))
+            counts[label] = count
+            effective_seconds = end - start - RESERVE_SECONDS[label]
+            limit = int(effective_seconds * MAX_HAN_CHARACTERS_PER_MINUTE / 60)
+            with self.subTest(segment=label):
+                self.assertLessEqual(
+                    count,
+                    limit,
+                    f"{label} 有 {count} 个汉字，但扣除 {RESERVE_SECONDS[label]} 秒操作停顿后"
+                    f"最多容纳 {limit} 个（按 {MAX_HAN_CHARACTERS_PER_MINUTE} 汉字/分钟）",
+                )
+        self.assertGreaterEqual(counts["4:25–4:45"], 60, "离线段旁白应约为 60–65 个汉字")
+        self.assertLessEqual(counts["4:25–4:45"], 65, "离线段旁白应约为 60–65 个汉字")
+        self.assertGreaterEqual(counts["4:45–5:00"], 50, "总结段旁白应约为 50–55 个汉字")
+        self.assertLessEqual(counts["4:45–5:00"], 55, "总结段旁白应约为 50–55 个汉字")
+
     def test_script_uses_real_ui_copy_and_shortcuts(self):
         ui_copy = (
             "搜索本地资料",
@@ -84,7 +144,7 @@ class DemoMaterialsTests(unittest.TestCase):
             "语义",
             "关键词",
             "文本语义",
-            "图片语义",
+            "图像语义",
             "添加资料文件夹",
             "资料已可搜索",
             "打开文件",
@@ -100,6 +160,7 @@ class DemoMaterialsTests(unittest.TestCase):
             "150%",
         )
         self.assertContainsAll(self.script, ui_copy, "成片脚本 UI 文案与快捷键")
+        self.assertNotIn("图片语义", self.script, "UI/检索通道名称必须使用实际文案“图像语义”")
 
     def test_test_data_queries_and_expectations_are_complete(self):
         fixtures = (
@@ -132,7 +193,11 @@ class DemoMaterialsTests(unittest.TestCase):
             "score 不是概率，也不是准确率",
         )
         self.assertContainsAll(self.script, boundaries, "能力边界说明")
-        self.assertNotRegex(self.script, re.compile(r"WebP", re.IGNORECASE), "不得声称支持 WebP")
+        self.assertNotRegex(
+            self.script,
+            re.compile(r"(?:支持|可索引|能处理|可以处理).{0,20}WebP|WebP.{0,20}(?:受支持|可索引|可处理)", re.IGNORECASE),
+            "不得正向声称支持或可处理 WebP",
+        )
         self.assertNotRegex(
             self.script,
             r"score\s*(?:=|等于|就是|表示|代表)\s*(?:准确率|概率)",
@@ -171,7 +236,7 @@ class DemoMaterialsTests(unittest.TestCase):
             "索引慢",
             "部分失败",
             "无结果",
-            "语义/图片排序波动",
+            "语义/图像排序波动",
             "源文件移动或打开失败",
             "无障碍布局不理想",
             "成片超时",
