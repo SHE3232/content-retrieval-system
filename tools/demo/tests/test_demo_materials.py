@@ -386,6 +386,27 @@ class DemoMaterialsTests(unittest.TestCase):
         action_line = next(
             line for line in self.script.splitlines() if line.startswith("| 3:25–3:55 |")
         )
+        cells = [cell.strip() for cell in action_line.split("|")]
+        operation = cells[2]
+        self.assertOrdered(
+            operation,
+            (
+                "清空",
+                "查询为空",
+                "重置",
+                "取消“文本文件”",
+                "取消“图片”",
+                "只保留“文档”",
+                "输入",
+                "哪个文档介绍了不用鼠标操作界面",
+                "搜索资料",
+                "02_无障碍设计指南.pdf",
+                "复制路径",
+                "路径已复制",
+                "打开文件",
+            ),
+            "3:25–3:55 必须先清空旧查询，再配置筛选并执行 PDF 文件操作",
+        )
         self.assertContainsAll(
             action_line,
             (
