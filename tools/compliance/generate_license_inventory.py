@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import re
+import re
 from pathlib import Path
 from typing import Sequence
 
@@ -319,6 +320,34 @@ def write_csv(rows: list[dict[str, str]], destination: Path) -> None:
     destination.write_text(render_csv(rows), encoding="utf-8", newline="")
 
 
+def render_third_party_summary(repository: Path, rows: list[dict[str, str]]) -> str:
+    project = repository / "tools/demo/pyproject.toml"
+    dependencies = []
+    for line in project.read_text(encoding="utf-8").splitlines():
+        match = re.match(r'\s*"([A-Za-z0-9_.-]+)(?:[<>=!~;]|$)', line)
+        if match and match.group(1).lower() in {"python-docx", "reportlab", "pillow", "pypdfium2"}:
+            dependencies.append(match.group(1))
+    return ("<!-- GENERATED-DEMO-TOOLS-START -->\n"
+            "## 演示工具环境（自动生成）\n\n"
+            f"四套 Python `uv.lock` 共 {len(rows)} 条环境记录。\n\n"
+            "演示工具直接依赖：" + ", ".join(dependencies) + "。\n"
+            "<!-- GENERATED-DEMO-TOOLS-END -->")
+
+
+def sync_third_party_notices(repository: Path, rows: list[dict[str, str]]) -> None:
+    path = repository / "THIRD_PARTY_NOTICES.md"
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    start, end = "<!-- GENERATED-DEMO-TOOLS-START -->", "<!-- GENERATED-DEMO-TOOLS-END -->"
+    block = render_third_party_summary(repository, rows)
+    if start in text and end in text:
+        text = re.sub(re.escape(start) + r".*?" + re.escape(end), block, text, flags=re.S)
+    else:
+        text += "\n\n" + block + "\n"
+    path.write_text(text, encoding="utf-8")
+
+
 def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate the reviewed license inventory.")
     parser.add_argument("--repository", type=Path, default=Path.cwd())
@@ -357,6 +386,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(rendered, encoding="utf-8", newline="")
+    sync_third_party_notices(repository, rows)
     print(f"wrote {len(rows)} inventory rows")
     return 0
 

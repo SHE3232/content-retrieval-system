@@ -86,3 +86,12 @@ WAVE、NVDA（GPL）、VoiceOver（Apple 专有）和 Android Accessibility Scan
 3. 保留本项目 `LICENSE`、`NOTICE`、本文件，以及所有实际分发依赖自身的许可证/NOTICE。若修改第三方文件，按其许可证标记修改。
 4. 含 MobileCLIP 权重的研究包必须使用专门的研究用途发行流程，明确显示非商业限制并随包附上 Apple 模型许可；它不能被标为通用 Apache-2.0 包。
 5. 本声明是工程合规记录，不构成法律意见。对外商业发行、面向特定司法辖区的发行或数据再分发，应由具备权限的法务人员复核。
+
+
+<!-- GENERATED-DEMO-TOOLS-START -->
+## 演示工具环境（自动生成）
+
+四套 Python `uv.lock` 共 383 条环境记录。
+
+演示工具直接依赖：python-docx, reportlab, pillow, pypdfium2。
+<!-- GENERATED-DEMO-TOOLS-END -->

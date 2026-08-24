@@ -228,6 +228,26 @@ class DemoDataGeneratorTests(unittest.TestCase):
             self.assertIn("recovery", str(ctx.exception).lower())
             self.assertTrue(any("rollback" in p.name for p in root.parent.iterdir()))
 
+    def test_manifest_publish_interrupt_invalidates_new_manifest_before_failed_recovery(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; generate_demo_data(root)
+            original = os.replace; calls = 0
+            def double_fault(src, dst):
+                nonlocal calls
+                calls += 1
+                result = original(src, dst)
+                if calls == 12: raise KeyboardInterrupt()
+                if calls == 13: raise OSError("restore fault")
+                return result
+            with mock.patch("tools.demo.generate_demo_data.os.replace", side_effect=double_fault):
+                with self.assertRaises(RuntimeError) as ctx: generate_demo_data(root, force=True)
+            self.assertIn("recovery", str(ctx.exception).lower())
+            manifest = root / "MANIFEST.json"
+            self.assertFalse(manifest.exists())
+            backups = [p for p in root.parent.iterdir() if "rollback" in p.name]
+            self.assertTrue(backups)
+            self.assertTrue((backups[0] / "MANIFEST.json").is_file())
+
     def test_demo_tool_declares_reproducible_dependencies(self):
         config = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
         deps = " ".join(config["project"]["dependencies"]).lower()

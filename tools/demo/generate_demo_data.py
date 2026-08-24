@@ -125,6 +125,11 @@ def _publish(staging: Path, root: Path) -> None:
         try:
             # Reconcile from directory state, covering an interrupt after replace
             # succeeded but before any in-memory bookkeeping could run.
+            manifest_target = root / "MANIFEST.json"
+            if not (staging / "MANIFEST.json").exists() and (manifest_target.exists() or manifest_target.is_symlink()):
+                # The manifest is the trust boundary: invalidate a newly published
+                # one before any other recovery step can fail.
+                manifest_target.unlink()
             for name in EXPECTED_FILES:
                 backup = rollback / name
                 target = root / name

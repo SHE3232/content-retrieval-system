@@ -101,3 +101,9 @@ def test_compliance_summary_matches_lock_record_counts() -> None:
     assert "252 个唯一的" in report
     assert "| 模型工具 Python | `model-tools/uv.lock` | 99 |" in report
     assert "| 转换工具 Python | `conversion-tools/uv.lock` | 84 |" in report
+
+
+def test_third_party_notices_has_demo_environment_summary() -> None:
+    notices = (REPOSITORY / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    for phrase in ("四套 Python", "383 条", "演示工具", "python-docx", "reportlab", "pillow", "pypdfium2"):
+        assert phrase in notices
