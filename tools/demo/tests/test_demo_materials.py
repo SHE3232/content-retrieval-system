@@ -29,6 +29,11 @@ RESERVE_SECONDS = {
     "4:45–5:00": 3,
 }
 MAX_HAN_CHARACTERS_PER_MINUTE = 260
+POSITIVE_WEBP_CLAIM_PATTERN = re.compile(
+    r"(?<!不)(?<!未)(?:支持|可索引|能处理|可以处理).{0,20}WebP"
+    r"|WebP.{0,20}(?<!不)(?<!未)(?:受支持|可索引|可处理)",
+    re.IGNORECASE,
+)
 
 
 class DemoMaterialsTests(unittest.TestCase):
@@ -135,6 +140,24 @@ class DemoMaterialsTests(unittest.TestCase):
         self.assertGreaterEqual(counts["4:45–5:00"], 50, "总结段旁白应约为 50–55 个汉字")
         self.assertLessEqual(counts["4:45–5:00"], 55, "总结段旁白应约为 50–55 个汉字")
 
+    def test_closing_segment_summarizes_all_four_project_values(self):
+        closing_line = next(
+            line for line in self.script.splitlines() if line.startswith("| 4:45–5:00 |")
+        )
+        cells = [cell.strip() for cell in closing_line.split("|")]
+        closing_copy = f"{cells[3]}\n{cells[5]}"
+        concepts = {
+            "本地离线": "本地" in closing_copy and "离线" in closing_copy,
+            "五类文件": bool(
+                re.search(r"(?:五类|五种).{0,4}(?:文件|格式)|(?:文件|格式).{0,4}(?:五类|五种)", closing_copy)
+            ),
+            "多模态检索": "多模态" in closing_copy,
+            "无障碍支持": "无障碍" in closing_copy,
+        }
+        for concept, present in concepts.items():
+            with self.subTest(concept=concept):
+                self.assertTrue(present, f"4:45–5:00 的旁白或字幕缺少“{concept}”价值总结")
+
     def test_script_uses_real_ui_copy_and_shortcuts(self):
         ui_copy = (
             "搜索本地资料",
@@ -195,7 +218,7 @@ class DemoMaterialsTests(unittest.TestCase):
         self.assertContainsAll(self.script, boundaries, "能力边界说明")
         self.assertNotRegex(
             self.script,
-            re.compile(r"(?:支持|可索引|能处理|可以处理).{0,20}WebP|WebP.{0,20}(?:受支持|可索引|可处理)", re.IGNORECASE),
+            POSITIVE_WEBP_CLAIM_PATTERN,
             "不得正向声称支持或可处理 WebP",
         )
         self.assertNotRegex(
@@ -203,6 +226,20 @@ class DemoMaterialsTests(unittest.TestCase):
             r"score\s*(?:=|等于|就是|表示|代表)\s*(?:准确率|概率)",
             "不得把 score 表述为准确率或概率",
         )
+
+    def test_webp_boundary_allows_negative_but_rejects_positive_claims(self):
+        for statement in ("不支持 WebP", "尚未支持 WebP", "WebP 不受支持", "WebP 未支持"):
+            with self.subTest(statement=statement):
+                self.assertIsNone(
+                    POSITIVE_WEBP_CLAIM_PATTERN.search(statement),
+                    f"准确的否定边界不应被误判：{statement}",
+                )
+        for statement in ("支持 WebP", "能处理 WebP", "WebP 可索引"):
+            with self.subTest(statement=statement):
+                self.assertIsNotNone(
+                    POSITIVE_WEBP_CLAIM_PATTERN.search(statement),
+                    f"正向能力声明必须被识别：{statement}",
+                )
 
     def test_recording_preparation_is_safe_reproducible_and_complete(self):
         prep = (
