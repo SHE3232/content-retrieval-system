@@ -29,11 +29,31 @@ RESERVE_SECONDS = {
     "4:45–5:00": 3,
 }
 MAX_HAN_CHARACTERS_PER_MINUTE = 260
-POSITIVE_WEBP_CLAIM_PATTERN = re.compile(
-    r"(?<!不)(?<!未)(?:支持|可索引|能处理|可以处理).{0,20}WebP"
-    r"|WebP.{0,20}(?<!不)(?<!未)(?:受支持|可索引|可处理)",
-    re.IGNORECASE,
-)
+
+
+def has_positive_webp_claim(text: str) -> bool:
+    """Return whether a sentence or clause positively claims WebP capability."""
+    negative_before = re.compile(
+        r"(?:尚未|不再|不|未)(?:支持|可索引|可以索引|能处理|可以处理)\s*WebP",
+        re.IGNORECASE,
+    )
+    negative_after = re.compile(
+        r"WebP(?:\s*格式)?.{0,4}(?:不受支持|尚未支持|未支持|不能处理|不可索引|不可处理)",
+        re.IGNORECASE,
+    )
+    positive = re.compile(
+        r"(?:支持|可索引|可以索引|能处理|可以处理)\s*WebP"
+        r"|WebP(?:\s*格式)?.{0,4}(?:已经)?(?:支持|可索引|可处理)",
+        re.IGNORECASE,
+    )
+    for clause in re.split(r"[。！？；;\n]", text):
+        if re.search(r"WebP", clause, re.IGNORECASE) is None:
+            continue
+        without_negative_boundaries = negative_before.sub("", clause)
+        without_negative_boundaries = negative_after.sub("", without_negative_boundaries)
+        if positive.search(without_negative_boundaries) is not None:
+            return True
+    return False
 
 
 class DemoMaterialsTests(unittest.TestCase):
@@ -49,6 +69,22 @@ class DemoMaterialsTests(unittest.TestCase):
     def assertContainsAll(self, text: str, values: tuple[str, ...], subject: str):
         missing = [value for value in values if value not in text]
         self.assertFalse(missing, f"{subject} 缺少以下必需内容：{missing}")
+
+    def assertOrdered(self, text: str, values: tuple[str, ...], subject: str):
+        cursor = 0
+        for value in values:
+            position = text.find(value, cursor)
+            self.assertNotEqual(position, -1, f"{subject} 缺少或顺序错误：{value}")
+            cursor = position + len(value)
+
+    def _section(self, text: str, heading: str) -> str:
+        match = re.search(
+            rf"^{re.escape(heading)}\s*$\n(?P<body>.*?)(?=^## |\Z)",
+            text,
+            re.MULTILINE | re.DOTALL,
+        )
+        self.assertIsNotNone(match, f"缺少章节：{heading}")
+        return match.group("body")
 
     def _timed_rows(self):
         rows = []
@@ -185,6 +221,135 @@ class DemoMaterialsTests(unittest.TestCase):
         self.assertContainsAll(self.script, ui_copy, "成片脚本 UI 文案与快捷键")
         self.assertNotIn("图片语义", self.script, "UI/检索通道名称必须使用实际文案“图像语义”")
 
+    def test_rehearsal_and_recording_use_separate_sequential_data_directories(self):
+        script_prep = self._section(self.script, "## 二、录制前准备")
+        readme_flow_match = re.search(
+            r"^## 启动预演实例\s*$\n(?P<body>.*)\Z",
+            self.readme,
+            re.MULTILINE | re.DOTALL,
+        )
+        self.assertIsNotNone(readme_flow_match, "README 必须从“启动预演实例”开始说明双实例顺序")
+        for subject, flow in (
+            ("脚本录制前准备", script_prep),
+            ("README 实例流程", readme_flow_match.group("body")),
+        ):
+            with self.subTest(subject=subject):
+                self.assertContainsAll(
+                    flow,
+                    (
+                        "rehearsal-01",
+                        "recording-01",
+                        "rehearsal-02",
+                        "recording-02",
+                        "Ctrl+C",
+                        "全新",
+                    ),
+                    subject,
+                )
+                self.assertRegex(
+                    flow,
+                    r"start-mvp\.ps1 -CheckOnly -DataDir ['\"]?F:\\contentretrieval-demo\\rehearsal-01",
+                    f"{subject} 缺少 rehearsal-01 的 CheckOnly 命令",
+                )
+                self.assertRegex(
+                    flow,
+                    r"start-mvp\.ps1 -DataDir ['\"]?F:\\contentretrieval-demo\\rehearsal-01",
+                    f"{subject} 缺少 rehearsal-01 的启动命令",
+                )
+                self.assertRegex(
+                    flow,
+                    r"start-mvp\.ps1 -CheckOnly -DataDir ['\"]?F:\\contentretrieval-demo\\recording-01",
+                    f"{subject} 缺少 recording-01 的 CheckOnly 命令",
+                )
+                self.assertRegex(
+                    flow,
+                    r"start-mvp\.ps1 -DataDir ['\"]?F:\\contentretrieval-demo\\recording-01",
+                    f"{subject} 缺少 recording-01 的启动命令",
+                )
+                self.assertOrdered(
+                    flow,
+                    ("rehearsal-01", "Ctrl+C", "recording-01"),
+                    f"{subject} 必须先停止预演实例，再启动正式实例",
+                )
+                self.assertRegex(
+                    flow,
+                    r"(?:停止|退出)预演实例.{0,50}(?:再|然后).{0,20}(?:启动|预检).{0,20}正式",
+                    f"{subject} 必须明确停止预演实例后再启动正式实例",
+                )
+                self.assertRegex(
+                    flow,
+                    r"(?:不要|不得).{0,20}(?:同时|并行).{0,20}(?:实例|8000|端口)",
+                    f"{subject} 必须禁止两个实例同时占用 8000 端口",
+                )
+
+    def test_offline_clip_uses_library_refresh_instead_of_disabled_search(self):
+        script_prep = self._section(self.script, "## 二、录制前准备")
+        offline_line = next(
+            line for line in self.script.splitlines() if line.startswith("| 4:25–4:45 |")
+        )
+        offline_plan = next(
+            line for line in self.script.splitlines() if line.startswith("| 服务离线 |")
+        )
+        for subject, instructions in (
+            ("脚本准备步骤", script_prep),
+            ("4:25–4:45 时间行", offline_line),
+            ("服务离线预案", offline_plan),
+        ):
+            with self.subTest(subject=subject):
+                self.assertContainsAll(
+                    instructions,
+                    ("Ctrl+2", "索引库", "F5"),
+                    f"{subject} 的真实可点击离线路径",
+                )
+                self.assertNotRegex(
+                    instructions,
+                    r"(?:回到|返回)搜索.{0,12}触发(?:一次)?请求|搜索后出现完整错误",
+                    f"{subject} 不得依赖离线时被禁用的搜索按钮",
+                )
+        readme_offline = self._section(self.readme, "## 预录离线异常")
+        self.assertContainsAll(
+            readme_offline,
+            ("Ctrl+2", "索引库", "F5"),
+            "README 离线预录的真实可点击路径",
+        )
+        self.assertNotRegex(
+            readme_offline,
+            r"(?:回到|返回)搜索.{0,12}触发(?:一次)?请求|搜索后出现完整错误",
+            "README 离线预录不得依赖离线时被禁用的搜索按钮",
+        )
+        self.assertOrdered(
+            script_prep,
+            (
+                "http://127.0.0.1:65534",
+                "Ctrl+2",
+                "F5",
+                "无法连接本地检索服务，请检查服务地址和运行状态。",
+                "http://127.0.0.1:8000",
+                "Ctrl+2",
+                "F5",
+                "Ctrl+1",
+            ),
+            "脚本离线异常的触发与恢复顺序",
+        )
+
+    def test_document_actions_follow_a_verified_hybrid_pdf_result(self):
+        action_line = next(
+            line for line in self.script.splitlines() if line.startswith("| 3:25–3:55 |")
+        )
+        self.assertContainsAll(
+            action_line,
+            (
+                "重置",
+                "综合",
+                "文档",
+                "哪个文档介绍了不用鼠标操作界面",
+                "02_无障碍设计指南.pdf",
+                "路径已复制",
+                "打开文件",
+            ),
+            "3:25–3:55 文档检索与文件操作链",
+        )
+
     def test_test_data_queries_and_expectations_are_complete(self):
         fixtures = (
             ("01_课程检索笔记.txt", "星桥检索协议"),
@@ -216,9 +381,8 @@ class DemoMaterialsTests(unittest.TestCase):
             "score 不是概率，也不是准确率",
         )
         self.assertContainsAll(self.script, boundaries, "能力边界说明")
-        self.assertNotRegex(
-            self.script,
-            POSITIVE_WEBP_CLAIM_PATTERN,
+        self.assertFalse(
+            has_positive_webp_claim(self.script),
             "不得正向声称支持或可处理 WebP",
         )
         self.assertNotRegex(
@@ -228,16 +392,29 @@ class DemoMaterialsTests(unittest.TestCase):
         )
 
     def test_webp_boundary_allows_negative_but_rejects_positive_claims(self):
-        for statement in ("不支持 WebP", "尚未支持 WebP", "WebP 不受支持", "WebP 未支持"):
+        for statement in (
+            "不支持 WebP",
+            "未支持 WebP",
+            "不再支持 WebP",
+            "WebP 不受支持",
+            "WebP 尚未支持",
+            "WebP 不能处理",
+        ):
             with self.subTest(statement=statement):
-                self.assertIsNone(
-                    POSITIVE_WEBP_CLAIM_PATTERN.search(statement),
+                self.assertFalse(
+                    has_positive_webp_claim(statement),
                     f"准确的否定边界不应被误判：{statement}",
                 )
-        for statement in ("支持 WebP", "能处理 WebP", "WebP 可索引"):
+        for statement in (
+            "支持 WebP",
+            "WebP 格式已经支持",
+            "可以索引 WebP",
+            "WebP 可索引",
+            "WebP 可处理",
+        ):
             with self.subTest(statement=statement):
-                self.assertIsNotNone(
-                    POSITIVE_WEBP_CLAIM_PATTERN.search(statement),
+                self.assertTrue(
+                    has_positive_webp_claim(statement),
                     f"正向能力声明必须被识别：{statement}",
                 )
 
@@ -251,6 +428,8 @@ class DemoMaterialsTests(unittest.TestCase):
             "鼠标",
             "recording-01",
             "recording-02",
+            "rehearsal-01",
+            "rehearsal-02",
             "$env:TEMP",
             "$env:TMP",
             "$env:UV_CACHE_DIR",
