@@ -327,9 +327,11 @@ def render_third_party_summary(repository: Path, rows: list[dict[str, str]]) -> 
         match = re.match(r'\s*"([A-Za-z0-9_.-]+)(?:[<>=!~;]|$)', line)
         if match and match.group(1).lower() in {"python-docx", "reportlab", "pillow", "pypdfium2"}:
             dependencies.append(match.group(1))
+    python_rows = sum(row["ecosystem"] == "python" for row in rows)
+    dart_rows = sum(row["ecosystem"] == "dart" for row in rows)
     return ("<!-- GENERATED-DEMO-TOOLS-START -->\n"
             "## 演示工具环境（自动生成）\n\n"
-            f"四套 Python `uv.lock` 共 {len(rows)} 条环境记录。\n\n"
+            f"4 套 Python `uv.lock` + 1 套 Flutter `pubspec.lock`，共 {len(rows)} 条锁定依赖记录（Python {python_rows}，Dart {dart_rows}）。\n\n"
             "演示工具直接依赖：" + ", ".join(dependencies) + "。\n"
             "<!-- GENERATED-DEMO-TOOLS-END -->")
 
@@ -346,6 +348,18 @@ def sync_third_party_notices(repository: Path, rows: list[dict[str, str]]) -> No
     else:
         text += "\n\n" + block + "\n"
     path.write_text(text, encoding="utf-8")
+
+
+def validate_third_party_notices(repository: Path, rows: list[dict[str, str]], path: Path | None = None) -> bool:
+    path = path or (repository / "THIRD_PARTY_NOTICES.md")
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8")
+    start, end = "<!-- GENERATED-DEMO-TOOLS-START -->", "<!-- GENERATED-DEMO-TOOLS-END -->"
+    if start not in text or end not in text:
+        return False
+    actual = text[text.index(start):text.index(end) + len(end)]
+    return actual == render_third_party_summary(repository, rows) and "三套 Python" not in text and "共 374" not in text
 
 
 def _argument_parser() -> argparse.ArgumentParser:
@@ -381,6 +395,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.check:
         if not output_path.is_file() or output_path.read_text(encoding="utf-8") != rendered:
             raise SystemExit(f"license inventory is stale: {output_path}")
+        if not validate_third_party_notices(repository, rows):
+            raise SystemExit("third-party notices generated section is stale")
         print(f"{len(rows)} inventory rows verified")
         return 0
 

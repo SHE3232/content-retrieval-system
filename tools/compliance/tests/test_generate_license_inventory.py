@@ -9,6 +9,7 @@ from tools.compliance.generate_license_inventory import (
     build_inventory,
     parse_pubspec_lock,
     parse_uv_lock,
+    validate_third_party_notices,
 )
 
 
@@ -105,5 +106,14 @@ def test_compliance_summary_matches_lock_record_counts() -> None:
 
 def test_third_party_notices_has_demo_environment_summary() -> None:
     notices = (REPOSITORY / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
-    for phrase in ("四套 Python", "383 条", "演示工具", "python-docx", "reportlab", "pillow", "pypdfium2"):
+    for phrase in ("4 套 Python", "1 套 Flutter", "383 条锁定依赖记录", "演示工具", "python-docx", "reportlab", "pillow", "pypdfium2"):
         assert phrase in notices
+    assert "三套 Python" not in notices
+
+
+def test_check_rejects_tampered_generated_notices(tmp_path: Path) -> None:
+    source = (REPOSITORY / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    tampered = source.replace("383 条锁定依赖记录", "382 条锁定依赖记录")
+    path = tmp_path / "THIRD_PARTY_NOTICES.md"
+    path.write_text(tampered, encoding="utf-8")
+    assert not validate_third_party_notices(REPOSITORY, list(build_inventory(REPOSITORY, json.loads((REPOSITORY / "tools/compliance/approved-licenses.json").read_text(encoding="utf-8")))), path)
