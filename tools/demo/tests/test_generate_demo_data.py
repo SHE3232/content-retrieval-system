@@ -46,6 +46,7 @@ class DemoDataGeneratorTests(unittest.TestCase):
             self.assertIn("无需记住文件名", txt)
             doc = Document(out / "03_离线系统方案.docx")
             text = "\n".join(p.text for p in doc.paragraphs)
+            self.assertIn("无网络时仍可运行", text)
             self.assertIn("本机完成", text); self.assertIn("解析、检索与排序", text)
             self.assertIn("不会发送到云端", text)
             self.assertEqual(doc.styles["Normal"].font.name, "Times New Roman")
@@ -62,6 +63,7 @@ class DemoDataGeneratorTests(unittest.TestCase):
             pdf = PdfDocument(str(out / "02_无障碍设计指南.pdf"))
             extracted = "".join(page.get_textpage().get_text_range() for page in pdf)
             pdf.close()
+            self.assertIn(b"STSong-Light", (out / "02_无障碍设计指南.pdf").read_bytes())
             for phrase in ("DEMO-PDF-ACCESSIBILITY", "Tab", "高对比度", "200%", "减少动态效果"):
                 self.assertIn(phrase, extracted)
             with Image.open(out / "04_红色苹果.jpg") as apple:
@@ -87,6 +89,18 @@ class DemoDataGeneratorTests(unittest.TestCase):
             (out / "unknown.txt").write_text("keep", encoding="utf-8")
             generate_demo_data(out, force=True)
             self.assertEqual((out / "unknown.txt").read_text(encoding="utf-8"), "keep")
+
+    def test_force_preserves_unknown_subdirectories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            generate_demo_data(out)
+            nested = out / "unknown-subdir"
+            nested.mkdir()
+            marker = nested / "marker.txt"
+            marker.write_text("preserve", encoding="utf-8")
+            generate_demo_data(out, force=True)
+            self.assertTrue(nested.is_dir())
+            self.assertEqual(marker.read_text(encoding="utf-8"), "preserve")
 
     def test_force_rejects_foreign_or_invalid_manifest_without_modifying_files(self):
         for manifest in (
