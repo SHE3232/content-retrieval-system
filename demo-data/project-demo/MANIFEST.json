@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "generated_by": "tools/demo/generate_demo_data.py",
+  "files": [
+    {
+      "name": "01_课程检索笔记.txt",
+      "query": "星桥检索协议",
+      "mode": "精确"
+    },
+    {
+      "name": "02_无障碍设计指南.pdf",
+      "query": "哪个文档介绍了不用鼠标操作界面",
+      "mode": "文本语义"
+    },
+    {
+      "name": "03_离线系统方案.docx",
+      "query": "怎样在断网时保护本地文档隐私",
+      "mode": "文本语义"
+    },
+    {
+      "name": "04_红色苹果.jpg",
+      "query": "a simple red apple on a white background",
+      "mode": "图像语义"
+    },
+    {
+      "name": "05_蓝色方块.png",
+      "query": "a simple blue square on a white background",
+      "mode": "图像语义"
+    }
+  ]
+}
