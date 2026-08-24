@@ -23,7 +23,7 @@ RESERVE_SECONDS = {
     "1:05–1:50": 4,
     "1:50–2:40": 4,
     "2:40–3:25": 4,
-    "3:25–3:55": 3,
+    "3:25–3:55": 7,
     "3:55–4:25": 3,
     "4:25–4:45": 5,
     "4:45–5:00": 3,
@@ -175,6 +175,8 @@ class DemoMaterialsTests(unittest.TestCase):
         self.assertLessEqual(counts["4:25–4:45"], 65, "离线段旁白应约为 60–65 个汉字")
         self.assertGreaterEqual(counts["4:45–5:00"], 50, "总结段旁白应约为 50–55 个汉字")
         self.assertLessEqual(counts["4:45–5:00"], 55, "总结段旁白应约为 50–55 个汉字")
+        self.assertGreaterEqual(counts["3:25–3:55"], 96, "文档操作段旁白应约为 96–100 个汉字")
+        self.assertLessEqual(counts["3:25–3:55"], 100, "文档操作段旁白应约为 96–100 个汉字")
 
     def test_closing_segment_summarizes_all_four_project_values(self):
         closing_line = next(
@@ -282,6 +284,54 @@ class DemoMaterialsTests(unittest.TestCase):
                     f"{subject} 必须禁止两个实例同时占用 8000 端口",
                 )
 
+    def test_frontend_is_restarted_and_empty_state_checked_after_recording_backend_starts(self):
+        recording_start = (
+            "& .\\tools\\start-mvp.ps1 -DataDir "
+            "'F:\\contentretrieval-demo\\recording-01'"
+        )
+        for subject, flow in (
+            ("脚本准备流程", self._section(self.script, "## 二、录制前准备")),
+            (
+                "README 实例流程",
+                re.search(
+                    r"^## 启动预演实例\s*$\n(?P<body>.*)\Z",
+                    self.readme,
+                    re.MULTILINE | re.DOTALL,
+                ).group("body"),
+            ),
+        ):
+            prefix, marker, after_recording_start = flow.partition(recording_start)
+            with self.subTest(subject=subject, requirement="recording command"):
+                self.assertTrue(marker, f"{subject} 缺少 recording-01 的正式启动命令")
+            if not marker:
+                continue
+            with self.subTest(subject=subject, requirement="stop order"):
+                self.assertOrdered(
+                    prefix,
+                    ("停止 Flutter", "停止预演实例"),
+                    f"{subject} 必须先停止 Flutter，再停止 rehearsal MVP",
+                )
+            with self.subTest(subject=subject, requirement="restart Flutter"):
+                self.assertContainsAll(
+                    after_recording_start,
+                    ("重新启动 Flutter", "flutter run -d windows"),
+                    f"{subject} 必须为 recording-01 重建 Flutter controller",
+                )
+            with self.subTest(subject=subject, requirement="empty-state order"):
+                self.assertOrdered(
+                    after_recording_start,
+                    (
+                        "health/ready",
+                        "flutter run -d windows",
+                        "Ctrl+2",
+                        "F5",
+                        "索引库为空",
+                        "Ctrl+1",
+                        "搜索本地资料",
+                    ),
+                    f"{subject} 必须在新前端验证正式数据目录空态",
+                )
+
     def test_offline_clip_uses_library_refresh_instead_of_disabled_search(self):
         script_prep = self._section(self.script, "## 二、录制前准备")
         offline_line = next(
@@ -348,6 +398,11 @@ class DemoMaterialsTests(unittest.TestCase):
                 "打开文件",
             ),
             "3:25–3:55 文档检索与文件操作链",
+        )
+        self.assertRegex(
+            action_line,
+            r"取消[“\"]?文本文件[”\"]?.{0,20}取消[“\"]?图片[”\"]?.{0,20}只保留[“\"]?文档",
+            "重置后必须取消“文本文件”和“图片”，只保留已选中的“文档”",
         )
 
     def test_test_data_queries_and_expectations_are_complete(self):

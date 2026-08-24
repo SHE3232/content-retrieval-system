@@ -68,7 +68,7 @@ flutter run -d windows
 
 ## 停止预演并启动正式实例
 
-预演和异常片段完成后，回到启动 MVP 的终端按 `Ctrl+C` 停止预演实例，确认进程退出且 8000 端口已释放。不要删除 `rehearsal-01`，也不要同时运行两个实例。停止预演实例后再预检并启动正式实例；`recording-01` 必须是全新目录，正式录制从空白索引状态开始。
+预演和异常片段完成后，先在运行 Flutter 的终端按 `Ctrl+C`（或关闭应用）停止 Flutter，确认窗口退出；再回到启动 MVP 的终端按 `Ctrl+C` 停止预演实例，确认进程退出且 8000 端口已释放。不要删除 `rehearsal-01`，也不要同时运行两个实例。停止预演实例后再预检并启动正式实例；`recording-01` 必须是全新目录，正式录制从空白索引状态开始。
 
 ```powershell
 Set-Location F:\contentretrivalsystem
@@ -76,10 +76,12 @@ Set-Location F:\contentretrivalsystem
 & .\tools\start-mvp.ps1 -DataDir 'F:\contentretrieval-demo\recording-01'
 ```
 
-正式实例启动后，再次确认就绪：
+正式实例启动后先确认就绪，再重新启动 Flutter；这一步会重建 controller，不能沿用预演窗口：
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health/ready
+Set-Location F:\contentretrivalsystem\frontend
+flutter run -d windows
 ```
 
-此后才开始正式录制，并在 `recording-01` 中重新执行“添加资料文件夹”。重录使用一组同编号的新目录，例如 `rehearsal-02` 与 `recording-02`；不要删除旧目录，也不要让两个实例同时占用 8000 端口。
+新 Flutter 窗口出现后，按 `Ctrl+2` 到索引库并按 `F5`，明确确认真实 UI 显示“索引库为空”；再按 `Ctrl+1` 回到“搜索本地资料”首页。此后才开始正式录制，并在 `recording-01` 中重新执行“添加资料文件夹”。重录使用一组同编号的新目录，例如 `rehearsal-02` 与 `recording-02`；不要删除旧目录，也不要让两个实例同时占用 8000 端口。
