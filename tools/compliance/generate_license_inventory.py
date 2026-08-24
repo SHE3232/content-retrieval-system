@@ -35,6 +35,11 @@ PYTHON_LOCKS = (
         Path("model-tools/uv.lock"),
         Path("model-tools/pyproject.toml"),
     ),
+    (
+        "demo-tools",
+        Path("tools/demo/uv.lock"),
+        Path("tools/demo/pyproject.toml"),
+    ),
 )
 
 PYTHON_NAME_PATTERN = re.compile(r"[-_.]+")

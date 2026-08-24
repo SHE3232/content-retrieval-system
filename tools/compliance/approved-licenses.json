@@ -4,10 +4,59 @@
     "backend/uv.lock",
     "conversion-tools/uv.lock",
     "model-tools/uv.lock",
+    "tools/demo/uv.lock",
     "frontend/pubspec.lock"
   ],
   "evidence_policy": "Exact release metadata, supplemented by shipped or fixed-revision upstream license files for ambiguous and restricted items; metadata classifiers are normalized only when unambiguous.",
   "components": [
+    {
+      "key": "python:charset-normalizer@3.5.1",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/charset-normalizer/3.5.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata"
+    },
+    {
+      "key": "python:content-retrieval-demo-tools@0.1.0",
+      "license_expression": "Apache-2.0",
+      "evidence_url": "LICENSE",
+      "review_status": "project-owned",
+      "redistribution": "covered by the project Apache-2.0 LICENSE",
+      "notes": "project package"
+    },
+    {
+      "key": "python:lxml@6.1.2",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/lxml/6.1.2/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata"
+    },
+    {
+      "key": "python:pillow@11.3.0",
+      "license_expression": "MIT-CMU",
+      "evidence_url": "https://pypi.org/project/pillow/11.3.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata"
+    },
+    {
+      "key": "python:python-docx@1.2.0",
+      "license_expression": "MIT",
+      "evidence_url": "https://pypi.org/project/python-docx/1.2.0/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata"
+    },
+    {
+      "key": "python:reportlab@4.5.1",
+      "license_expression": "BSD-3-Clause",
+      "evidence_url": "https://pypi.org/project/reportlab/4.5.1/",
+      "review_status": "approved",
+      "redistribution": "retain license and copyright notices",
+      "notes": "exact PyPI release metadata"
+    },
     {
       "key": "dart:async@2.13.1",
       "license_expression": "BSD-3-Clause",

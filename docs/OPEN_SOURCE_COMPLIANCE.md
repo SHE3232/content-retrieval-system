@@ -7,10 +7,10 @@
 
 项目贡献者有权授权的自有代码和文档已准备采用 [Apache License 2.0](../LICENSE)，并通过根目录 [NOTICE](../NOTICE) 明确授权边界。第三方材料仍受原许可证约束，详细来源和义务见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
 
-本次扫描覆盖三套 Python `uv.lock` 和一套 Flutter `pubspec.lock`：
+本次扫描覆盖四套 Python `uv.lock` 和一套 Flutter `pubspec.lock`：
 
 - 246 个唯一的“生态 + 名称 + 版本”审核项；
-- 374 条按环境保留的依赖记录，其中 337 条 `approved`、34 条 `restricted`、3 条 `project-owned`；
+- 383 条按环境保留的依赖记录，其中 345 条 `approved`、34 条 `restricted`、4 条 `project-owned`；
 - 0 条缺失许可证、0 条缺失证据、0 条 `review-required`；
 - 17 个唯一受限组件，均为 Linux CUDA 路径下的 NVIDIA 专有传递依赖。
 
@@ -25,10 +25,11 @@
 | 后端 Python | `backend/uv.lock` | 152 |
 | 模型工具 Python | `model-tools/uv.lock` | 84 |
 | 转换工具 Python | `conversion-tools/uv.lock` | 99 |
+| 演示工具 Python | `tools/demo/uv.lock` | 9 |
 | Flutter/Dart | `frontend/pubspec.lock` | 39 |
-| **合计** |  | **374** |
+| **合计** |  | **383** |
 
-同一组件出现在多个环境时保留多行，以便判断它在何处被直接或传递引入；审核基线按唯一名称和版本去重。项目自身的三个 Python 包标记为 `project-owned`。
+同一组件出现在多个环境时保留多行，以便判断它在何处被直接或传递引入；审核基线按唯一名称和版本去重。项目自身的四个 Python 包标记为 `project-owned`。
 
 ### 证据优先级
 
@@ -99,7 +100,7 @@ Natural Questions 衍生样本保守按 CC BY-SA 3.0 处理；COCO 子集的 200
 
 ## 发布检查表
 
-- [ ] 四个锁文件没有未审核的名称/版本，生成器以 `--check` 成功。
+- [ ] 五个锁文件没有未审核的名称/版本，生成器以 `--check` 成功。
 - [ ] `LICENSE`、`NOTICE`、`THIRD_PARTY_NOTICES.md` 和实际分发依赖的许可证文件均进入归档。
 - [ ] 包中实际的 Python/Dart/原生组件与 CSV 及包清单一致；没有从开发环境意外复制缓存或未锁定包。
 - [ ] 默认包不含 MobileCLIP-S0 权重、NQ/COCO 二进制、用户文件、Oracle JDK 或 NVIDIA/CUDA 包。

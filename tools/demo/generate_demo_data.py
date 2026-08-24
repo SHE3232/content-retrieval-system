@@ -108,8 +108,6 @@ def _publish(staging: Path, root: Path) -> None:
     rollback = root.parent / f".{root.name}.rollback-{uuid.uuid4().hex}"
     rollback.mkdir()
     known = ("MANIFEST.json", *EXPECTED_FILES)
-    moved: list[str] = []
-    published: list[str] = []
     try:
         for name in known:
             target = root / name
@@ -118,18 +116,30 @@ def _publish(staging: Path, root: Path) -> None:
         for name in known:
             target = root / name
             if target.exists() or target.is_symlink():
-                os.replace(target, rollback / name); moved.append(name)
+                os.replace(target, rollback / name)
         for name in EXPECTED_FILES:
-            os.replace(staging / name, root / name); published.append(name)
-        os.replace(staging / "MANIFEST.json", root / "MANIFEST.json"); published.append("MANIFEST.json")
+            os.replace(staging / name, root / name)
+        os.replace(staging / "MANIFEST.json", root / "MANIFEST.json")
     except BaseException as failure:
         recovery_failure = None
         try:
-            for name in reversed(published):
+            # Reconcile from directory state, covering an interrupt after replace
+            # succeeded but before any in-memory bookkeeping could run.
+            for name in EXPECTED_FILES:
+                backup = rollback / name
                 target = root / name
+                if backup.exists() or backup.is_symlink():
+                    if target.exists() or target.is_symlink(): target.unlink()
+                    os.replace(backup, target)
+                elif not (staging / name).exists() and (target.exists() or target.is_symlink()):
+                    target.unlink()
+            backup = rollback / "MANIFEST.json"
+            target = root / "MANIFEST.json"
+            if backup.exists() or backup.is_symlink():
                 if target.exists() or target.is_symlink(): target.unlink()
-            for name in reversed(moved):
-                os.replace(rollback / name, root / name)
+                os.replace(backup, target)
+            elif not (staging / "MANIFEST.json").exists() and (target.exists() or target.is_symlink()):
+                target.unlink()
         except BaseException as error:
             recovery_failure = error
         if recovery_failure is not None:

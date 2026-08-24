@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from tools.compliance.generate_license_inventory import (
+    PYTHON_LOCKS,
     build_inventory,
     parse_pubspec_lock,
     parse_uv_lock,
@@ -12,6 +13,10 @@ from tools.compliance.generate_license_inventory import (
 
 
 REPOSITORY = Path(__file__).resolve().parents[3]
+
+
+def test_python_lock_set_includes_demo_tools() -> None:
+    assert ("demo-tools", Path("tools/demo/uv.lock"), Path("tools/demo/pyproject.toml")) in PYTHON_LOCKS
 
 
 def test_parse_uv_lock_keeps_name_version_and_registry(tmp_path: Path) -> None:
@@ -85,7 +90,7 @@ def test_repository_inventory_covers_every_locked_component() -> None:
         rendered = list(csv.DictReader(inventory_file))
 
     assert rendered == rows
-    assert len(rows) == 374
+    assert len(rows) == 383
     assert not [
         row for row in rows if row["review_status"] == "review-required"
     ]

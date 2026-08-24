@@ -195,6 +195,24 @@ class DemoDataGeneratorTests(unittest.TestCase):
             self.assertEqual({p.name: p.read_bytes() for p in root.iterdir() if p.is_file() and p.name != "unknown.txt"}, old)
             self.assertEqual(unknown.read_text(encoding="utf-8"), "keep")
 
+    def test_interrupt_after_replace_before_bookkeeping_restores_everything(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; generate_demo_data(root)
+            unknown = root / "unknown.txt"; unknown.write_text("keep", encoding="utf-8")
+            old = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}
+            original = os.replace; calls = 0
+            def replace_then_interrupt(src, dst):
+                nonlocal calls
+                calls += 1
+                result = original(src, dst)
+                if calls == 2: raise KeyboardInterrupt()
+                return result
+            with mock.patch("tools.demo.generate_demo_data.os.replace", side_effect=replace_then_interrupt):
+                with self.assertRaises(KeyboardInterrupt): generate_demo_data(root, force=True)
+            self.assertEqual({p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}, old)
+            self.assertEqual(unknown.read_text(encoding="utf-8"), "keep")
+            self.assertTrue(json.loads((root / "MANIFEST.json").read_text(encoding="utf-8"))["schema_version"] == 1)
+
     def test_failed_recovery_retains_backup_path(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "out"; generate_demo_data(root)
