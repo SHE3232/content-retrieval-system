@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from docx import Document
+from docx.oxml.ns import qn
 from PIL import Image, ImageDraw
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
@@ -29,7 +30,7 @@ _MANIFEST_ENTRIES = [
 
 def _write_txt(path: Path) -> None:
     path.write_text(
-        "课程资料整理说明\n\n本课介绍星桥检索协议。即使不记得文件名，也能按内容检索相关资料。\n",
+        "课程资料整理说明\n\n本课介绍星桥检索协议。无需记住文件名，也能按内容检索相关资料，按内容找文件。\n",
         encoding="utf-8",
     )
 
@@ -53,6 +54,12 @@ def _write_pdf(path: Path) -> None:
 
 def _write_docx(path: Path) -> None:
     doc = Document()
+    for style_name in ("Normal", "Title", "Heading 1"):
+        style = doc.styles[style_name]
+        style.font.name = "Times New Roman"
+        style._element.rPr.rFonts.set(qn("w:ascii"), "Times New Roman")
+        style._element.rPr.rFonts.set(qn("w:hAnsi"), "Times New Roman")
+        style._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
     doc.add_heading("离线系统方案", level=1)
     doc.add_paragraph(
         "系统在无网络时仍可运行。解析、检索与排序均在本机完成；用户文件、查询和片段不会发送到云端。"
@@ -71,13 +78,27 @@ def _write_images(directory: Path) -> None:
     square.save(directory / EXPECTED_FILES[4])
 
 
+def _is_owned_manifest(path: Path) -> bool:
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        names = {entry["name"] for entry in manifest["files"]}
+        return (
+            manifest["schema_version"] == 1
+            and manifest["generated_by"] == "tools/demo/generate_demo_data.py"
+            and names == set(EXPECTED_FILES)
+            and len(manifest["files"]) == len(EXPECTED_FILES)
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError):
+        return False
+
+
 def generate_demo_data(output: str | Path, force: bool = False) -> dict:
     """Generate five fixed demo files and return the manifest dictionary."""
     directory = Path(output).expanduser()
     directory.mkdir(parents=True, exist_ok=True)
     existing = list(directory.iterdir())
     manifest_path = directory / "MANIFEST.json"
-    if existing and (not force or not manifest_path.is_file()):
+    if existing and (not force or not _is_owned_manifest(manifest_path)):
         raise FileExistsError(f"Output directory is not empty: {directory}")
     _write_txt(directory / EXPECTED_FILES[0])
     _write_pdf(directory / EXPECTED_FILES[1])
