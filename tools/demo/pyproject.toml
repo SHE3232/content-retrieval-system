@@ -1,0 +1,11 @@
+[project]
+name = "content-retrieval-demo-tools"
+version = "0.1.0"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "python-docx>=1.1,<2",
+  "reportlab>=4.0,<5",
+  "pillow>=10,<12",
+  "pypdfium2>=4.30,<5",
+  "tomli>=2,<3; python_version < '3.11'",
+]

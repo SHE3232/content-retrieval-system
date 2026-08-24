@@ -2,6 +2,10 @@ import json
 import os
 import sys
 import subprocess
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 import tempfile
 import unittest
 from pathlib import Path
@@ -65,7 +69,7 @@ class DemoDataGeneratorTests(unittest.TestCase):
             out = Path(tmp)
             generate_demo_data(out)
             pdf = PdfDocument(str(out / "02_无障碍设计指南.pdf"))
-            extracted = "".join(page.get_textpage().get_text_range() for page in pdf)
+            extracted = "".join(page.get_textpage().get_text_bounded() for page in pdf)
             pdf.close()
             self.assertIn(b"STSong-Light", (out / "02_无障碍设计指南.pdf").read_bytes())
             for phrase in ("DEMO-PDF-ACCESSIBILITY", "Tab", "高对比度", "200%", "减少动态效果"):
@@ -174,6 +178,43 @@ class DemoDataGeneratorTests(unittest.TestCase):
             with mock.patch("tools.demo.generate_demo_data.os.replace", side_effect=flaky):
                 with self.assertRaises(OSError): generate_demo_data(root, force=True)
             self.assertEqual({p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}, old)
+
+    def test_keyboard_interrupt_restores_old_artifacts_and_unknowns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; generate_demo_data(root)
+            unknown = root / "unknown.txt"; unknown.write_text("keep", encoding="utf-8")
+            old = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file() and p.name != "unknown.txt"}
+            original = os.replace; calls = 0
+            def interrupting(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls == 8: raise KeyboardInterrupt()
+                return original(src, dst)
+            with mock.patch("tools.demo.generate_demo_data.os.replace", side_effect=interrupting):
+                with self.assertRaises(KeyboardInterrupt): generate_demo_data(root, force=True)
+            self.assertEqual({p.name: p.read_bytes() for p in root.iterdir() if p.is_file() and p.name != "unknown.txt"}, old)
+            self.assertEqual(unknown.read_text(encoding="utf-8"), "keep")
+
+    def test_failed_recovery_retains_backup_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; generate_demo_data(root)
+            original = os.replace; calls = 0
+            def doubly_failing(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls == 8: raise KeyboardInterrupt()
+                if calls == 9: raise OSError("restore fault")
+                return original(src, dst)
+            with mock.patch("tools.demo.generate_demo_data.os.replace", side_effect=doubly_failing):
+                with self.assertRaises(RuntimeError) as ctx: generate_demo_data(root, force=True)
+            self.assertIn("recovery", str(ctx.exception).lower())
+            self.assertTrue(any("rollback" in p.name for p in root.parent.iterdir()))
+
+    def test_demo_tool_declares_reproducible_dependencies(self):
+        config = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
+        deps = " ".join(config["project"]["dependencies"]).lower()
+        for name in ("python-docx", "reportlab", "pillow", "pypdfium2"):
+            self.assertIn(name, deps)
 
 
 if __name__ == "__main__":

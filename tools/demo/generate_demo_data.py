@@ -107,7 +107,7 @@ def _generate_into(directory: Path) -> None:
 def _publish(staging: Path, root: Path) -> None:
     rollback = root.parent / f".{root.name}.rollback-{uuid.uuid4().hex}"
     rollback.mkdir()
-    known = (*EXPECTED_FILES, "MANIFEST.json")
+    known = ("MANIFEST.json", *EXPECTED_FILES)
     moved: list[str] = []
     published: list[str] = []
     try:
@@ -122,14 +122,21 @@ def _publish(staging: Path, root: Path) -> None:
         for name in EXPECTED_FILES:
             os.replace(staging / name, root / name); published.append(name)
         os.replace(staging / "MANIFEST.json", root / "MANIFEST.json"); published.append("MANIFEST.json")
-    except Exception:
-        for name in reversed(published):
-            target = root / name
-            if target.exists() or target.is_symlink(): target.unlink()
-        for name in reversed(moved):
-            os.replace(rollback / name, root / name)
-        raise
-    finally:
+    except BaseException as failure:
+        recovery_failure = None
+        try:
+            for name in reversed(published):
+                target = root / name
+                if target.exists() or target.is_symlink(): target.unlink()
+            for name in reversed(moved):
+                os.replace(rollback / name, root / name)
+        except BaseException as error:
+            recovery_failure = error
+        if recovery_failure is not None:
+            raise RuntimeError(f"Publishing failed; recovery backup retained at {rollback.resolve()}") from recovery_failure
+        shutil.rmtree(rollback, ignore_errors=True)
+        raise failure
+    else:
         shutil.rmtree(rollback, ignore_errors=True)
 
 
