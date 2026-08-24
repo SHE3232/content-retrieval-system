@@ -1,0 +1,102 @@
+"""Create deterministic five-format project demonstration fixtures."""
+
+import argparse
+import json
+from pathlib import Path
+
+from docx import Document
+from PIL import Image, ImageDraw
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfgen import canvas
+
+EXPECTED_FILES = (
+    "01_课程检索笔记.txt",
+    "02_无障碍设计指南.pdf",
+    "03_离线系统方案.docx",
+    "04_红色苹果.jpg",
+    "05_蓝色方块.png",
+)
+
+_MANIFEST_ENTRIES = [
+    {"name": EXPECTED_FILES[0], "query": "星桥检索协议", "mode": "精确"},
+    {"name": EXPECTED_FILES[1], "query": "哪个文档介绍了不用鼠标操作界面", "mode": "文本语义"},
+    {"name": EXPECTED_FILES[2], "query": "怎样在断网时保护本地文档隐私", "mode": "文本语义"},
+    {"name": EXPECTED_FILES[3], "query": "a simple red apple on a white background", "mode": "图像语义"},
+    {"name": EXPECTED_FILES[4], "query": "a simple blue square on a white background", "mode": "图像语义"},
+]
+
+
+def _write_txt(path: Path) -> None:
+    path.write_text(
+        "课程资料整理说明\n\n本课介绍星桥检索协议。即使不记得文件名，也能按内容检索相关资料。\n",
+        encoding="utf-8",
+    )
+
+
+def _write_pdf(path: Path) -> None:
+    pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+    pdf = canvas.Canvas(str(path), pagesize=(595, 842))
+    pdf.setFont("STSong-Light", 20)
+    pdf.drawString(72, 770, "无障碍设计指南")
+    pdf.setFont("STSong-Light", 12)
+    lines = [
+        "DEMO-PDF-ACCESSIBILITY",
+        "支持键盘 Tab 完成界面导航。",
+        "提供高对比度配色，字号支持 200% 放大。",
+        "提供减少动态效果选项，降低视觉干扰。",
+    ]
+    for index, line in enumerate(lines):
+        pdf.drawString(72, 730 - index * 28, line)
+    pdf.save()
+
+
+def _write_docx(path: Path) -> None:
+    doc = Document()
+    doc.add_heading("离线系统方案", level=1)
+    doc.add_paragraph(
+        "系统在无网络时仍可运行。解析、检索与排序均在本机完成；用户文件、查询和片段不会发送到云端。"
+    )
+    doc.save(path)
+
+
+def _write_images(directory: Path) -> None:
+    apple = Image.new("RGB", (512, 512), "white")
+    draw = ImageDraw.Draw(apple)
+    draw.ellipse((112, 115, 402, 425), fill=(220, 30, 35), outline=(120, 0, 0), width=12)
+    draw.polygon([(275, 135), (330, 72), (355, 78), (315, 150)], fill=(40, 145, 55))
+    apple.save(directory / EXPECTED_FILES[3], quality=95)
+    square = Image.new("RGB", (512, 512), "white")
+    ImageDraw.Draw(square).rectangle((110, 110, 402, 402), fill=(35, 90, 220))
+    square.save(directory / EXPECTED_FILES[4])
+
+
+def generate_demo_data(output: str | Path, force: bool = False) -> dict:
+    """Generate five fixed demo files and return the manifest dictionary."""
+    directory = Path(output).expanduser()
+    directory.mkdir(parents=True, exist_ok=True)
+    existing = list(directory.iterdir())
+    manifest_path = directory / "MANIFEST.json"
+    if existing and (not force or not manifest_path.is_file()):
+        raise FileExistsError(f"Output directory is not empty: {directory}")
+    _write_txt(directory / EXPECTED_FILES[0])
+    _write_pdf(directory / EXPECTED_FILES[1])
+    _write_docx(directory / EXPECTED_FILES[2])
+    _write_images(directory)
+    manifest = {"schema_version": 1, "generated_by": "tools/demo/generate_demo_data.py", "files": _MANIFEST_ENTRIES}
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return manifest
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("output", type=Path)
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args(argv)
+    generate_demo_data(args.output, force=args.force)
+    print(f"Generated five demo files in {args.output.resolve()}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
