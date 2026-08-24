@@ -1,11 +1,17 @@
 """Create deterministic five-format project demonstration fixtures."""
 
 import argparse
+import copy
 import json
+import os
+import shutil
+import tempfile
+import uuid
 from pathlib import Path
 
 from docx import Document
 from docx.oxml.ns import qn
+from docx.shared import RGBColor
 from PIL import Image, ImageDraw
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
@@ -19,13 +25,16 @@ EXPECTED_FILES = (
     "05_蓝色方块.png",
 )
 
-_MANIFEST_ENTRIES = [
-    {"name": EXPECTED_FILES[0], "query": "星桥检索协议", "mode": "精确"},
-    {"name": EXPECTED_FILES[1], "query": "哪个文档介绍了不用鼠标操作界面", "mode": "文本语义"},
-    {"name": EXPECTED_FILES[2], "query": "怎样在断网时保护本地文档隐私", "mode": "文本语义"},
-    {"name": EXPECTED_FILES[3], "query": "a simple red apple on a white background", "mode": "图像语义"},
-    {"name": EXPECTED_FILES[4], "query": "a simple blue square on a white background", "mode": "图像语义"},
-]
+def _expected_entries() -> list[dict]:
+    values = [("星桥检索协议", "精确"), ("哪个文档介绍了不用鼠标操作界面", "文本语义"),
+              ("怎样在断网时保护本地文档隐私", "文本语义"),
+              ("a simple red apple on a white background", "图像语义"),
+              ("a simple blue square on a white background", "图像语义")]
+    return [{"name": name, "query": query, "mode": mode} for name, (query, mode) in zip(EXPECTED_FILES, values)]
+
+
+def _expected_manifest() -> dict:
+    return {"schema_version": 1, "generated_by": "tools/demo/generate_demo_data.py", "files": _expected_entries()}
 
 
 def _write_txt(path: Path) -> None:
@@ -57,6 +66,7 @@ def _write_docx(path: Path) -> None:
     for style_name in ("Normal", "Title", "Heading 1"):
         style = doc.styles[style_name]
         style.font.name = "Times New Roman"
+        style.font.color.rgb = RGBColor(0, 0, 0)
         style._element.rPr.rFonts.set(qn("w:ascii"), "Times New Roman")
         style._element.rPr.rFonts.set(qn("w:hAnsi"), "Times New Roman")
         style._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
@@ -81,15 +91,46 @@ def _write_images(directory: Path) -> None:
 def _is_owned_manifest(path: Path) -> bool:
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
-        names = {entry["name"] for entry in manifest["files"]}
-        return (
-            manifest["schema_version"] == 1
-            and manifest["generated_by"] == "tools/demo/generate_demo_data.py"
-            and names == set(EXPECTED_FILES)
-            and len(manifest["files"]) == len(EXPECTED_FILES)
-        )
+        return manifest == _expected_manifest()
     except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError):
         return False
+
+
+def _generate_into(directory: Path) -> None:
+    _write_txt(directory / EXPECTED_FILES[0])
+    _write_pdf(directory / EXPECTED_FILES[1])
+    _write_docx(directory / EXPECTED_FILES[2])
+    _write_images(directory)
+    (directory / "MANIFEST.json").write_text(json.dumps(_expected_manifest(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _publish(staging: Path, root: Path) -> None:
+    rollback = root.parent / f".{root.name}.rollback-{uuid.uuid4().hex}"
+    rollback.mkdir()
+    known = (*EXPECTED_FILES, "MANIFEST.json")
+    moved: list[str] = []
+    published: list[str] = []
+    try:
+        for name in known:
+            target = root / name
+            if target.exists() and target.is_dir():
+                raise FileExistsError(f"Known target is a directory: {target}")
+        for name in known:
+            target = root / name
+            if target.exists() or target.is_symlink():
+                os.replace(target, rollback / name); moved.append(name)
+        for name in EXPECTED_FILES:
+            os.replace(staging / name, root / name); published.append(name)
+        os.replace(staging / "MANIFEST.json", root / "MANIFEST.json"); published.append("MANIFEST.json")
+    except Exception:
+        for name in reversed(published):
+            target = root / name
+            if target.exists() or target.is_symlink(): target.unlink()
+        for name in reversed(moved):
+            os.replace(rollback / name, root / name)
+        raise
+    finally:
+        shutil.rmtree(rollback, ignore_errors=True)
 
 
 def generate_demo_data(output: str | Path, force: bool = False) -> dict:
@@ -100,13 +141,13 @@ def generate_demo_data(output: str | Path, force: bool = False) -> dict:
     manifest_path = directory / "MANIFEST.json"
     if existing and (not force or not _is_owned_manifest(manifest_path)):
         raise FileExistsError(f"Output directory is not empty: {directory}")
-    _write_txt(directory / EXPECTED_FILES[0])
-    _write_pdf(directory / EXPECTED_FILES[1])
-    _write_docx(directory / EXPECTED_FILES[2])
-    _write_images(directory)
-    manifest = {"schema_version": 1, "generated_by": "tools/demo/generate_demo_data.py", "files": _MANIFEST_ENTRIES}
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return manifest
+    staging = Path(tempfile.mkdtemp(prefix=f".{directory.name}.staging-", dir=directory.parent))
+    try:
+        _generate_into(staging)
+        _publish(staging, directory)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    return copy.deepcopy(_expected_manifest())
 
 
 def main(argv: list[str] | None = None) -> int:

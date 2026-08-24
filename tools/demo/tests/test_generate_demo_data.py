@@ -1,9 +1,12 @@
 import json
+import os
+import sys
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from zipfile import ZipFile
+from unittest import mock
 
 from docx import Document
 from PIL import Image
@@ -52,6 +55,7 @@ class DemoDataGeneratorTests(unittest.TestCase):
             self.assertEqual(doc.styles["Normal"].font.name, "Times New Roman")
             self.assertEqual(doc.styles["Title"].font.name, "Times New Roman")
             self.assertEqual(doc.styles["Heading 1"].font.name, "Times New Roman")
+            self.assertEqual(doc.styles["Heading 1"].font.color.rgb, (0, 0, 0))
             with ZipFile(out / "03_离线系统方案.docx") as archive:
                 styles_xml = archive.read("word/styles.xml").decode("utf-8")
             self.assertIn('w:eastAsia="Times New Roman"', styles_xml)
@@ -119,11 +123,57 @@ class DemoDataGeneratorTests(unittest.TestCase):
     def test_cli_generates_six_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "cli"
-            python = r"C:\Users\Aaron\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
-            completed = subprocess.run([python, "tools/demo/generate_demo_data.py", str(output)], capture_output=True, text=True)
+            script = Path(__file__).resolve().parents[1] / "generate_demo_data.py"
+            completed = subprocess.run([sys.executable, str(script), str(output)], capture_output=True, text=True)
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertIn(f"Generated five demo files in {output.resolve()}", completed.stdout)
             self.assertEqual(len(list(output.iterdir())), 6)
+
+    def test_hardlink_target_is_not_modified_by_force(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; root.mkdir()
+            sentinel = Path(tmp) / "sentinel.txt"; sentinel.write_text("outside", encoding="utf-8")
+            generate_demo_data(root)
+            target = root / EXPECTED_FILES[0]; target.unlink(); os.link(sentinel, target)
+            generate_demo_data(root, force=True)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "outside")
+
+    def test_generation_failure_is_atomic_and_retryable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"
+            with mock.patch("tools.demo.generate_demo_data._write_docx", side_effect=OSError("boom")):
+                with self.assertRaises(OSError): generate_demo_data(root)
+            self.assertFalse(root.exists() and list(root.iterdir()))
+            generate_demo_data(root)
+            old = (root / EXPECTED_FILES[0]).read_bytes(); old_manifest = (root / "MANIFEST.json").read_bytes()
+            with mock.patch("tools.demo.generate_demo_data._write_docx", side_effect=OSError("boom")):
+                with self.assertRaises(OSError): generate_demo_data(root, force=True)
+            self.assertEqual((root / EXPECTED_FILES[0]).read_bytes(), old)
+            self.assertEqual((root / "MANIFEST.json").read_bytes(), old_manifest)
+
+    def test_manifest_is_strict_and_return_isolated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; first = generate_demo_data(root)
+            first["files"][0]["query"] = "mutated"
+            second = generate_demo_data(root, force=True)
+            self.assertEqual(second["files"][0]["query"], "星桥检索协议")
+            bad = json.loads((root / "MANIFEST.json").read_text(encoding="utf-8")); bad["files"][0].pop("query")
+            (root / "MANIFEST.json").write_text(json.dumps(bad), encoding="utf-8")
+            with self.assertRaises(FileExistsError): generate_demo_data(root, force=True)
+
+    def test_publish_failure_restores_all_old_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"; generate_demo_data(root)
+            old = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}
+            original = os.replace; calls = 0
+            def flaky(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls == 9: raise OSError("publish fault")
+                return original(src, dst)
+            with mock.patch("tools.demo.generate_demo_data.os.replace", side_effect=flaky):
+                with self.assertRaises(OSError): generate_demo_data(root, force=True)
+            self.assertEqual({p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}, old)
 
 
 if __name__ == "__main__":
