@@ -234,7 +234,6 @@ def test_text_semantic_query_uses_text_space_and_deduplicates_chunks(
 
     assert [hit.file_id for hit in result.hits] == [
         records[0].file_id,
-        records[2].file_id,
     ]
     assert len({hit.file_id for hit in result.hits}) == len(result.hits)
     assert result.hits[0].match_reasons == ("text_semantic",)
@@ -270,7 +269,7 @@ def test_all_channels_are_fused_without_duplicate_files(tmp_path: Path) -> None:
         for hit in result.hits
     )
     assert len({hit.file_id for hit in result.hits}) == len(result.hits)
-    assert result.total_candidates == 3
+    assert result.total_candidates == 2
 
 
 def test_modality_filter_skips_irrelevant_query_encoder(

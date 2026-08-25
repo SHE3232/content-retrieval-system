@@ -68,6 +68,9 @@ def test_tokenize_casefolds_latin_and_preserves_cjk_search_terms() -> None:
         "地",
         "检",
         "索",
+        "本地",
+        "地检",
+        "检索",
         "2",
         "0",
     ]
@@ -128,6 +131,33 @@ def test_keyword_search_handles_chinese_terms(tmp_path: Path) -> None:
     )
 
     assert [candidate.record for candidate in candidates] == [relevant]
+
+
+def test_multichar_chinese_query_does_not_match_one_shared_character(
+    tmp_path: Path,
+) -> None:
+    apple = make_record(
+        tmp_path,
+        key="apple",
+        name="红色苹果.jpg",
+        document="红色苹果",
+        mime_type="image/jpeg",
+        modality="image",
+    )
+    accessibility = make_record(
+        tmp_path,
+        key="accessibility",
+        name="无障碍设计指南.pdf",
+        document="提供减少动态效果选项，降低视觉干扰。",
+        mime_type="application/pdf",
+    )
+
+    candidates = KeywordIndex([accessibility, apple]).search(
+        "苹果",
+        limit=5,
+    )
+
+    assert [candidate.record for candidate in candidates] == [apple]
 
 
 def test_keyword_filters_before_ranking(tmp_path: Path) -> None:

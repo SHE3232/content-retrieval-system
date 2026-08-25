@@ -33,7 +33,14 @@ if ([string]::IsNullOrWhiteSpace($compiler)) {
     throw 'C# compiler was not found in the Windows .NET Framework directories'
 }
 
-& $compiler /nologo /target:winexe /platform:x64 "/out:$output" $source
+& $compiler `
+    /nologo `
+    /target:winexe `
+    /platform:x64 `
+    /reference:System.Drawing.dll `
+    /reference:System.Windows.Forms.dll `
+    "/out:$output" `
+    $source
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output -PathType Leaf)) {
     throw "One-click launcher build failed with exit code $LASTEXITCODE"
 }

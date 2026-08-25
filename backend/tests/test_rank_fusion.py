@@ -94,15 +94,15 @@ def test_fusion_aggregates_chunks_before_combining_channels(
     )
 
     assert [candidate.record.file_id for candidate in result] == [
-        other_file.file_id,
         first_chunk.file_id,
+        other_file.file_id,
     ]
     assert result[0].channels == ("keyword", "text_semantic")
     assert result[1].channels == ("keyword", "text_semantic")
     assert all(0.0 <= candidate.score <= 1.0 for candidate in result)
 
 
-def test_fusion_uses_rank_not_incompatible_raw_scores(tmp_path: Path) -> None:
+def test_fusion_uses_relative_quality_within_each_channel(tmp_path: Path) -> None:
     first = make_record(
         tmp_path,
         key="a",
@@ -126,7 +126,56 @@ def test_fusion_uses_rank_not_incompatible_raw_scores(tmp_path: Path) -> None:
         {"keyword": 1.0},
     )
 
-    assert [candidate.record for candidate in result] == [first, second]
+    assert [candidate.record for candidate in result] == [second, first]
+
+
+def test_weak_dual_channel_match_does_not_outrank_strong_apple_match(
+    tmp_path: Path,
+) -> None:
+    apple = make_record(
+        tmp_path,
+        key="apple",
+        file_key="apple",
+        name="红色苹果.jpg",
+    )
+    accessibility = make_record(
+        tmp_path,
+        key="accessibility",
+        file_key="accessibility",
+        name="无障碍设计指南.pdf",
+    )
+    notes = make_record(
+        tmp_path,
+        key="notes",
+        file_key="notes",
+        name="课程检索笔记.txt",
+    )
+    blue_square = make_record(
+        tmp_path,
+        key="blue",
+        file_key="blue",
+        name="蓝色方块.png",
+    )
+
+    result = weighted_rrf(
+        {
+            "keyword": [
+                KeywordCandidate(apple, 5.4408),
+                KeywordCandidate(accessibility, 0.8502),
+            ],
+            "text_semantic": [
+                VectorCandidate(notes, 0.1811),
+                VectorCandidate(accessibility, 0.0120),
+            ],
+            "image_semantic": [
+                VectorCandidate(apple, 0.1981),
+                VectorCandidate(blue_square, 0.1700),
+            ],
+        },
+        {"keyword": 0.35, "text_semantic": 1.0, "image_semantic": 0.85},
+    )
+
+    assert result[0].record == apple
 
 
 def test_fusion_ties_are_deterministic_and_limit_is_applied(

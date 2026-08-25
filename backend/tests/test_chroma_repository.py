@@ -210,6 +210,29 @@ def test_repository_keeps_embedding_spaces_isolated(tmp_path: Path) -> None:
     assert image_candidates[0].score == pytest.approx(1.0)
 
 
+def test_query_filters_candidates_below_minimum_score(tmp_path: Path) -> None:
+    repository = ChromaVectorRepository(tmp_path / "index")
+    relevant = make_record(
+        tmp_path,
+        key="relevant",
+        vector_values=[1.0, 0.0],
+    )
+    unrelated = make_record(
+        tmp_path,
+        key="unrelated",
+        vector_values=[0.0, 1.0],
+    )
+    repository.upsert([unrelated, relevant])
+
+    candidates = repository.query(
+        make_query(values=[1.0, 0.0]),
+        limit=10,
+        min_score=0.1,
+    )
+
+    assert [candidate.record for candidate in candidates] == [relevant]
+
+
 def test_query_cache_reuses_results_and_invalidates_after_upsert(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

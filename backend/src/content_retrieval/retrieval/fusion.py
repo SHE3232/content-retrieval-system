@@ -19,6 +19,7 @@ _CHANNEL_ORDER: tuple[SearchChannel, ...] = (
 )
 _VALID_CHANNELS = frozenset(_CHANNEL_ORDER)
 _RRF_CONSTANT = 60
+_QUALITY_FLOOR = 0.5
 
 
 class RankedCandidate(Protocol):
@@ -53,7 +54,7 @@ def weighted_rrf(
     *,
     limit: int | None = None,
 ) -> list[FusedCandidate]:
-    """Fuse channel ranks after collapsing duplicate chunks by file."""
+    """Fuse channel ranks and within-channel quality by file."""
     unknown_channels = (set(channels) | set(weights)) - _VALID_CHANNELS
     if unknown_channels:
         raise ValueError("unsupported search channel")
@@ -68,10 +69,15 @@ def weighted_rrf(
     ):
         raise ValueError("channel weights must be finite and positive")
 
+    peak_scores = {
+        channel: max(candidate.score for candidate in channels[channel])
+        for channel in _CHANNEL_ORDER
+        if channels.get(channel)
+    }
     active_channels = [
         channel
         for channel in _CHANNEL_ORDER
-        if channels.get(channel)
+        if peak_scores.get(channel, 0.0) > 0.0
     ]
     if not active_channels:
         return []
@@ -88,7 +94,19 @@ def weighted_rrf(
             if file_id in seen_files:
                 continue
             seen_files.add(file_id)
-            contribution = weights[channel] / (_RRF_CONSTANT + rank)
+            relative_quality = (
+                max(0.0, candidate.score) / peak_scores[channel]
+            )
+            if relative_quality == 0.0:
+                continue
+            quality = _QUALITY_FLOOR + (
+                1.0 - _QUALITY_FLOOR
+            ) * relative_quality
+            contribution = (
+                weights[channel]
+                * quality
+                / (_RRF_CONSTANT + rank)
+            )
             current = scores.get(file_id)
             if current is None:
                 scores[file_id] = _FileScore(

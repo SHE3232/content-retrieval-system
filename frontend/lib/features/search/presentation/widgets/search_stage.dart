@@ -59,6 +59,7 @@ final class SearchStage extends StatelessWidget {
                     prefixIcon: const Icon(Icons.search),
                     suffixIconConstraints: const BoxConstraints(minWidth: 62),
                     suffixIcon: const Center(
+                      widthFactor: 1,
                       child: Text('Ctrl K', style: TextStyle(fontSize: 11)),
                     ),
                   ),

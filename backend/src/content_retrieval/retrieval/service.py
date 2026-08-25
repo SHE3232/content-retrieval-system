@@ -22,6 +22,10 @@ DEFAULT_SEARCH_WEIGHTS: dict[SearchChannel, float] = {
     "text_semantic": 1.0,
     "image_semantic": 0.85,
 }
+DEFAULT_SEMANTIC_MIN_SCORES: dict[SearchChannel, float] = {
+    "text_semantic": 0.10,
+    "image_semantic": 0.15,
+}
 DEFAULT_SEARCH_CHANNELS: tuple[SearchChannel, ...] = (
     "keyword",
     "text_semantic",
@@ -107,6 +111,7 @@ class RetrievalService:
                 query_vector,
                 limit=candidate_limit,
                 filters=active_filters,
+                min_score=DEFAULT_SEMANTIC_MIN_SCORES["text_semantic"],
             )
         if "image_semantic" in active_channels:
             query_vector = self._image_query_vector(normalized_query)
@@ -114,6 +119,7 @@ class RetrievalService:
                 query_vector,
                 limit=candidate_limit,
                 filters=active_filters,
+                min_score=DEFAULT_SEMANTIC_MIN_SCORES["image_semantic"],
             )
 
         total_candidates = len(
@@ -177,12 +183,14 @@ class RetrievalService:
         *,
         limit: int,
         filters: SearchFilters,
+        min_score: float,
     ):
         try:
             return self.repository.query(
                 query_vector,
                 limit=limit,
                 filters=filters,
+                min_score=min_score,
             )
         except StorageError as error:
             raise RetrievalError("local vector search failed") from error

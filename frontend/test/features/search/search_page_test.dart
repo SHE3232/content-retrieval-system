@@ -77,6 +77,27 @@ void main() {
     expect(find.text('Ctrl K'), findsOneWidget);
   });
 
+  testWidgets('search shortcut leaves most of the field editable', (
+    tester,
+  ) async {
+    await _SearchHarness.create(
+      tester,
+      surfaceSize: const Size(900, 720),
+    );
+
+    final field = find.byKey(const Key('search-query-field'));
+    final editable = find.descendant(
+      of: field,
+      matching: find.byType(EditableText),
+    );
+    final fieldWidth = tester.getSize(field).width;
+
+    expect(
+      tester.getSize(editable).width,
+      greaterThan(fieldWidth * 0.6),
+    );
+  });
+
   testWidgets('initial state teaches content-first searching', (tester) async {
     await _SearchHarness.create(tester);
 

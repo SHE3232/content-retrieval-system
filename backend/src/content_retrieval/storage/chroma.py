@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -171,9 +172,12 @@ class ChromaVectorRepository:
         *,
         limit: int,
         filters: SearchFilters | None = None,
+        min_score: float = -1.0,
     ) -> list[VectorCandidate]:
         if limit <= 0:
             raise ValueError("limit must be positive")
+        if not math.isfinite(min_score) or not -1.0 <= min_score <= 1.0:
+            raise ValueError("min_score must be finite and between -1 and 1")
         if not vector.normalized:
             raise StorageError("query vector must be normalized")
         active_filters = filters or SearchFilters()
@@ -183,6 +187,7 @@ class ChromaVectorRepository:
             tuple(vector.values),
             limit,
             active_filters,
+            min_score,
         )
         cached = self._query_cache.get(cache_key)
         if cached is not None:
@@ -236,6 +241,8 @@ class ChromaVectorRepository:
             if not self._matches_filters(record, active_filters):
                 continue
             score = max(-1.0, min(1.0, 1.0 - float(distance)))
+            if score < min_score:
+                continue
             candidates.append(VectorCandidate(record=record, score=score))
 
         candidates.sort(

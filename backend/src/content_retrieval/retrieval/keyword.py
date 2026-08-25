@@ -15,12 +15,36 @@ from content_retrieval.domain.retrieval import (
 )
 
 
-_TOKEN_PATTERN = re.compile(r"[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff]")
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff]+")
+_CJK_PATTERN = re.compile(r"^[\u3400-\u4dbf\u4e00-\u9fff]+$")
 
 
 def tokenize(text: str) -> list[str]:
-    """Return deterministic case-folded Latin/digit and CJK search tokens."""
-    return _TOKEN_PATTERN.findall(text.casefold())
+    """Return Latin tokens plus CJK unigrams and adjacent bigrams."""
+    tokens: list[str] = []
+    for value in _TOKEN_PATTERN.findall(text.casefold()):
+        if _CJK_PATTERN.fullmatch(value) is None:
+            tokens.append(value)
+            continue
+        tokens.extend(value)
+        tokens.extend(
+            value[index : index + 2]
+            for index in range(len(value) - 1)
+        )
+    return tokens
+
+
+def _query_terms(query: str) -> list[str]:
+    terms: list[str] = []
+    for value in _TOKEN_PATTERN.findall(query.casefold()):
+        if _CJK_PATTERN.fullmatch(value) is not None and len(value) > 1:
+            terms.extend(
+                value[index : index + 2]
+                for index in range(len(value) - 1)
+            )
+        else:
+            terms.append(value)
+    return list(dict.fromkeys(terms))
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,7 +129,7 @@ class KeywordIndex:
     ) -> list[KeywordCandidate]:
         if limit <= 0:
             raise ValueError("limit must be positive")
-        terms = list(dict.fromkeys(tokenize(query)))
+        terms = _query_terms(query)
         if not terms or not self._documents:
             return []
         active_filters = filters or SearchFilters()
