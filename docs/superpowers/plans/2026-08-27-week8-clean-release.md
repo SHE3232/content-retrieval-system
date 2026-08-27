@@ -112,7 +112,7 @@ git commit -m "refactor: remove tracked temporary implementation files"
 - Create: `tools/week8/tests/test_build_clean_source.py`
 - Create: `docs/week8/CLEAN_ENGINEERING_AUDIT.md`
 
-- [ ] **Step 1: Write failing path-policy tests**
+- [x] **Step 1: Write failing path-policy tests**
 
 Tests must build a miniature Git tree and assert:
 
@@ -122,22 +122,22 @@ Tests must build a miniature Git tree and assert:
 - the public tree contains `models/model-manifest.example.json` but no model binary;
 - every copied file is Git tracked and has a SHA-256 entry.
 
-- [ ] **Step 2: Implement an allowlist-only exporter**
+- [x] **Step 2: Implement an allowlist-only exporter**
 
 `build_clean_source.py` must read paths from `git ls-files -z`, apply `delivery_profile.json`, copy without following links, reject a non-empty destination unless its owned manifest matches, and generate `CLEAN_SOURCE_MANIFEST.json` with source commit, inclusion policy version, file count, bytes, hashes, exclusions by rule, and required-file assertions.
 
-- [ ] **Step 3: Run tests and export to an untracked directory**
+- [x] **Step 3: Run tests and export to an untracked directory**
 
 ```powershell
 & 'F:\contentretrivalsystem\backend\.venv\Scripts\python.exe' -m pytest tools/week8/tests/test_build_clean_source.py -q
 & 'F:\contentretrivalsystem\backend\.venv\Scripts\python.exe' tools/week8/build_clean_source.py --repository . --destination 'F:\contentretrivalsystem\.tmp\week8\clean-source'
 ```
 
-- [ ] **Step 4: Perform read-only archive audit**
+- [x] **Step 4: Perform read-only archive audit**
 
 From the exported directory, run the Python test suite, `flutter analyze --no-pub`, `flutter test --no-pub`, the compliance verifier, and a forbidden-path scan. Record exact commands/results in `docs/week8/CLEAN_ENGINEERING_AUDIT.md`.
 
-- [ ] **Step 5: Commit the exporter and audit method**
+- [x] **Step 5: Commit the exporter and audit method**
 
 ```powershell
 git add -- tools/week8/delivery_profile.json tools/week8/build_clean_source.py tools/week8/tests/test_build_clean_source.py docs/week8/CLEAN_ENGINEERING_AUDIT.md
