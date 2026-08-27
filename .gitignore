@@ -47,3 +47,11 @@ Thumbs.db
 
 # Local verification renders and scratch artifacts
 /tmp/
+/.tmp*/
+/output/
+/outputs/
+**/build/
+**/coverage/
+*.lcov
+/recordings/
+/docs/week8/evidence/report/rendered-*/

@@ -20,7 +20,7 @@
 - Modify: `tools/week6/build_reports.py:112`
 - Create: `docs/week8/evidence/source-audit/README.md`
 
-- [ ] **Step 1: Add failing tests for the two current findings and framework exemptions**
+- [x] **Step 1: Add failing tests for the two current findings and framework exemptions**
 
 Implement tests that run `audit_paths()` over `backend/src`, `tools`, `model-tools`, and `conversion-tools`; assert that `WD_SECTION` in both report builders is reported, while decorated FastAPI routes and Pydantic validators in small fixtures are not treated as deletion candidates.
 
@@ -32,11 +32,11 @@ Run:
 
 Expected: FAIL because `tools/week8/source_audit.py` does not exist.
 
-- [ ] **Step 2: Implement the audit wrapper and pin Vulture 2.16**
+- [x] **Step 2: Implement the audit wrapper and pin Vulture 2.16**
 
 `source_audit.py` must invoke Vulture with `--min-confidence 80 --sort-by-size`, normalize paths, maintain a documented decorator exemption list, and write JSON containing command, tool version, findings, reviewed exemptions, and source commit. It must return non-zero while unexplained findings remain.
 
-- [ ] **Step 3: Confirm red state against the repository**
+- [x] **Step 3: Confirm red state against the repository**
 
 ```powershell
 $env:TEMP='F:\contentretrivalsystem\.tmp'
@@ -47,11 +47,11 @@ uv run --project tools/week8 --locked python tools/week8/source_audit.py --outpu
 
 Expected: non-zero with exactly the two `WD_SECTION` imports as unresolved findings.
 
-- [ ] **Step 4: Remove exactly those two imports**
+- [x] **Step 4: Remove exactly those two imports**
 
 Delete `from docx.enum.section import WD_SECTION` in Week 5 and the local import in `_style_document()` in Week 6. Do not remove any route, validator, serializer hook, test helper, or public API based only on reference count.
 
-- [ ] **Step 5: Verify green state and report generation**
+- [x] **Step 5: Verify green state and report generation**
 
 ```powershell
 uv run --project tools/week8 --locked python tools/week8/source_audit.py --output docs/week8/evidence/source-audit/report.json
@@ -60,54 +60,48 @@ uv run --project tools/week8 --locked python tools/week8/source_audit.py --outpu
 
 Expected: audit exit 0; all targeted tests pass.
 
-- [ ] **Step 6: Commit the isolated cleanup**
+- [x] **Step 6: Commit the isolated cleanup**
 
 ```powershell
 git add -- tools/week8 tools/week5/build_draft_reports.py tools/week6/build_reports.py docs/week8/evidence/source-audit
 git commit -m "refactor: remove verified dead report imports"
 ```
 
-### Task 2: Replace tracked temporary sources with maintained locations
+### Task 2: Remove broken temporary code and relocate reproducible assets
 
 **Files:**
-- Move: `tmp/docx/build_week2_reports.py` → `tools/week2/build_reports.py`
-- Move: `tmp/docx/build_week3_reports.py` → `tools/week3/build_reports.py`
-- Move: `tmp/docx/test_week2_sequence_diagram.py` → `tools/week2/tests/test_sequence_diagram.py`
+- Delete: `tmp/docx/build_week2_reports.py`
+- Delete: `tmp/docx/build_week3_reports.py`
+- Delete: `tmp/docx/test_week2_sequence_diagram.py`
 - Move: `tmp/week2-deliverables/assets/current-ingestion-sequence.png` → `docs/week2/assets/current-ingestion-sequence.png`
-- Modify: `tools/week2/build_reports.py`
-- Modify: `docs/superpowers/plans/2026-07-21-ingestion-sequence-readability.md`
-- Modify: `docs/superpowers/plans/2026-07-25-week3-multimodal-embedding-engine.md`
-- Modify: `docs/superpowers/plans/2026-08-10-week5-deliverables.md`
 - Modify: `.gitignore`
 
-- [ ] **Step 1: Prove each tracked temporary file is either maintained or archival**
+- [x] **Step 1: Prove each tracked temporary file is either maintained or archival**
 
-Run `git grep -n` for all four paths. Record that only historical plans reference them and that the two builders plus the regression test remain reproducibility tools, while the PNG is an input to the Week 2 report flow.
+`git grep -n` found only historical-plan references. Direct execution proved the Week 2 builder and its regression test depend on an untracked, absent `build_architecture_docx.py`. The Week 3 builder hard-codes a missing, ignored `output/week3/embedding-coverage.json`. None of the three scripts is reproducible in a clean checkout; the Week 2 PNG remains useful documentary evidence.
 
-- [ ] **Step 2: Move maintained code and asset with history**
+- [x] **Step 2: Delete broken code and move maintained evidence with history**
 
-Use `Move-Item` only for the four exact files after resolving every destination under the isolated worktree. Update builder defaults/imports and historical-plan path references so executable commands remain valid.
+Delete the exact broken Week 2 builder/test pair and Week 3 builder. Move the Week 2 PNG after resolving its destination under the isolated worktree. Keep historical-plan references unchanged because they record the paths that existed when those plans were executed.
 
-- [ ] **Step 3: Extend `.gitignore`**
+- [x] **Step 3: Extend `.gitignore`**
 
 Ignore `/.tmp*/`, `/output/`, Flutter build directories, coverage outputs, generated report renders, recording scratch files, and platform packaging staging directories. Preserve existing exceptions for `.gitkeep`, example manifests, checksums, and tracked evidence.
 
-- [ ] **Step 4: Run relocated tests and builders in temporary output directories**
+- [x] **Step 4: Run the repository-layout test**
 
 ```powershell
-& 'F:\contentretrivalsystem\backend\.venv\Scripts\python.exe' -m unittest tools/week2/tests/test_sequence_diagram.py -v
-& 'F:\contentretrivalsystem\backend\.venv\Scripts\python.exe' tools/week2/build_reports.py --help
-& 'F:\contentretrivalsystem\backend\.venv\Scripts\python.exe' tools/week3/build_reports.py --help
+uv run --project tools/week8 --locked python -m pytest tools/week8/tests/test_repository_layout.py -q
 git ls-files tmp
 ```
 
-Expected: tests pass; both builders parse; `git ls-files tmp` is empty.
+Expected: repository-layout test passes; `git ls-files tmp` is empty.
 
-- [ ] **Step 5: Commit the relocation**
+- [x] **Step 5: Commit the relocation**
 
 ```powershell
-git add -A -- tmp tools/week2 tools/week3 docs/week2/assets .gitignore docs/superpowers/plans
-git commit -m "refactor: move maintained generators out of temp paths"
+git add -A -- tmp docs/week2/assets .gitignore docs/superpowers/plans tools/week8/tests/test_repository_layout.py
+git commit -m "refactor: remove tracked temporary implementation files"
 ```
 
 ### Task 3: Define and test the clean public-source whitelist
@@ -308,4 +302,3 @@ Verify that source ZIP, platform package manifests, research package, report evi
 - [ ] **Step 5: Do not tag until publication documents and CI are committed**
 
 Leave the candidate commit untagged until the publishing plan completes; any source change after this point requires rebuilding all artifacts.
-
