@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/offline-accessible-multimodal-retrieval/week8-evidence.schema.json",
+  "title": "Week 8 delivery evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_commit",
+    "generated_at",
+    "tests",
+    "platforms",
+    "distributions",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "tests": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/testGate"}
+    },
+    "platforms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windows", "linux", "macos"],
+      "properties": {
+        "windows": {"$ref": "#/$defs/platformGate"},
+        "linux": {"$ref": "#/$defs/platformGate"},
+        "macos": {"$ref": "#/$defs/platformGate"}
+      }
+    },
+    "distributions": {
+      "type": "object",
+      "minProperties": 3,
+      "additionalProperties": {"$ref": "#/$defs/distribution"}
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/artifact"}
+    }
+  },
+  "$defs": {
+    "status": {"enum": ["PASS", "FAIL", "BLOCKED"]},
+    "testGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "passed", "skipped", "evidence_path"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "passed": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0},
+        "evidence_path": {"type": "string", "minLength": 1}
+      }
+    },
+    "platformGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_paths", "reason"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "evidence_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reason": {"type": "string"}
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distribution_class", "model_policy"],
+      "properties": {
+        "distribution_class": {
+          "enum": ["public-source", "default-public", "research-only"]
+        },
+        "model_policy": {"type": "string", "minLength": 1}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256", "distribution_class", "provenance"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "distribution_class": {
+          "enum": ["public-source", "default-public", "research-only"]
+        },
+        "provenance": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
