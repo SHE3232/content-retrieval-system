@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "platform": "macos",
+  "status": "BLOCKED",
+  "source_commit": "63523866446e8807742895340db7117cc94da1fa",
+  "reason": "A real macOS host is unavailable; macOS release and VoiceOver evidence cannot be produced on Windows.",
+  "required_evidence": [
+    "environment.json",
+    "flutter-release-build.log",
+    "app-sha256.txt",
+    "launch-health.json",
+    "five-format.json",
+    "voiceover-checklist.json",
+    "screenshots.json"
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "source_commit": "63523866446e8807742895340db7117cc94da1fa",
+  "generated_at": "2026-08-27T12:00:00+00:00",
+  "tests": {
+    "python-main": {
+      "status": "PASS",
+      "passed": 464,
+      "skipped": 1,
+      "evidence_path": "docs/week8/CLEAN_ENGINEERING_AUDIT.md"
+    },
+    "week5-tools": {
+      "status": "PASS",
+      "passed": 7,
+      "skipped": 0,
+      "evidence_path": "docs/week8/CLEAN_ENGINEERING_AUDIT.md"
+    },
+    "week6-and-compliance": {
+      "status": "PASS",
+      "passed": 124,
+      "skipped": 0,
+      "evidence_path": "docs/week8/CLEAN_ENGINEERING_AUDIT.md"
+    },
+    "demo-materials": {
+      "status": "PASS",
+      "passed": 33,
+      "skipped": 0,
+      "evidence_path": "docs/week8/CLEAN_ENGINEERING_AUDIT.md"
+    },
+    "flutter": {
+      "status": "PASS",
+      "passed": 249,
+      "skipped": 0,
+      "evidence_path": "docs/week8/CLEAN_ENGINEERING_AUDIT.md"
+    },
+    "week8-tools": {
+      "status": "PASS",
+      "passed": 30,
+      "skipped": 1,
+      "evidence_path": "docs/week8/CLEAN_ENGINEERING_AUDIT.md"
+    }
+  },
+  "platforms": {
+    "windows": {
+      "status": "BLOCKED",
+      "evidence_paths": [
+        "docs/week8/evidence/platform/windows/status.json"
+      ],
+      "reason": "Candidate not yet built from the current commit."
+    },
+    "linux": {
+      "status": "BLOCKED",
+      "evidence_paths": [
+        "docs/week8/evidence/platform/linux/status.json"
+      ],
+      "reason": "Candidate not yet built from the current commit."
+    },
+    "macos": {
+      "status": "BLOCKED",
+      "evidence_paths": [
+        "docs/week8/evidence/platform/macos/status.json"
+      ],
+      "reason": "Real macOS host unavailable; build and VoiceOver verification pending."
+    }
+  },
+  "distributions": {
+    "public-source": {
+      "distribution_class": "public-source",
+      "model_policy": "Excludes MobileCLIP weights and all research-only model binaries."
+    },
+    "default-public": {
+      "distribution_class": "default-public",
+      "model_policy": "Excludes MobileCLIP weights; image semantic retrieval requires separately supplied compliant weights."
+    },
+    "course-research": {
+      "distribution_class": "research-only",
+      "model_policy": "MobileCLIP is allowed only with the Apple research license, model card, source revision, manifest, and SHA-256."
+    }
+  },
+  "artifacts": []
+}

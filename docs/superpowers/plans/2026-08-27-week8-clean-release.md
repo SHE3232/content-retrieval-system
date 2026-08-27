@@ -156,23 +156,23 @@ git commit -m "build: add clean source export policy"
 - Create: `docs/week8/evidence/manifest.json`
 - Create: `docs/week8/evidence/platform/README.md`
 
-- [ ] **Step 1: Specify failing manifest invariants**
+- [x] **Step 1: Specify failing manifest invariants**
 
 Tests must require a full 40-character commit; current test counts; explicit `PASS`, `FAIL`, or `BLOCKED` per platform gate; distribution class; model-license boundary; file size and lowercase SHA-256; provenance path; and prohibition of `PASS` without a referenced evidence file.
 
-- [ ] **Step 2: Implement evidence collection**
+- [x] **Step 2: Implement evidence collection**
 
 Capture commands, start/end timestamps, exit code, stdout/stderr log path, host OS, Flutter/Dart/Python/Java versions, WSL distro, and commit. Do not overwrite evidence from a different commit.
 
-- [ ] **Step 3: Implement manifest generation and verification**
+- [x] **Step 3: Implement manifest generation and verification**
 
 `build_delivery_manifest.py` consumes only validated evidence and final files. `verify_delivery.py` recomputes all hashes, opens each archive, checks source markers, rejects forbidden content in public artifacts, requires research-license files in the research package, and enforces the same commit in every item.
 
-- [ ] **Step 4: Validate the empty-platform state honestly**
+- [x] **Step 4: Validate the empty-platform state honestly**
 
 Generate an initial manifest with Windows/Linux/macOS gates marked `BLOCKED` and explanatory evidence paths. Tests must pass because the state is internally consistent, while `verify_delivery.py --require-all-platforms` must fail.
 
-- [ ] **Step 5: Commit the evidence framework**
+- [x] **Step 5: Commit the evidence framework**
 
 ```powershell
 git add -- tools/week8 docs/week8/README.md docs/week8/evidence

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "platform": "linux",
+  "status": "BLOCKED",
+  "source_commit": "63523866446e8807742895340db7117cc94da1fa",
+  "reason": "Linux release candidate has not yet been built from this evidence-framework commit.",
+  "required_evidence": [
+    "environment.json",
+    "flutter-release-build.log",
+    "backend-start.log",
+    "health.json",
+    "five-format.json",
+    "archive-audit.json"
+  ]
+}
