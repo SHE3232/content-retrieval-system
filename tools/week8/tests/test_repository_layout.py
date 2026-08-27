@@ -36,3 +36,27 @@ def test_root_gitignore_excludes_week8_generated_and_scratch_trees() -> None:
         "/recordings/",
         "/docs/week8/evidence/report/rendered-*/",
     }.issubset(rules)
+
+
+def test_cross_platform_shell_scripts_are_forced_to_lf() -> None:
+    completed = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(REPOSITORY),
+            "check-attr",
+            "eol",
+            "--",
+            "tools/week8/build_linux_release.sh",
+            "tools/week8/start-integrated-linux.sh",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+
+    assert completed.stdout.splitlines() == [
+        "tools/week8/build_linux_release.sh: eol: lf",
+        "tools/week8/start-integrated-linux.sh: eol: lf",
+    ]
