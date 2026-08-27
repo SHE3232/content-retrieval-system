@@ -109,7 +109,6 @@ def _font_run(run: Any, *, size: float | None = None, bold: bool | None = None) 
 
 
 def _style_document(document: Any, *, title: str, subtitle: str, status: str, commit: str) -> None:
-    from docx.enum.section import WD_SECTION
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
     from docx.shared import Inches, Pt, RGBColor

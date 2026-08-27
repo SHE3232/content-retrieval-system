@@ -1,0 +1,127 @@
+{
+  "findings": [],
+  "reviewed_exemptions": [
+    {
+      "decorator": "router.get",
+      "kind": "function",
+      "line": 8,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\health.py",
+      "symbol": "live"
+    },
+    {
+      "decorator": "router.get",
+      "kind": "function",
+      "line": 13,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\health.py",
+      "symbol": "ready"
+    },
+    {
+      "decorator": "index_router.get",
+      "kind": "function",
+      "line": 49,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\indexing.py",
+      "symbol": "list_indexed_files"
+    },
+    {
+      "decorator": "index_router.delete",
+      "kind": "function",
+      "line": 70,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\indexing.py",
+      "symbol": "delete_indexed_file"
+    },
+    {
+      "decorator": "index_router.post",
+      "kind": "function",
+      "line": 123,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\indexing.py",
+      "symbol": "reindex_file"
+    },
+    {
+      "decorator": "router.post",
+      "kind": "function",
+      "line": 197,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\indexing.py",
+      "symbol": "create_job"
+    },
+    {
+      "decorator": "router.get",
+      "kind": "function",
+      "line": 235,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\indexing.py",
+      "symbol": "get_job"
+    },
+    {
+      "decorator": "router.get",
+      "kind": "function",
+      "line": 254,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\indexing.py",
+      "symbol": "get_job_failures"
+    },
+    {
+      "decorator": "router.post",
+      "kind": "function",
+      "line": 29,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\ingestion.py",
+      "symbol": "create_job"
+    },
+    {
+      "decorator": "router.get",
+      "kind": "function",
+      "line": 45,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\ingestion.py",
+      "symbol": "get_job"
+    },
+    {
+      "decorator": "router.post",
+      "kind": "function",
+      "line": 18,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\search.py",
+      "symbol": "search"
+    },
+    {
+      "decorator": "router.get",
+      "kind": "function",
+      "line": 45,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\routes\\search.py",
+      "symbol": "index_stats"
+    },
+    {
+      "decorator": "field_validator",
+      "kind": "function",
+      "line": 174,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\schemas.py",
+      "symbol": "validate_query"
+    },
+    {
+      "decorator": "field_validator",
+      "kind": "function",
+      "line": 182,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\schemas.py",
+      "symbol": "validate_channels"
+    },
+    {
+      "decorator": "field_validator",
+      "kind": "function",
+      "line": 192,
+      "path": "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src\\content_retrieval\\api\\schemas.py",
+      "symbol": "validate_weights"
+    }
+  ],
+  "command": [
+    "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\tools\\week8\\.venv\\Scripts\\python.exe",
+    "--output",
+    "docs/week8/evidence/source-audit/report.json"
+  ],
+  "minimum_confidence": 80,
+  "paths": [
+    "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\backend\\src",
+    "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\tools",
+    "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\model-tools",
+    "F:\\contentretrivalsystem\\.worktrees\\week8-finalization\\conversion-tools"
+  ],
+  "source_commit": "3d67082de1dcc87d0437e682ab55f5b03324547f",
+  "tool": {
+    "name": "vulture",
+    "version": "2.16"
+  }
+}
