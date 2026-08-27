@@ -79,7 +79,10 @@ def _write_archive(
             )
             archive.writestr(
                 "app/models/mobileclip/LICENSE_MODELS",
-                "Apple Machine Learning Research Model License",
+                (
+                    "Disclaimer: This Apple Machine Learning Research Model "
+                    "is provided solely for Research Purposes."
+                ),
             )
         if extra_bytes:
             archive.writestr("padding.bin", b"x" * extra_bytes)
@@ -229,3 +232,19 @@ def test_windows_builder_rejects_dirty_worktree() -> None:
 
     assert completed.returncode != 0
     assert "Worktree is not clean" in completed.stdout + completed.stderr
+
+
+def test_windows_builder_does_not_use_stale_native_exit_code_for_ps1_calls() -> None:
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    assert "Default public Windows package build failed" not in source
+    assert "Research-only Windows package build failed" not in source
+    assert "Public model launcher preflight failed" not in source
+
+
+def test_windows_builder_stages_research_models_without_source_caches() -> None:
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    assert "--distribution research-only" in source
+    assert "-ModelRoot $researchModelRoot" in source
+    assert "-ModelRoot $sourceModels" not in source

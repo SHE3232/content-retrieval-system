@@ -174,6 +174,7 @@ $runRoot = Assert-EmptyOrMissingDirectory `
     -AllowedParent $workingParent
 New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
 $publicModelRoot = Join-Path $runRoot 'public-models'
+$researchModelRoot = Join-Path $runRoot 'research-models'
 
 & $pythonExecutable (Join-Path $repository 'tools/week8/build_public_model_root.py') `
     --source-model-root $sourceModels `
@@ -181,6 +182,14 @@ $publicModelRoot = Join-Path $runRoot 'public-models'
     --destination $publicModelRoot
 if ($LASTEXITCODE -ne 0) {
     throw 'Public model staging failed'
+}
+& $pythonExecutable (Join-Path $repository 'tools/week8/build_public_model_root.py') `
+    --source-model-root $sourceModels `
+    --source-manifest $sourceModelManifest `
+    --destination $researchModelRoot `
+    --distribution research-only
+if ($LASTEXITCODE -ne 0) {
+    throw 'Research model staging failed'
 }
 
 if (-not $SkipPreflight) {
@@ -194,9 +203,6 @@ if (-not $SkipPreflight) {
         -TikaJar $resolvedTikaJar `
         -TikaChecksumFile $resolvedTikaChecksum `
         -CheckOnly
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Public model launcher preflight failed'
-    }
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
@@ -272,20 +278,14 @@ $packageCommon = @{
     -ModelManifestPath (Join-Path $publicModelRoot 'model-manifest.json') `
     -OutputZip $publicIntermediate `
     -ReplaceExactTarget
-if ($LASTEXITCODE -ne 0) {
-    throw 'Default public Windows package build failed'
-}
 
 & (Join-Path $repository 'tools/week6/package_stable_build.ps1') `
     @packageCommon `
-    -ModelRoot $sourceModels `
-    -ModelManifestPath $sourceModelManifest `
+    -ModelRoot $researchModelRoot `
+    -ModelManifestPath (Join-Path $researchModelRoot 'model-manifest.json') `
     -OutputZip $researchIntermediate `
     -ResearchOnlyDistribution `
     -ReplaceExactTarget
-if ($LASTEXITCODE -ne 0) {
-    throw 'Research-only Windows package build failed'
-}
 
 foreach ($pair in @(
     [pscustomobject]@{ Source = $publicIntermediate; Target = $publicFinal },

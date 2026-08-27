@@ -10,6 +10,7 @@ from zipfile import BadZipFile, ZipFile
 
 Distribution = Literal["default-public", "research-only"]
 RESEARCH_LICENSE = "Apple Machine Learning Research Model License"
+RESEARCH_LICENSE_TEXT_MARKER = "Apple Machine Learning Research Model"
 REQUIRED_LEGAL_FILES = (
     "app/LICENSE",
     "app/NOTICE",
@@ -135,7 +136,7 @@ def validate_windows_archive(
                     and name.startswith("app/models/")
                 ]
                 if not any(
-                    RESEARCH_LICENSE in archive.read(name).decode(
+                    RESEARCH_LICENSE_TEXT_MARKER in archive.read(name).decode(
                         "utf-8",
                         errors="replace",
                     )

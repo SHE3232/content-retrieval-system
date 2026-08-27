@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from tools.week8.build_public_model_root import stage_public_model_root
+from tools.week8.build_public_model_root import (
+    stage_public_model_root,
+    stage_research_model_root,
+)
 
 
 TEXT_MODEL_ID = "text-multilingual-v1"
@@ -35,6 +38,13 @@ def _write_source(root: Path, *, text_digest: str | None = None) -> Path:
     image_path = root / "mobileclip" / "mobileclip_s0.pt"
     image_path.parent.mkdir(parents=True)
     image_path.write_bytes(b"research-only-image-model")
+    (image_path.parent / "LICENSE").write_text(
+        "Apple Machine Learning Research Model",
+        encoding="utf-8",
+    )
+    cache_path = image_path.parent / ".cache" / "download.metadata"
+    cache_path.parent.mkdir()
+    cache_path.write_text("do not distribute cache", encoding="utf-8")
     manifest = {
         "schema_version": "1",
         "models": [
@@ -133,3 +143,25 @@ def test_refuses_nonempty_destination(tmp_path: Path) -> None:
         )
 
     assert (destination / "owned-by-user.txt").read_text(encoding="utf-8") == "keep"
+
+
+def test_stages_verified_research_models_without_download_caches(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    manifest = _write_source(source)
+    destination = tmp_path / "research-models"
+
+    result = stage_research_model_root(
+        source_model_root=source,
+        source_manifest_path=manifest,
+        destination=destination,
+    )
+
+    assert result["included_model_ids"] == [TEXT_MODEL_ID, IMAGE_MODEL_ID]
+    assert (destination / "mobileclip" / "mobileclip_s0.pt").is_file()
+    assert (destination / "mobileclip" / "LICENSE").is_file()
+    assert not any(".cache" in path.parts for path in destination.rglob("*"))
+    assert json.loads(
+        (destination / "model-manifest.json").read_text(encoding="utf-8")
+    ) == json.loads(manifest.read_text(encoding="utf-8"))
