@@ -7,6 +7,7 @@ from content_retrieval.embeddings.manifest import ModelManifest
 from content_retrieval.embeddings.mobileclip import (
     LocalMobileClipBackend,
     MobileClipEmbeddingEngine,
+    UnavailableMobileClipEmbeddingEngine,
 )
 from content_retrieval.embeddings.sentence_transformer import (
     SentenceTransformerBackend,
@@ -37,7 +38,9 @@ class LocalRuntime:
     repository: ChromaVectorRepository
     chunker: TextChunker
     text_engine: TextEmbeddingEngine
-    image_engine: MobileClipEmbeddingEngine
+    image_engine: (
+        MobileClipEmbeddingEngine | UnavailableMobileClipEmbeddingEngine
+    )
     embedding_service: MultimodalEmbeddingService
     ingestion_service: BatchIngestionService
     indexing_service: IndexingService
@@ -77,9 +80,17 @@ def build_local_runtime(
 
     manifest = ModelManifest.load(manifest_file, model_root=root)
     text_entry = manifest.require(TEXT_MODEL_ID)
-    image_entry = manifest.require(IMAGE_MODEL_ID)
     text_entry.verify()
-    image_entry.verify()
+    image_entry = next(
+        (
+            entry
+            for entry in manifest.entries
+            if entry.model_id == IMAGE_MODEL_ID
+        ),
+        None,
+    )
+    if image_entry is not None:
+        image_entry.verify()
 
     text_backend = SentenceTransformerBackend(
         text_entry.path,
@@ -88,20 +99,23 @@ def build_local_runtime(
         dimensions=text_entry.dimensions,
         batch_size=text_batch_size,
     )
-    image_backend = LocalMobileClipBackend(
-        image_entry.path,
-        model_id=image_entry.model_id,
-        space_id=image_entry.space_id,
-        dimensions=image_entry.dimensions,
-    )
     text_engine = TextEmbeddingEngine(
         text_backend,
         batch_size=text_batch_size,
     )
-    image_engine = MobileClipEmbeddingEngine(
-        image_backend,
-        batch_size=image_batch_size,
-    )
+    if image_entry is None:
+        image_engine = UnavailableMobileClipEmbeddingEngine()
+    else:
+        image_backend = LocalMobileClipBackend(
+            image_entry.path,
+            model_id=image_entry.model_id,
+            space_id=image_entry.space_id,
+            dimensions=image_entry.dimensions,
+        )
+        image_engine = MobileClipEmbeddingEngine(
+            image_backend,
+            batch_size=image_batch_size,
+        )
     chunker = TextChunker()
     embedding_service = MultimodalEmbeddingService(
         chunker=chunker,

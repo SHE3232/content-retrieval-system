@@ -12,7 +12,10 @@ from content_retrieval.domain.models import (
     ParseResult,
     SkippedFile,
 )
-from content_retrieval.embeddings.mobileclip import MobileClipEmbeddingEngine
+from content_retrieval.embeddings.mobileclip import (
+    MobileClipEmbeddingEngine,
+    UnavailableMobileClipEmbeddingEngine,
+)
 from content_retrieval.embeddings.text import TextEmbeddingEngine
 from content_retrieval.services.chunking import TextChunker
 from content_retrieval.services.indexing import IndexingService
@@ -174,6 +177,39 @@ def test_index_paths_persists_located_text_and_image_records(
     assert [record.name for record in records if record.modality == "image"] == [
         "picture.png"
     ]
+
+
+def test_text_only_distribution_indexes_text_and_reports_image_failure(
+    tmp_path: Path,
+) -> None:
+    text_path = tmp_path / "notes.txt"
+    text_path.write_text("offline search", encoding="utf-8")
+    image_path = tmp_path / "picture.png"
+    image_path.write_bytes(b"fake-image")
+    repository = ChromaVectorRepository(tmp_path / "index")
+    service = IndexingService(
+        ingestion_service=LocalFixtureIngestion(),
+        chunker=TextChunker(max_characters=100, overlap_characters=10),
+        text_engine=TextEmbeddingEngine(RecordingTextBackend(), batch_size=4),
+        mobileclip_engine=UnavailableMobileClipEmbeddingEngine(),
+        repository=repository,
+    )
+
+    result = service.index_paths(
+        [text_path, image_path],
+        authorized_roots=[tmp_path],
+    )
+
+    assert result.parsed_files == 2
+    assert result.indexed_files == 1
+    assert result.failed_files == 1
+    assert result.indexed_records == 1
+    assert result.failures[0].code == "EMBEDDING_ERROR"
+    assert result.failures[0].path == image_path.resolve()
+    assert "unavailable" in result.failures[0].message.lower()
+    assert [
+        record.name for record in repository.list_records()
+    ] == ["notes.txt"]
 
 
 def test_repeated_unchanged_file_skips_embedding_and_upsert(

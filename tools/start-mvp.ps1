@@ -458,9 +458,22 @@ try:
 
     manifest = ModelManifest.load(Path(sys.argv[2]), model_root=Path(sys.argv[3]))
     text_entry = manifest.require(TEXT_MODEL_ID)
-    image_entry = manifest.require(IMAGE_MODEL_ID)
     text_entry.verify()
-    image_entry.verify()
+    image_entry = next(
+        (
+            entry
+            for entry in manifest.entries
+            if entry.model_id == IMAGE_MODEL_ID
+        ),
+        None,
+    )
+    if image_entry is None:
+        print(
+            'Image semantic capability unavailable '
+            '(MobileCLIP weights omitted)'
+        )
+    else:
+        image_entry.verify()
 except Exception as error:
     print(f'{type(error).__name__}: {error}', file=sys.stderr)
     raise SystemExit(1)
@@ -506,6 +519,9 @@ if ($manifestVerificationExitCode -ne 0) {
         $manifestVerificationDetails = "unknown verification error"
     }
     throw "Model manifest verification failed: $manifestVerificationDetails"
+}
+if (-not [string]::IsNullOrWhiteSpace($manifestVerificationStandardOutput)) {
+    Write-Output $manifestVerificationStandardOutput.Trim()
 }
 
 $dataDirCreatedByLauncher = $false

@@ -10,7 +10,10 @@ import pytest
 from content_retrieval.domain.errors import RetrievalError, StorageError
 from content_retrieval.domain.models import EmbeddingVector
 from content_retrieval.domain.retrieval import IndexRecord, SearchFilters
-from content_retrieval.embeddings.mobileclip import MobileClipEmbeddingEngine
+from content_retrieval.embeddings.mobileclip import (
+    MobileClipEmbeddingEngine,
+    UnavailableMobileClipEmbeddingEngine,
+)
 from content_retrieval.embeddings.service import MultimodalEmbeddingService
 from content_retrieval.embeddings.text import TextEmbeddingEngine
 from content_retrieval.retrieval.service import RetrievalService
@@ -270,6 +273,51 @@ def test_all_channels_are_fused_without_duplicate_files(tmp_path: Path) -> None:
     )
     assert len({hit.file_id for hit in result.hits}) == len(result.hits)
     assert result.total_candidates == 2
+
+
+def test_text_only_distribution_omits_image_channel_from_default_search(
+    tmp_path: Path,
+) -> None:
+    repository = ChromaVectorRepository(tmp_path / "index")
+    repository.upsert(corpus(tmp_path))
+    text_backend = QueryTextBackend()
+    embeddings = MultimodalEmbeddingService(
+        chunker=TextChunker(),
+        text_engine=TextEmbeddingEngine(text_backend),
+        mobileclip_engine=UnavailableMobileClipEmbeddingEngine(),
+    )
+    service = RetrievalService(
+        repository=repository,
+        embedding_service=embeddings,
+    )
+
+    result = service.search("alpha", top_k=5)
+
+    assert service.available_channels == ("keyword", "text_semantic")
+    assert result.weights == {"keyword": 0.35, "text_semantic": 1.0}
+    assert all("image_semantic" not in hit.match_reasons for hit in result.hits)
+    assert text_backend.calls == [["alpha"]]
+
+
+def test_text_only_distribution_rejects_explicit_image_semantic_search(
+    tmp_path: Path,
+) -> None:
+    repository = ChromaVectorRepository(tmp_path / "index")
+    embeddings = MultimodalEmbeddingService(
+        chunker=TextChunker(),
+        text_engine=TextEmbeddingEngine(QueryTextBackend()),
+        mobileclip_engine=UnavailableMobileClipEmbeddingEngine(),
+    )
+    service = RetrievalService(
+        repository=repository,
+        embedding_service=embeddings,
+    )
+
+    with pytest.raises(RetrievalError, match="image semantic.*unavailable"):
+        service.search(
+            "cat",
+            channels=("image_semantic",),
+        )
 
 
 def test_modality_filter_skips_irrelevant_query_encoder(

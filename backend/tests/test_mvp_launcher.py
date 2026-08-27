@@ -494,7 +494,7 @@ def test_check_only_rejects_java_that_fails_version_check(tmp_path: Path) -> Non
     assert "Java runtime check failed" in result.stdout + result.stderr
 
 
-def test_check_only_reports_missing_required_model_id(tmp_path: Path) -> None:
+def test_check_only_accepts_text_only_public_model_manifest(tmp_path: Path) -> None:
     fixture = _build_fixture(
         tmp_path,
         include_image=False,
@@ -502,12 +502,10 @@ def test_check_only_reports_missing_required_model_id(tmp_path: Path) -> None:
 
     result = _run_launcher(fixture, java=_java())
 
-    assert result.returncode != 0
+    assert result.returncode == 0, result.stdout + result.stderr
     output = result.stdout + result.stderr
-    assert (
-        "Model manifest verification failed: ModelManifestError: "
-        f"unknown model_id: {IMAGE_MODEL_ID}"
-    ) in output
+    assert "Image semantic capability unavailable" in output
+    assert "MVP preflight passed" in output
     assert "Traceback" not in output
     assert not fixture.data_dir.exists()
 

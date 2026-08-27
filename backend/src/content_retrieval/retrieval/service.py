@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
 from time import perf_counter
 
 from content_retrieval.domain.errors import RetrievalError, StorageError
@@ -48,6 +47,12 @@ class RetrievalService:
         self.keyword_index = KeywordIndex()
         self.refresh()
 
+    @property
+    def available_channels(self) -> tuple[SearchChannel, ...]:
+        if self.embedding_service.image_semantic_available:
+            return DEFAULT_SEARCH_CHANNELS
+        return ("keyword", "text_semantic")
+
     def refresh(self) -> None:
         """Rebuild the volatile keyword catalog from persistent records."""
         try:
@@ -87,6 +92,19 @@ class RetrievalService:
             channels,
             active_filters,
         )
+        if (
+            not self.embedding_service.image_semantic_available
+            and "image_semantic" in active_channels
+        ):
+            active_channels = tuple(
+                channel
+                for channel in active_channels
+                if channel != "image_semantic"
+            )
+            if not active_channels:
+                raise RetrievalError(
+                    "image semantic retrieval is unavailable in this distribution"
+                )
         resolved_weights = {
             channel: float(
                 (weights or DEFAULT_SEARCH_WEIGHTS).get(

@@ -21,7 +21,10 @@ from content_retrieval.domain.retrieval import (
     IndexingFailure,
     IndexingResult,
 )
-from content_retrieval.embeddings.mobileclip import MobileClipEmbeddingEngine
+from content_retrieval.embeddings.mobileclip import (
+    MobileClipEmbeddingEngine,
+    UnavailableMobileClipEmbeddingEngine,
+)
 from content_retrieval.embeddings.text import TextEmbeddingEngine
 from content_retrieval.services.batch_ingestion import BatchIngestionService
 from content_retrieval.services.chunking import TextChunker
@@ -37,7 +40,9 @@ class IndexingService:
         ingestion_service: BatchIngestionService,
         chunker: TextChunker,
         text_engine: TextEmbeddingEngine,
-        mobileclip_engine: MobileClipEmbeddingEngine,
+        mobileclip_engine: (
+            MobileClipEmbeddingEngine | UnavailableMobileClipEmbeddingEngine
+        ),
         repository: ChromaVectorRepository,
     ) -> None:
         self.ingestion_service = ingestion_service

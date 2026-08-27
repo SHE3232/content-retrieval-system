@@ -10,7 +10,10 @@ from content_retrieval.domain.models import (
 )
 from content_retrieval.services.chunking import TextChunker
 
-from .mobileclip import MobileClipEmbeddingEngine
+from .mobileclip import (
+    MobileClipEmbeddingEngine,
+    UnavailableMobileClipEmbeddingEngine,
+)
 from .text import TextEmbeddingEngine
 
 
@@ -22,11 +25,17 @@ class MultimodalEmbeddingService:
         *,
         chunker: TextChunker,
         text_engine: TextEmbeddingEngine,
-        mobileclip_engine: MobileClipEmbeddingEngine,
+        mobileclip_engine: (
+            MobileClipEmbeddingEngine | UnavailableMobileClipEmbeddingEngine
+        ),
     ) -> None:
         self.chunker = chunker
         self.text_engine = text_engine
         self.mobileclip_engine = mobileclip_engine
+
+    @property
+    def image_semantic_available(self) -> bool:
+        return bool(getattr(self.mobileclip_engine, "available", True))
 
     def embed_documents(
         self,

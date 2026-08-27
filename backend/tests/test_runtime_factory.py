@@ -76,6 +76,7 @@ def write_manifest(
     root: Path,
     *,
     text_hash: str | None = None,
+    include_image: bool = True,
 ) -> Path:
     text_path = root / "text" / "text-multilingual-v1"
     text_path.mkdir(parents=True)
@@ -87,36 +88,33 @@ def write_manifest(
     image_path.parent.mkdir(parents=True)
     image_path.write_bytes(b"local-mobileclip-fixture")
     manifest = root / "model-manifest.json"
-    manifest.write_text(
-        json.dumps(
+    entries = [
+        {
+            "model_id": "text-multilingual-v1",
+            "space_id": "text-semantic-v1",
+            "modality": "text",
+            "dimensions": 2,
+            "relative_path": "text/text-multilingual-v1",
+            "sha256": text_hash or sha256_path(text_path),
+            "license_name": "Apache-2.0",
+            "runtime": "sentence-transformers",
+        }
+    ]
+    if include_image:
+        entries.append(
             {
-                "schema_version": "1",
-                "models": [
-                    {
-                        "model_id": "text-multilingual-v1",
-                        "space_id": "text-semantic-v1",
-                        "modality": "text",
-                        "dimensions": 2,
-                        "relative_path": "text/text-multilingual-v1",
-                        "sha256": text_hash or sha256_path(text_path),
-                        "license_name": "Apache-2.0",
-                        "runtime": "sentence-transformers",
-                    },
-                    {
-                        "model_id": "mobileclip-s0-v1",
-                        "space_id": "mobileclip-image-text-v1",
-                        "modality": "image_text",
-                        "dimensions": 2,
-                        "relative_path": "mobileclip/mobileclip_s0.pt",
-                        "sha256": hashlib.sha256(
-                            image_path.read_bytes()
-                        ).hexdigest(),
-                        "license_name": "Fixture",
-                        "runtime": "pytorch-mobileclip",
-                    },
-                ],
+                "model_id": "mobileclip-s0-v1",
+                "space_id": "mobileclip-image-text-v1",
+                "modality": "image_text",
+                "dimensions": 2,
+                "relative_path": "mobileclip/mobileclip_s0.pt",
+                "sha256": hashlib.sha256(image_path.read_bytes()).hexdigest(),
+                "license_name": "Fixture",
+                "runtime": "pytorch-mobileclip",
             }
-        ),
+        )
+    manifest.write_text(
+        json.dumps({"schema_version": "1", "models": entries}),
         encoding="utf-8",
     )
     return manifest
@@ -236,3 +234,36 @@ def test_runtime_factory_builds_persistent_local_services(
     bundle.close()
 
     assert identifier not in SharedSystemClient._identifier_to_system
+
+
+def test_runtime_factory_builds_text_only_runtime_without_mobileclip_weights(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import content_retrieval.runtime as runtime
+
+    FakeTextBackend.created.clear()
+    model_root = tmp_path / "models"
+    manifest = write_manifest(model_root, include_image=False)
+    monkeypatch.setattr(runtime, "SentenceTransformerBackend", FakeTextBackend)
+
+    def reject_mobileclip(*args, **kwargs):
+        raise AssertionError(
+            "MobileCLIP backend must not load for a text-only manifest"
+        )
+
+    monkeypatch.setattr(runtime, "LocalMobileClipBackend", reject_mobileclip)
+
+    bundle = runtime.build_local_runtime(
+        model_root=model_root,
+        manifest_path=manifest,
+        data_dir=tmp_path / "runtime-data",
+    )
+
+    assert bundle.image_engine.available is False
+    assert bundle.embedding_service.image_semantic_available is False
+    assert bundle.retrieval_service.available_channels == (
+        "keyword",
+        "text_semantic",
+    )
+    bundle.close()

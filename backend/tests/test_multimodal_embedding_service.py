@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 
 from content_retrieval.domain.models import EmbeddingVector, ParseResult
-from content_retrieval.embeddings.mobileclip import MobileClipEmbeddingEngine
+from content_retrieval.embeddings.mobileclip import (
+    MobileClipEmbeddingEngine,
+    UnavailableMobileClipEmbeddingEngine,
+)
 from content_retrieval.embeddings.service import (
     MultimodalEmbeddingService,
     cosine_similarity,
@@ -121,6 +124,28 @@ def test_mobileclip_queries_use_the_image_embedding_space(
     assert image.space_id == query.space_id
     assert query.metadata["source_kind"] == "query"
     assert cosine_similarity(image, query) == pytest.approx(0.8)
+
+
+def test_unavailable_mobileclip_returns_controlled_per_item_errors() -> None:
+    service = MultimodalEmbeddingService(
+        chunker=TextChunker(max_characters=100, overlap_characters=10),
+        text_engine=TextEmbeddingEngine(FakeTextBackend(), batch_size=2),
+        mobileclip_engine=UnavailableMobileClipEmbeddingEngine(),
+    )
+
+    documents = service.embed_documents(
+        [parse_result(identifier="a", modality="image")]
+    )
+    queries = service.embed_image_queries(["a square"])
+
+    assert service.image_semantic_available is False
+    assert documents.items == []
+    assert documents.failed == 1
+    assert documents.errors[0].file_id == "a" * 64
+    assert "unavailable" in str(documents.errors[0]).lower()
+    assert queries.items == []
+    assert queries.failed == 1
+    assert "unavailable" in str(queries.errors[0]).lower()
 
 
 def vector(

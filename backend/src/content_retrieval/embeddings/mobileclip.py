@@ -116,6 +116,36 @@ class LocalMobileClipBackend:
         return [[float(value) for value in row] for row in rows]
 
 
+class UnavailableMobileClipEmbeddingEngine:
+    """Capability marker used when a distribution omits image model weights."""
+
+    available = False
+    _MESSAGE = (
+        "Image semantic embedding is unavailable because this distribution "
+        "omits MobileCLIP weights"
+    )
+
+    def __init__(self) -> None:
+        self.batch_size = 0
+
+    def embed_images(
+        self,
+        images: Iterable[ParseResult],
+    ) -> BatchProcessingResult:
+        result = BatchProcessingResult()
+        for image in images:
+            result.errors.append(
+                EmbeddingError(self._MESSAGE, file_id=image.file_id)
+            )
+        return result
+
+    def embed_queries(self, queries: Iterable[str]) -> BatchProcessingResult:
+        result = BatchProcessingResult()
+        for _query in queries:
+            result.errors.append(EmbeddingError(self._MESSAGE))
+        return result
+
+
 class MobileClipEmbeddingEngine:
     """Validate and normalize MobileCLIP image and query embeddings."""
 
