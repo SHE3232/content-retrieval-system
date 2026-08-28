@@ -70,19 +70,40 @@ def load_profile(path: Path) -> dict[str, object]:
 
 
 def read_tracked_paths(repository: Path) -> list[str]:
-    """Read exact unquoted tracked paths, including non-ASCII names, from Git."""
+    """Read Git paths, or the exporter manifest in an independent clean tree."""
 
-    completed = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=repository,
-        capture_output=True,
-        check=True,
-    )
-    return [
-        raw.decode("utf-8").replace("\\", "/")
-        for raw in completed.stdout.split(b"\0")
-        if raw
-    ]
+    if (repository / ".git").exists():
+        completed = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=repository,
+            capture_output=True,
+            check=True,
+        )
+        return [
+            raw.decode("utf-8").replace("\\", "/")
+            for raw in completed.stdout.split(b"\0")
+            if raw
+        ]
+
+    manifest_path = repository / "CLEAN_SOURCE_MANIFEST.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(
+            "repository is neither a Git worktree nor a clean-source export"
+        ) from error
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("owned_by") != "week8-clean-source-exporter"
+        or not isinstance(manifest.get("files"), list)
+    ):
+        raise ValueError("clean-source manifest is invalid")
+    paths: list[str] = []
+    for entry in manifest["files"]:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            raise TypeError("clean-source manifest contains an invalid file entry")
+        paths.append(entry["path"].replace("\\", "/"))
+    return sorted(paths)
 
 
 def _git_output(repository: Path, *arguments: str) -> str:

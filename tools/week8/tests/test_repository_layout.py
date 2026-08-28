@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -12,12 +13,22 @@ except ModuleNotFoundError:  # Python 3.10 compatibility
 REPOSITORY = Path(__file__).resolve().parents[3]
 
 
-def test_tracked_temp_tree_is_empty_and_only_reproducible_assets_are_relocated() -> None:
-    tracked = set(
-        subprocess.check_output(
-            ["git", "ls-files"], cwd=REPOSITORY, text=True
-        ).splitlines()
+def _tracked_paths() -> set[str]:
+    if (REPOSITORY / ".git").exists():
+        return set(
+            subprocess.check_output(
+                ["git", "ls-files"], cwd=REPOSITORY, text=True
+            ).splitlines()
+        )
+    manifest = json.loads(
+        (REPOSITORY / "CLEAN_SOURCE_MANIFEST.json").read_text(encoding="utf-8")
     )
+    assert manifest["owned_by"] == "week8-clean-source-exporter"
+    return {entry["path"] for entry in manifest["files"]}
+
+
+def test_tracked_temp_tree_is_empty_and_only_reproducible_assets_are_relocated() -> None:
+    tracked = _tracked_paths()
 
     assert not {path for path in tracked if path.startswith("tmp/")}
     assert "docs/week2/assets/current-ingestion-sequence.png" in tracked
@@ -44,6 +55,11 @@ def test_root_gitignore_excludes_week8_generated_and_scratch_trees() -> None:
 
 
 def test_cross_platform_shell_scripts_are_forced_to_lf() -> None:
+    if not (REPOSITORY / ".git").exists():
+        attributes = (REPOSITORY / ".gitattributes").read_text(encoding="utf-8")
+        assert "*.sh text eol=lf" in attributes.splitlines()
+        return
+
     completed = subprocess.run(
         [
             "git",

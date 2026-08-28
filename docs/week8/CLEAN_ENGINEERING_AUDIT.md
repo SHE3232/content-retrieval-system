@@ -45,7 +45,7 @@
 | Week 6 启动器/打包/验收测试 | 116 passed |
 | 开源合规测试 | 8 passed |
 | 演示材料测试 | 33 passed |
-| Week 8 清理、发行、报告、作品集与外部门禁测试 | 92 passed，1 skipped（当前 Windows 主机不允许创建真实符号链接；等价 fail-closed 路径用例已通过） |
+| Week 8 清理、发行、报告、作品集与外部门禁测试 | 93 passed，1 skipped（当前 Windows 主机不允许创建真实符号链接；等价 fail-closed 路径用例已通过） |
 | Flutter 静态分析 | 0 issues |
 | Flutter 测试 | 249 passed |
 | 锁定依赖许可证清单 | 312 rows verified |

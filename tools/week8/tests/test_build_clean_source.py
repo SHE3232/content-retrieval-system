@@ -103,6 +103,24 @@ def test_repository_profile_keeps_runnable_source_and_excludes_history_binaries(
     assert not any(path.startswith("models/") for path in selected if path != "models/model-manifest.example.json")
 
 
+def test_read_tracked_paths_uses_clean_source_manifest_without_git(
+    tmp_path: Path,
+) -> None:
+    manifest = {
+        "schema_version": 1,
+        "owned_by": "week8-clean-source-exporter",
+        "files": [
+            {"path": "README.md", "bytes": 1, "sha256": "a" * 64},
+            {"path": "docs/中文说明.md", "bytes": 1, "sha256": "b" * 64},
+        ],
+    }
+    (tmp_path / "CLEAN_SOURCE_MANIFEST.json").write_text(
+        json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
+    )
+
+    assert read_tracked_paths(tmp_path) == ["README.md", "docs/中文说明.md"]
+
+
 def _init_repository(root: Path) -> str:
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
     subprocess.run(["git", "config", "user.email", "week8@example.invalid"], cwd=root, check=True)
