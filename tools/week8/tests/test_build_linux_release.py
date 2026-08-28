@@ -26,6 +26,7 @@ def _write_archive(
     *,
     commit: str = COMMIT,
     include_research_model: bool = False,
+    include_gpu_runtime: bool = False,
 ) -> None:
     models = [
         {
@@ -79,6 +80,12 @@ def _write_archive(
                 "app/models/mobileclip/mobileclip_s0.pt",
                 b"restricted",
             )
+        if include_gpu_runtime:
+            _add_bytes(
+                archive,
+                "app/runtime/python/lib/python3.10/site-packages/nvidia/cublas/lib.so",
+                b"gpu-runtime",
+            )
 
 
 def test_linux_archive_passes_public_release_validation(tmp_path: Path) -> None:
@@ -108,6 +115,18 @@ def test_linux_archive_rejects_research_weight(tmp_path: Path) -> None:
         )
 
 
+def test_linux_archive_rejects_cuda_runtime(tmp_path: Path) -> None:
+    archive = tmp_path / "linux-with-cuda.tar.gz"
+    _write_archive(archive, include_gpu_runtime=True)
+
+    with pytest.raises(ValueError, match="CUDA/NVIDIA runtime"):
+        validate_linux_archive(
+            archive,
+            expected_commit=COMMIT,
+            size_limit_bytes=1_000_000,
+        )
+
+
 def test_linux_builder_contains_fail_closed_release_policy() -> None:
     source = BUILD_SCRIPT.read_text(encoding="utf-8")
 
@@ -123,3 +142,4 @@ def test_linux_builder_contains_fail_closed_release_policy() -> None:
     assert "MobileCLIP weights are not included" in source
     assert "THIRD_PARTY_SOURCE_DIR" not in source
     assert "third_party/mobileclip-src" not in source
+    assert "Backend lock contains a CUDA/NVIDIA runtime" in source

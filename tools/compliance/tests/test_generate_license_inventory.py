@@ -91,7 +91,7 @@ def test_repository_inventory_covers_every_locked_component() -> None:
         rendered = list(csv.DictReader(inventory_file))
 
     assert rendered == rows
-    assert len(rows) == 330
+    assert len(rows) == 312
     assert not [
         row for row in rows if row["review_status"] == "review-required"
     ]
@@ -109,7 +109,7 @@ def test_third_party_notices_has_demo_environment_summary() -> None:
     for phrase in (
         "4 套 Python",
         "1 套 Flutter",
-        "330 条锁定依赖记录",
+        "312 条锁定依赖记录",
         "演示工具",
         "python-docx",
         "reportlab",
@@ -122,7 +122,7 @@ def test_third_party_notices_has_demo_environment_summary() -> None:
 
 def test_check_rejects_tampered_generated_notices(tmp_path: Path) -> None:
     source = (REPOSITORY / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
-    tampered = source.replace("330 条锁定依赖记录", "329 条锁定依赖记录")
+    tampered = source.replace("312 条锁定依赖记录", "311 条锁定依赖记录")
     path = tmp_path / "THIRD_PARTY_NOTICES.md"
     path.write_text(tampered, encoding="utf-8")
     approvals = json.loads(

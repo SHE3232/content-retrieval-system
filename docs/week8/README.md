@@ -15,6 +15,8 @@
 
 Windows 构建器要求分别传入公开 Python 运行时与可直接导入 `mobileclip` 的研究 Python 运行时，且两者路径不得相同。验证器同时拒绝公开包内的 MobileCLIP 模块和缺少该模块的研究包，避免只复制权重却无法实际运行。
 
+后端将 Torch 作为显式运行时依赖并绑定 PyTorch 官方 CPU 索引；Linux 默认公开包必须保持无 `nvidia-*`、`cuda-*` 与 `triton` 锁项，不能把条件性 GPU 依赖误带入 CPU 候选。
+
 ## 发行边界
 
 公开源码和默认公开发行包不得包含 MobileCLIP 权重。课程演示研究包可以包含已核验权重，但必须同时包含研究许可证、模型卡、模型清单、来源修订和哈希，并明确标记为 `research-only`。研究包不进入默认 GitHub Release 资产列表。

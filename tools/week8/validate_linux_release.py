@@ -16,6 +16,7 @@ REQUIRED_FILES = (
     "app/models/model-manifest.json",
     "app/frontend/content_retrieval_app",
 )
+GPU_RUNTIME_PREFIXES = ("cuda", "nvidia", "triton")
 
 
 def _sha256_file(path: Path) -> str:
@@ -114,6 +115,18 @@ def validate_linux_archive(
                 raise ValueError("Linux public package contains a research-only model")
             if any(".cache" in PurePosixPath(name).parts for name in names):
                 raise ValueError("Linux public package contains a download cache")
+            for name in names:
+                lower_name = name.casefold()
+                marker = "/site-packages/"
+                if marker not in lower_name:
+                    continue
+                installed_name = lower_name.split(marker, 1)[1].split("/", 1)[0]
+                normalized_name = installed_name.replace("-", "_")
+                if normalized_name.startswith(GPU_RUNTIME_PREFIXES):
+                    raise ValueError(
+                        "Linux public package contains a CUDA/NVIDIA runtime: "
+                        f"{name}"
+                    )
     except (tarfile.TarError, KeyError) as error:
         raise ValueError(f"Linux archive is invalid: {path}") from error
 

@@ -1786,6 +1786,14 @@
       "notes": "exact PyPI release metadata; classifiers normalized only when unambiguous"
     },
     {
+      "key": "python:torch@2.13.0+cpu",
+      "license_expression": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
+      "evidence_url": "https://github.com/pytorch/pytorch/blob/v2.13.0/LICENSE",
+      "review_status": "approved",
+      "redistribution": "retain license, copyright, attribution, and upstream NOTICE when present",
+      "notes": "PyTorch official CPU index distribution"
+    },
+    {
       "key": "python:torch@2.9.1",
       "license_expression": "BSD-3-Clause",
       "evidence_url": "https://github.com/pytorch/pytorch/blob/v2.9.1/LICENSE",

@@ -67,6 +67,10 @@ require_file "$repo/tools/week8/build_public_model_root.py" 'Public model builde
 require_file "$repo/tools/week8/validate_linux_release.py" 'Linux archive validator'
 require_file "$tika_jar_source" 'Tika server JAR'
 require_file "$tika_checksum_source" 'Tika checksum'
+if grep -Eq '^name = "(cuda-|nvidia-|triton")' "$repo/backend/uv.lock"; then
+  printf 'Backend lock contains a CUDA/NVIDIA runtime and is not valid for the public CPU package\n' >&2
+  exit 1
+fi
 
 require_dir "$flutter_sdk" 'Flutter Linux SDK'
 require_file "$flutter_sdk/bin/flutter" 'Flutter executable'

@@ -84,6 +84,28 @@ def test_public_python_projects_do_not_require_machine_local_mobileclip_source()
         assert "../third_party/mobileclip-src" not in lockfile
 
 
+def test_backend_locks_torch_to_the_official_cpu_index() -> None:
+    pyproject = tomllib.loads(
+        (REPOSITORY / "backend/pyproject.toml").read_text(encoding="utf-8")
+    )
+    dependencies = pyproject["project"]["dependencies"]
+    uv = pyproject["tool"]["uv"]
+    indexes = uv["index"]
+    lockfile = (REPOSITORY / "backend/uv.lock").read_text(encoding="utf-8")
+
+    assert any(dependency.startswith("torch") for dependency in dependencies)
+    assert uv["sources"]["torch"] == {"index": "pytorch-cpu"}
+    assert {
+        "name": "pytorch-cpu",
+        "url": "https://download.pytorch.org/whl/cpu",
+        "explicit": True,
+    } in indexes
+    assert 'registry = "https://download.pytorch.org/whl/cpu"' in lockfile
+    assert 'name = "nvidia-' not in lockfile
+    assert 'name = "cuda-' not in lockfile
+    assert 'name = "triton"' not in lockfile
+
+
 def test_public_repository_has_community_health_and_ci_files() -> None:
     required = {
         "CONTRIBUTING.md": ("uv sync --project backend --locked", "flutter test"),
