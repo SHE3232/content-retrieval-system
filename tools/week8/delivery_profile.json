@@ -4,6 +4,7 @@
   "include_root_files": [
     ".gitignore",
     "CODE_OF_CONDUCT.md",
+    "CHANGELOG.md",
     "CONTRIBUTING.md",
     "DESIGN.md",
     "LICENSE",
@@ -64,6 +65,7 @@
   ],
   "required_files": [
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
     "NOTICE",
     "THIRD_PARTY_NOTICES.md",

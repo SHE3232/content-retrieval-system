@@ -3,9 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -15,7 +15,6 @@ from tools.week8.build_clean_source import (
     read_tracked_paths,
     select_tracked_paths,
 )
-
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 DELIVERY_PROFILE = REPOSITORY / "tools" / "week8" / "delivery_profile.json"

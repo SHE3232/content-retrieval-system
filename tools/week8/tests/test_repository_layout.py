@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 compatibility
+    import tomli as tomllib
 
 
 REPOSITORY = Path(__file__).resolve().parents[3]
@@ -60,3 +65,42 @@ def test_cross_platform_shell_scripts_are_forced_to_lf() -> None:
         "tools/week8/build_linux_release.sh: eol: lf",
         "tools/week8/start-integrated-linux.sh: eol: lf",
     ]
+
+
+def test_public_python_projects_do_not_require_machine_local_mobileclip_source() -> None:
+    for project in ("backend", "model-tools"):
+        pyproject = tomllib.loads(
+            (REPOSITORY / project / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        dependencies = pyproject["project"]["dependencies"]
+        uv_sources = pyproject.get("tool", {}).get("uv", {}).get("sources", {})
+        lockfile = (REPOSITORY / project / "uv.lock").read_text(encoding="utf-8")
+
+        assert not any(
+            dependency.partition(";")[0].strip().lower().startswith("mobileclip")
+            for dependency in dependencies
+        )
+        assert "mobileclip" not in uv_sources
+        assert "../third_party/mobileclip-src" not in lockfile
+
+
+def test_public_repository_has_community_health_and_ci_files() -> None:
+    required = {
+        "CONTRIBUTING.md": ("uv sync --project backend --locked", "flutter test"),
+        "CODE_OF_CONDUCT.md": ("行为准则", "举报"),
+        "SECURITY.md": ("安全漏洞", "不要"),
+        ".github/workflows/ci.yml": (
+            "permissions:",
+            "uv sync --project backend --locked",
+            "flutter analyze --no-pub",
+            "flutter test --no-pub",
+        ),
+    }
+
+    for relative_path, markers in required.items():
+        content = (REPOSITORY / relative_path).read_text(encoding="utf-8")
+        assert all(marker in content for marker in markers)
+
+    workflow = (REPOSITORY / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "download_models.py" not in workflow
+    assert "download_mobileclip.py" not in workflow

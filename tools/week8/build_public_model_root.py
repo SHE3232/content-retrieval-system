@@ -4,12 +4,11 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import stat
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
-
 
 TEXT_MODEL_ID = "text-multilingual-v1"
 IMAGE_MODEL_ID = "mobileclip-s0-v1"
@@ -76,7 +75,7 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(f"model manifest is invalid: {path}") from error
     if not isinstance(data, dict) or not isinstance(data.get("models"), list):
-        raise ValueError("model manifest must contain a models array")
+        raise TypeError("model manifest must contain a models array")
     return data
 
 

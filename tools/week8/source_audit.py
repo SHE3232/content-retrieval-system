@@ -6,14 +6,13 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-from pathlib import Path
 import subprocess
 import sys
-from typing import Iterable
+from collections.abc import Iterable
+from pathlib import Path
 
 import vulture
 from vulture.core import Vulture
-
 
 HTTP_ROUTE_DECORATORS = frozenset({"delete", "get", "patch", "post", "put"})
 PYDANTIC_VALIDATOR_DECORATORS = frozenset(

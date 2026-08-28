@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
 from tools.week8.validate_windows_release import validate_windows_archive
-
 
 COMMIT = "a" * 40
 REPOSITORY = Path(__file__).resolve().parents[3]
@@ -220,15 +219,48 @@ def test_windows_builder_rejects_source_commit_mismatch() -> None:
     assert "does not match repository HEAD" in completed.stdout + completed.stderr
 
 
-def test_windows_builder_rejects_dirty_worktree() -> None:
-    head = subprocess.run(
-        ["git", "-C", str(REPOSITORY), "rev-parse", "HEAD"],
+def test_windows_builder_rejects_dirty_worktree(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    marker = repository / "tracked.txt"
+    marker.write_text("clean\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "week8@example.invalid"],
+        cwd=repository,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Week 8 Test"],
+        cwd=repository,
+        check=True,
+    )
+    subprocess.run(["git", "add", "tracked.txt"], cwd=repository, check=True)
+    subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repository, check=True)
+    head = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=repository, text=True
+    ).strip()
+    marker.write_text("dirty\n", encoding="utf-8")
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(BUILD_SCRIPT),
+            "-RepositoryRoot",
+            str(repository),
+            "-SourceCommit",
+            head,
+            "-ValidateOnly",
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",
-        check=True,
-    ).stdout.strip()
-    completed = _run_builder_validation(head)
+        errors="replace",
+        check=False,
+    )
 
     assert completed.returncode != 0
     assert "Worktree is not clean" in completed.stdout + completed.stderr
@@ -248,3 +280,12 @@ def test_windows_builder_stages_research_models_without_source_caches() -> None:
     assert "--distribution research-only" in source
     assert "-ModelRoot $researchModelRoot" in source
     assert "-ModelRoot $sourceModels" not in source
+
+
+def test_windows_builder_keeps_mobileclip_source_out_of_public_package() -> None:
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    assert "ResearchThirdPartySourceDir" in source
+    assert "$publicThirdPartySource = Join-Path $runRoot 'public-third-party-omitted'" in source
+    assert "-ThirdPartySourceDir $publicThirdPartySource" in source
+    assert "-ThirdPartySourceDir $researchThirdPartySource" in source

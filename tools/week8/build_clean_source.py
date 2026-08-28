@@ -4,16 +4,16 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
-from datetime import datetime, timezone
-from fnmatch import fnmatchcase
 import hashlib
 import json
-from pathlib import Path
 import shutil
 import stat
 import subprocess
-from typing import Iterable, Mapping, Sequence
+from collections import Counter
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import datetime, timezone
+from fnmatch import fnmatchcase
+from pathlib import Path
 
 
 def _matches(path: str, patterns: Sequence[str]) -> str | None:

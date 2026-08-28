@@ -11,7 +11,6 @@ from tools.week8.build_public_model_root import (
     stage_research_model_root,
 )
 
-
 TEXT_MODEL_ID = "text-multilingual-v1"
 IMAGE_MODEL_ID = "mobileclip-s0-v1"
 

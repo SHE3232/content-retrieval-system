@@ -4,15 +4,14 @@
 from __future__ import annotations
 
 import argparse
-from copy import deepcopy
-from datetime import datetime, timezone
 import hashlib
 import json
-from pathlib import Path, PurePosixPath
 import re
 import subprocess
+from copy import deepcopy
+from datetime import datetime, timezone
+from pathlib import Path, PurePosixPath
 from typing import Any
-
 
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -152,7 +151,7 @@ def build_manifest(
     delivery_root = delivery_root.resolve()
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     if not isinstance(evidence, dict):
-        raise ValueError("delivery evidence must be a JSON object")
+        raise TypeError("delivery evidence must be a JSON object")
     head = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=repository, text=True
     ).strip()
@@ -163,7 +162,7 @@ def build_manifest(
     artifacts: list[dict[str, Any]] = []
     for declaration in evidence.get("artifacts", []):
         if not isinstance(declaration, dict):
-            raise ValueError("artifact declaration must be an object")
+            raise TypeError("artifact declaration must be an object")
         relative_path = declaration.get("path")
         if not isinstance(relative_path, str) or not relative_path:
             raise ValueError("artifact declaration path is required")

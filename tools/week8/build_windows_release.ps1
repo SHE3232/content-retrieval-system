@@ -7,7 +7,7 @@ param(
     [string]$FrontendReleaseDir,
     [string]$PythonRuntimeDir,
     [string]$JavaRuntimeDir,
-    [string]$ThirdPartySourceDir,
+    [string]$ResearchThirdPartySourceDir,
     [string]$TikaJar,
     [string]$TikaChecksumFile,
     [string]$OutputRoot,
@@ -132,11 +132,11 @@ $resolvedTikaChecksum = Resolve-RequiredFile `
     -Path $TikaChecksumFile `
     -Label 'Tika checksum file'
 
-if ([string]::IsNullOrWhiteSpace($ThirdPartySourceDir)) {
-    $ThirdPartySourceDir = Join-Path $repository 'third_party/mobileclip-src'
+if ([string]::IsNullOrWhiteSpace($ResearchThirdPartySourceDir)) {
+    $ResearchThirdPartySourceDir = Join-Path $repository 'third_party/mobileclip-src'
 }
-$thirdPartySource = Resolve-RequiredDirectory `
-    -Path $ThirdPartySourceDir `
+$researchThirdPartySource = Resolve-RequiredDirectory `
+    -Path $ResearchThirdPartySourceDir `
     -Label 'Curated MobileCLIP source'
 
 if (-not $SkipFlutterBuild) {
@@ -173,6 +173,7 @@ $runRoot = Assert-EmptyOrMissingDirectory `
     -Path $runRootCandidate `
     -AllowedParent $workingParent
 New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
+$publicThirdPartySource = Join-Path $runRoot 'public-third-party-omitted'
 $publicModelRoot = Join-Path $runRoot 'public-models'
 $researchModelRoot = Join-Path $runRoot 'research-models'
 
@@ -264,7 +265,6 @@ $packageCommon = @{
     TikaChecksumFile = $resolvedTikaChecksum
     MvpLauncher = (Join-Path $repository 'tools/start-mvp.ps1')
     IntegratedLauncher = (Join-Path $repository 'tools/week6/start-integrated.ps1')
-    ThirdPartySourceDir = $thirdPartySource
     StagingRoot = $week6Stage
     PackageProfile = 'lightweight'
     ArchiveSizeLimitBytes = $ArchiveSizeLimitBytes
@@ -276,6 +276,7 @@ $packageCommon = @{
     @packageCommon `
     -ModelRoot $publicModelRoot `
     -ModelManifestPath (Join-Path $publicModelRoot 'model-manifest.json') `
+    -ThirdPartySourceDir $publicThirdPartySource `
     -OutputZip $publicIntermediate `
     -ReplaceExactTarget
 
@@ -283,6 +284,7 @@ $packageCommon = @{
     @packageCommon `
     -ModelRoot $researchModelRoot `
     -ModelManifestPath (Join-Path $researchModelRoot 'model-manifest.json') `
+    -ThirdPartySourceDir $researchThirdPartySource `
     -OutputZip $researchIntermediate `
     -ResearchOnlyDistribution `
     -ReplaceExactTarget

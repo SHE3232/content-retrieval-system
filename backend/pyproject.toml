@@ -6,7 +6,6 @@ dependencies = [
     "chromadb>=1.0,<2",
     "fastapi>=0.115,<1",
     "httpx>=0.28,<1",
-    "mobileclip",
     "pillow>=11,<13",
     "pypdfium2>=4.30,<5",
     "python-multipart>=0.0.20,<1",
@@ -30,6 +29,3 @@ markers = [
     "requires_models: requires real local model assets",
     "requires_tika: requires a real Apache Tika service",
 ]
-
-[tool.uv.sources]
-mobileclip = { path = "../third_party/mobileclip-src/ml-mobileclip-aecfb5453d022e9deff12f81a150ea8f35194baa" }

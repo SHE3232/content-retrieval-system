@@ -6,7 +6,6 @@ source_commit="${SOURCE_COMMIT:-}"
 flutter_sdk="${FLUTTER_SDK:-}"
 source_models="${SOURCE_MODEL_ROOT:-}"
 source_manifest="${SOURCE_MODEL_MANIFEST:-}"
-third_party_source="${THIRD_PARTY_SOURCE_DIR:-}"
 linux_jdk="${LINUX_JDK_DIR:-}"
 tika_jar_source="${TIKA_JAR:-$repo/tools/tika/tika-server-standard-3.3.1.jar}"
 tika_checksum_source="${TIKA_CHECKSUM_FILE:-$tika_jar_source.sha512}"
@@ -73,7 +72,6 @@ require_dir "$flutter_sdk" 'Flutter Linux SDK'
 require_file "$flutter_sdk/bin/flutter" 'Flutter executable'
 require_dir "$source_models" 'Source model root'
 require_file "$source_manifest" 'Source model manifest'
-require_dir "$third_party_source" 'Curated MobileCLIP source'
 require_dir "$linux_jdk" 'Linux OpenJDK'
 require_file "$linux_jdk/bin/jlink" 'Linux jlink executable'
 require_file "$linux_jdk/release" 'Linux OpenJDK release metadata'
@@ -117,10 +115,9 @@ python3.10 "$repo/tools/week8/build_public_model_root.py" \
   --destination "$app_root/models"
 
 cp -aL "$frontend_release" "$app_root/frontend"
-mkdir -p "$app_root/backend" "$app_root/tools/tika" "$app_root/third_party"
+mkdir -p "$app_root/backend" "$app_root/tools/tika"
 cp -aL "$repo/backend/src" "$app_root/backend/src"
 cp -aL "$repo/backend/pyproject.toml" "$repo/backend/uv.lock" "$app_root/backend/"
-cp -aL "$third_party_source" "$app_root/third_party/mobileclip-src"
 cp -aL "$repo/LICENSE" "$repo/NOTICE" "$repo/THIRD_PARTY_NOTICES.md" "$app_root/"
 cp -aL "$repo/docs/dependency-licenses.csv" "$app_root/dependency-licenses.csv"
 cp -aL "$tika_jar_source" "$app_root/tools/tika/tika-server-standard-3.3.1.jar"
@@ -129,9 +126,8 @@ cp -aL "$repo/tools/week8/start-integrated-linux.sh" "$app_root/start-integrated
 chmod 755 "$app_root/start-integrated.sh" "$app_root/frontend/content_retrieval_app"
 
 runtime_source="$run_root/runtime-source"
-mkdir -p "$runtime_source/backend" "$runtime_source/third_party"
+mkdir -p "$runtime_source/backend"
 cp -aL "$repo/backend/pyproject.toml" "$repo/backend/uv.lock" "$runtime_source/backend/"
-cp -aL "$third_party_source" "$runtime_source/third_party/mobileclip-src"
 "$uv_bin" sync --project "$runtime_source/backend" --locked --no-dev
 base_python="$($uv_bin python find 3.10)"
 base_root="$(dirname "$(dirname "$base_python")")"
@@ -146,7 +142,7 @@ cp -aL "$site_packages/." "$app_root/runtime/python/lib/python3.10/site-packages
   --strip-debug \
   --no-header-files \
   --no-man-pages \
-  --compress=zip-6 \
+  --compress=2 \
   --output "$app_root/runtime/java"
 
 python3.10 - "$app_root/PACKAGE_MANIFEST.json" "$source_commit" <<'PY'

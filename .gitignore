@@ -55,3 +55,5 @@ Thumbs.db
 *.lcov
 /recordings/
 /docs/week8/evidence/report/rendered-*/
+/docs/week8/reports/generated/
+/docs/week8/portfolio/generated/

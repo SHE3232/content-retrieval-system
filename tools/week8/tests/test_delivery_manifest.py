@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import json
-from pathlib import Path
 import subprocess
 import sys
+from copy import deepcopy
+from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -12,7 +12,6 @@ import pytest
 from tools.week8.build_delivery_manifest import build_manifest, validate_manifest_data
 from tools.week8.collect_evidence import run_evidence_command
 from tools.week8.verify_delivery import verify_delivery
-
 
 COMMIT = "1" * 40
 REPOSITORY = Path(__file__).resolve().parents[3]

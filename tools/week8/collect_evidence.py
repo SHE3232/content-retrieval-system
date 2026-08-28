@@ -4,15 +4,14 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import subprocess
-from typing import Mapping, Sequence
-
+from collections.abc import Mapping, Sequence
+from datetime import datetime, timezone
+from pathlib import Path
 
 EVIDENCE_ID = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 

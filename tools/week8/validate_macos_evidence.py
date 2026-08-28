@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 VOICEOVER_CHECKS = (
     "navigation",
     "labels",
@@ -29,7 +28,7 @@ def _sha256(path: Path) -> str:
 
 def _mapping(value: object, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
-        raise ValueError(f"{label} must be an object")
+        raise TypeError(f"{label} must be an object")
     return value
 
 

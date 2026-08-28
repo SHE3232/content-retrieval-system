@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 REPOSITORY = Path(__file__).resolve().parents[3]
 LAUNCHER = REPOSITORY / "tools" / "week8" / "start-integrated-linux.sh"
 

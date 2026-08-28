@@ -3,10 +3,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path, PurePosixPath
 import tarfile
+from pathlib import Path, PurePosixPath
 from typing import Any
-
 
 RESEARCH_LICENSE = "Apple Machine Learning Research Model License"
 REQUIRED_FILES = (
@@ -37,7 +36,7 @@ def _json_member(archive: tarfile.TarFile, name: str) -> dict[str, Any]:
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(f"archive member is not valid UTF-8 JSON: {name}") from error
     if not isinstance(value, dict):
-        raise ValueError(f"archive JSON member must be an object: {name}")
+        raise TypeError(f"archive JSON member must be an object: {name}")
     return value
 
 
@@ -102,7 +101,7 @@ def validate_linux_archive(
             )
             models = model_manifest.get("models")
             if not isinstance(models, list):
-                raise ValueError("model manifest does not contain a models array")
+                raise TypeError("model manifest does not contain a models array")
             if any(
                 isinstance(model, dict)
                 and model.get("license_name") == RESEARCH_LICENSE

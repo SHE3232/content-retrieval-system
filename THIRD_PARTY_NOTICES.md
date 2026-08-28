@@ -36,7 +36,7 @@
 | TorchVision | 0.24.1 / 0.24.1+cpu | [上游许可证](https://github.com/pytorch/vision/blob/v0.24.1/LICENSE) | BSD-3-Clause | 默认发行仅采用 CPU 构建；保留许可证和第三方声明。 |
 | Transformers | 4.57.6 | [PyPI](https://pypi.org/project/transformers/4.57.6/) | Apache-2.0 | 保留许可证、NOTICE 和版权声明。 |
 
-上述表格不是传递依赖的删节许可清单。4 套 Python `uv.lock` 和 1 套 Flutter `pubspec.lock` 中的全部 383 条锁定依赖记录已经逐项核查；以 [dependency-licenses.csv](docs/dependency-licenses.csv) 为完整清单。发行归档必须同时保留各 Python wheel、Dart 包和随附原生库中提供的 `LICENSE`、`COPYING`、`NOTICE` 及版权文件，不能只保留本文件。
+上述表格不是传递依赖的删节许可清单。4 套 Python `uv.lock` 和 1 套 Flutter `pubspec.lock` 中的全部 330 条锁定依赖记录已经逐项核查；以 [dependency-licenses.csv](docs/dependency-licenses.csv) 为完整清单。发行归档必须同时保留各 Python wheel、Dart 包和随附原生库中提供的 `LICENSE`、`COPYING`、`NOTICE` 及版权文件，不能只保留本文件。
 
 ## 模型与权重
 
@@ -91,7 +91,7 @@ WAVE、NVDA（GPL）、VoiceOver（Apple 专有）和 Android Accessibility Scan
 <!-- GENERATED-DEMO-TOOLS-START -->
 ## 演示工具环境（自动生成）
 
-4 套 Python `uv.lock` + 1 套 Flutter `pubspec.lock`，共 383 条锁定依赖记录（Python 344，Dart 39）。
+4 套 Python `uv.lock` + 1 套 Flutter `pubspec.lock`，共 330 条锁定依赖记录（Python 291，Dart 39）。
 
 演示工具直接依赖：python-docx, reportlab, pillow, pypdfium2。
 <!-- GENERATED-DEMO-TOOLS-END -->

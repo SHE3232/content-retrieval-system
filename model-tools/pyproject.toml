@@ -3,7 +3,6 @@ name = "content-retrieval-model-tools"
 version = "0.1.0"
 requires-python = ">=3.10,<3.11"
 dependencies = [
-    "mobileclip",
     "numpy>=2.0",
     "sentence-transformers>=5,<6",
 ]
@@ -12,6 +11,3 @@ dependencies = [
 dev = [
     "pytest>=8.3,<9",
 ]
-
-[tool.uv.sources]
-mobileclip = { path = "../third_party/mobileclip-src/ml-mobileclip-aecfb5453d022e9deff12f81a150ea8f35194baa" }

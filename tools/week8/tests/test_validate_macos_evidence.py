@@ -8,7 +8,6 @@ import pytest
 
 from tools.week8.validate_macos_evidence import validate_macos_evidence
 
-
 COMMIT = "d" * 40
 REPOSITORY = Path(__file__).resolve().parents[3]
 BUILD_SCRIPT = REPOSITORY / "tools" / "week8" / "build_macos_release.sh"

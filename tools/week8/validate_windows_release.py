@@ -7,7 +7,6 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 from zipfile import BadZipFile, ZipFile
 
-
 Distribution = Literal["default-public", "research-only"]
 RESEARCH_LICENSE = "Apple Machine Learning Research Model License"
 RESEARCH_LICENSE_TEXT_MARKER = "Apple Machine Learning Research Model"
@@ -34,7 +33,7 @@ def _json_member(archive: ZipFile, name: str) -> dict[str, Any]:
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(f"archive member is not valid UTF-8 JSON: {name}") from error
     if not isinstance(value, dict):
-        raise ValueError(f"archive JSON member must be an object: {name}")
+        raise TypeError(f"archive JSON member must be an object: {name}")
     return value
 
 
@@ -93,7 +92,7 @@ def validate_windows_archive(
             )
             model_entries = model_manifest.get("models")
             if not isinstance(model_entries, list):
-                raise ValueError("model manifest does not contain a models array")
+                raise TypeError("model manifest does not contain a models array")
             research_entries = [
                 entry
                 for entry in model_entries

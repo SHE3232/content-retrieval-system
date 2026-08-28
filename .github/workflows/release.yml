@@ -1,0 +1,53 @@
+name: Public source release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  public-source:
+    name: Validate and package public source
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.10"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Verify tag target and clean tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+      - name: Validate public source
+        run: |
+          uv sync --project backend --locked
+          uv run --project tools/week8 --locked python -m pytest \
+            tools/week8/tests -q
+          uv run --project backend python -m pytest \
+            tools/compliance/tests tools/demo/tests -q --import-mode=importlib
+      - name: Build source archive and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/public-source dist
+          uv run --project tools/week8 --locked python tools/week8/build_clean_source.py \
+            --repository . \
+            --destination build/public-source
+          archive="dist/offline-accessible-multimodal-retrieval-${GITHUB_REF_NAME}-source.zip"
+          (cd build/public-source && zip -q -r "../../${archive}" .)
+          (cd dist && sha256sum "$(basename "${archive}")" > SHA256SUMS.txt)
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/offline-accessible-multimodal-retrieval-${{ github.ref_name }}-source.zip
+            dist/SHA256SUMS.txt

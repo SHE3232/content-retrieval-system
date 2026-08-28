@@ -9,6 +9,9 @@
 - `CLEAN_ENGINEERING_AUDIT.md`：源码清理、白名单和独立目录回归。
 - `evidence/source-audit/report.json`：Vulture 2.16 结果和框架回调复核。
 - `evidence/platform/`：Windows、Linux、macOS 原始状态与构建证据。
+- `validate_rehearsals.py`：要求两轮带时区时间戳、产物哈希和完整操作步骤的真实预演记录。
+- `validate_video.py`：用 `ffprobe` 验证五分钟、1080p、30 fps、H.264/AAC 和非零音轨。
+- `validate_github_evidence.py`：核验公开仓库、CI、标签、Release、匿名下载与交付哈希。
 
 ## 发行边界
 
@@ -17,4 +20,3 @@
 ## 完成判定
 
 `verify_delivery.py` 默认允许证据充分的 `BLOCKED` 状态，以便在构建过程中持续审计；正式结项必须增加 `--require-all-platforms`，并同时通过 GitHub 匿名访问、两轮预演、严格五分钟视频、作品集、报告结构与逐页视觉检查。缺少直接证据的门禁不得从 `BLOCKED` 改为 `PASS`。
-

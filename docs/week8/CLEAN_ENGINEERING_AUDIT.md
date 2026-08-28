@@ -2,7 +2,7 @@
 
 ## 审计结论
 
-本轮在隔离工作树 `codex/week8-finalization` 中实施清理，原始主工作区及其未提交内容未被修改。白名单公开工程从提交 `0465339d5f22666ebdde46a3b4d8b87756c136f3` 导出到独立目录，包含 420 个 Git 跟踪文件，共 5,161,759 字节。清单复核为 420/420，额外文件 0，模型权重、数据库、缓存、构建目录和录制临时文件扫描结果为 0。
+本轮在隔离工作树 `codex/week8-finalization` 中实施清理，原始主工作区及其未提交内容不参与编辑。本文记录清理策略与冻结前门禁；最终公开工程的提交号、文件数、总字节数和逐文件 SHA-256 由独立目录内的 `CLEAN_SOURCE_MANIFEST.json` 给出，并由统一 `DELIVERY_MANIFEST.json` 二次绑定，避免在冻结提交前写入会自我循环的版本号。
 
 ## 源码级清理
 
@@ -14,6 +14,8 @@
 | `tmp/docx/test_week2_sequence_diagram.py` | 导入上述不可复现脚本，在干净检出中收集失败 | 删除失效测试 | 仓库布局测试通过 |
 | `tmp/docx/build_week3_reports.py` | 仅历史计划引用；硬依赖缺失且被忽略的 `output/week3/embedding-coverage.json` | 删除不可复现脚本 | 仓库布局测试通过 |
 | Week 2 摄取时序图 | 已完成报告所用的可读图证据 | 迁入 `docs/week2/assets/` | 文件哈希进入公开工程清单 |
+| 后端与模型工具的本机 MobileCLIP 路径依赖 | 公开环境在缺少 `third_party/mobileclip-src` 时不能安装 | 从默认锁文件移除，仅在研究流程中显式安装 | 独立公开环境可安装，`mobileclip=NOT_INSTALLED` |
+| Week 8 Python 工具的导入、异常类型与重复后缀判断 | Ruff 全目录检查 | 机械整理导入并明确类型错误 | Ruff 0 issue，Week 8 回归通过 |
 
 最终 Vulture 审计为 0 个未解释发现，并记录 15 个由 FastAPI/Pydantic 框架调用、不可按文本引用数删除的路由或校验器。Flutter `analyze` 为 0 issue，因此未删除任何 Dart 变量、函数或部件。
 
@@ -36,21 +38,21 @@
 
 | 门禁 | 结果 |
 |---|---:|
-| 后端测试 | 440 passed，1 skipped |
+| 后端测试 | 445 passed，1 deselected（需要真实模型/服务的标记项未纳入本轮 CPU 快速回归） |
 | 数据集、模型工具、转换工具 | 24 passed |
-| Python 主套件合计 | 464 passed，1 skipped |
+| Python 主套件合计 | 469 passed，1 deselected |
 | Week 5 工具测试 | 7 passed |
 | Week 6 启动器/打包/验收测试 | 116 passed |
 | 开源合规测试 | 8 passed |
 | 演示材料测试 | 33 passed |
-| Week 8 清理/导出测试 | 14 passed，1 skipped（当前 Windows 主机不允许创建真实符号链接；等价 fail-closed 路径用例已通过） |
+| Week 8 清理、发行、报告、作品集与外部门禁测试 | 88 passed，1 skipped（当前 Windows 主机不允许创建真实符号链接；等价 fail-closed 路径用例已通过） |
 | Flutter 静态分析 | 0 issues |
 | Flutter 测试 | 249 passed |
-| 锁定依赖许可证清单 | 383 rows verified |
-| 白名单文件复核 | 420 manifest files / 420 actual files / 0 extras |
-| 禁止内容扫描 | 0 findings |
+| 锁定依赖许可证清单 | 330 rows verified |
+| 白名单文件复核 | 由冻结提交生成后要求 manifest files = actual files，extras = 0 |
+| 禁止内容扫描 | 由冻结提交导出后要求 0 findings |
 
-Python 主套件由 `backend/tests` 的 440 项和 `datasets`、`model-tools`、`conversion-tools` 的 24 项组成。Week 5、Week 6 与合规目录因存在同名测试模块，分别运行并分别核对退出码，避免 pytest 默认导入模式造成收集冲突。
+Python 主套件由 `backend/tests` 的 445 项和 `datasets`、`model-tools`、`conversion-tools` 的 24 项组成。Week 5、Week 6 与合规目录因存在同名测试模块，分别运行并分别核对退出码，避免 pytest 默认导入模式造成收集冲突。
 
 ## 复现命令
 

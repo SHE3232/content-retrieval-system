@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 from tools.week8.source_audit import audit_paths
-
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 SCRIPT = REPOSITORY / "tools" / "week8" / "source_audit.py"
@@ -33,27 +32,7 @@ def test_audit_paths_reports_unused_import(tmp_path: Path) -> None:
 def test_audit_paths_records_framework_callbacks_as_reviewed_exemptions(tmp_path: Path) -> None:
     source = tmp_path / "callbacks.py"
     source.write_text(
-        "\n".join(
-            (
-                "from fastapi import FastAPI",
-                "from pydantic import BaseModel, field_validator",
-                "",
-                "app = FastAPI()",
-                "",
-                "@app.get('/health')",
-                "def health():",
-                "    return {'status': 'ok'}",
-                "",
-                "class Payload(BaseModel):",
-                "    value: str",
-                "",
-                "    @field_validator('value')",
-                "    @classmethod",
-                "    def validate_value(cls, value):",
-                "        return value.strip() if cls else value",
-                "",
-            )
-        ),
+        "from fastapi import FastAPI\nfrom pydantic import BaseModel, field_validator\n\napp = FastAPI()\n\n@app.get('/health')\ndef health():\n    return {'status': 'ok'}\n\nclass Payload(BaseModel):\n    value: str\n\n    @field_validator('value')\n    @classmethod\n    def validate_value(cls, value):\n        return value.strip() if cls else value\n",
         encoding="utf-8",
     )
 
@@ -106,16 +85,7 @@ def test_audit_paths_excludes_virtualenv_and_mock_patch_decorator(tmp_path: Path
     project = tmp_path / "project"
     project.mkdir()
     (project / "test_sample.py").write_text(
-        "\n".join(
-            (
-                "from unittest.mock import patch",
-                "",
-                "@patch('example.value')",
-                "def test_value(mock_value):",
-                "    assert mock_value",
-                "",
-            )
-        ),
+        "from unittest.mock import patch\n\n@patch('example.value')\ndef test_value(mock_value):\n    assert mock_value\n",
         encoding="utf-8",
     )
     site_packages = project / ".venv" / "Lib" / "site-packages"

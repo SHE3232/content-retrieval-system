@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import io
 import json
-from pathlib import Path
 import tarfile
+from pathlib import Path
 
 import pytest
 
 from tools.week8.validate_linux_release import validate_linux_archive
-
 
 COMMIT = "c" * 40
 REPOSITORY = Path(__file__).resolve().parents[3]
@@ -122,3 +121,5 @@ def test_linux_builder_contains_fail_closed_release_policy() -> None:
     assert "sha256sum" in source
     assert "PACKAGE_MANIFEST.json" in source
     assert "MobileCLIP weights are not included" in source
+    assert "THIRD_PARTY_SOURCE_DIR" not in source
+    assert "third_party/mobileclip-src" not in source

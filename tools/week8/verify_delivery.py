@@ -6,9 +6,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path, PurePosixPath
 import subprocess
 import sys
+from pathlib import Path, PurePosixPath
 from typing import Any
 from zipfile import BadZipFile, ZipFile
 
@@ -16,7 +16,6 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from tools.week8.build_delivery_manifest import validate_manifest_data
-
 
 RESTRICTED_PUBLIC_SUFFIXES = (
     ".ckpt",
@@ -58,8 +57,7 @@ def _embedded_commit(package: ZipFile, names: list[str]) -> str | None:
     candidates = [
         name
         for name in names
-        if name.endswith("CLEAN_SOURCE_MANIFEST.json")
-        or name.endswith("PACKAGE_MANIFEST.json")
+        if name.endswith(("CLEAN_SOURCE_MANIFEST.json", "PACKAGE_MANIFEST.json"))
     ]
     for name in candidates:
         try:
@@ -118,7 +116,7 @@ def verify_delivery(
     delivery_root = delivery_root.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
-        raise ValueError("delivery manifest must be a JSON object")
+        raise TypeError("delivery manifest must be a JSON object")
     errors = validate_manifest_data(manifest)
     if errors:
         raise ValueError("invalid delivery manifest: " + "; ".join(errors))

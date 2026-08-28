@@ -91,7 +91,7 @@ def test_repository_inventory_covers_every_locked_component() -> None:
         rendered = list(csv.DictReader(inventory_file))
 
     assert rendered == rows
-    assert len(rows) == 383
+    assert len(rows) == 330
     assert not [
         row for row in rows if row["review_status"] == "review-required"
     ]
@@ -99,21 +99,39 @@ def test_repository_inventory_covers_every_locked_component() -> None:
 
 def test_compliance_summary_matches_lock_record_counts() -> None:
     report = (REPOSITORY / "docs/OPEN_SOURCE_COMPLIANCE.md").read_text(encoding="utf-8")
-    assert "252 个唯一的" in report
-    assert "| 模型工具 Python | `model-tools/uv.lock` | 99 |" in report
+    assert "234 个唯一的" in report
+    assert "| 模型工具 Python | `model-tools/uv.lock` | 65 |" in report
     assert "| 转换工具 Python | `conversion-tools/uv.lock` | 84 |" in report
 
 
 def test_third_party_notices_has_demo_environment_summary() -> None:
     notices = (REPOSITORY / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
-    for phrase in ("4 套 Python", "1 套 Flutter", "383 条锁定依赖记录", "演示工具", "python-docx", "reportlab", "pillow", "pypdfium2"):
+    for phrase in (
+        "4 套 Python",
+        "1 套 Flutter",
+        "330 条锁定依赖记录",
+        "演示工具",
+        "python-docx",
+        "reportlab",
+        "pillow",
+        "pypdfium2",
+    ):
         assert phrase in notices
     assert "三套 Python" not in notices
 
 
 def test_check_rejects_tampered_generated_notices(tmp_path: Path) -> None:
     source = (REPOSITORY / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
-    tampered = source.replace("383 条锁定依赖记录", "382 条锁定依赖记录")
+    tampered = source.replace("330 条锁定依赖记录", "329 条锁定依赖记录")
     path = tmp_path / "THIRD_PARTY_NOTICES.md"
     path.write_text(tampered, encoding="utf-8")
-    assert not validate_third_party_notices(REPOSITORY, list(build_inventory(REPOSITORY, json.loads((REPOSITORY / "tools/compliance/approved-licenses.json").read_text(encoding="utf-8")))), path)
+    approvals = json.loads(
+        (REPOSITORY / "tools/compliance/approved-licenses.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert not validate_third_party_notices(
+        REPOSITORY,
+        list(build_inventory(REPOSITORY, approvals)),
+        path,
+    )

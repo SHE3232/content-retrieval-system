@@ -32,9 +32,9 @@ java -version
 
 ### 1.1 恢复固定版本的 MobileCLIP 源码
 
-后端锁定 Apple MobileCLIP 源码提交
-`aecfb5453d022e9deff12f81a150ea8f35194baa`。解压后的目录名与
-`backend/pyproject.toml` 和 `model-tools/pyproject.toml` 中的本地依赖一致。
+图文语义研究配置锁定 Apple MobileCLIP 源码提交
+`aecfb5453d022e9deff12f81a150ea8f35194baa`。默认公开版不需要该源码；只有启用
+MobileCLIP 研究能力时才执行本节。
 
 ```powershell
 New-Item -ItemType Directory -Force `
@@ -64,7 +64,19 @@ uv sync --project backend --locked
 ```
 
 该命令应生成 `backend/.venv/Scripts/python.exe`。启动器要求解释器版本严格为 Python
-3.10，并验证 `uvicorn` 可以导入。
+3.10，并验证 `uvicorn` 可以导入。默认依赖锁不引用仓库外的本机路径，因此公开源码可直接同步。
+
+若需要图文语义研究能力，在完成上一步源码校验后显式安装固定源码：
+
+```powershell
+uv pip install `
+  --python 'backend/.venv/Scripts/python.exe' `
+  $mobileClipSource
+```
+
+模型评测工具使用独立环境时同样先执行 `uv sync --project model-tools --locked`，再把上述
+`--python` 路径改为 `model-tools/.venv/Scripts/python.exe`。MobileCLIP 源码采用 MIT，
+预训练权重仍受 Apple Machine Learning Research Model License 约束。
 
 ### 1.3 下载固定 revision 的文本模型
 

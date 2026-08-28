@@ -9,8 +9,8 @@
 
 本次扫描覆盖四套 Python `uv.lock` 和一套 Flutter `pubspec.lock`：
 
-- 252 个唯一的“生态 + 名称 + 版本”审核项；
-- 383 条按环境保留的依赖记录，其中 345 条 `approved`、34 条 `restricted`、4 条 `project-owned`；
+- 234 个唯一的“生态 + 名称 + 版本”审核项；
+- 330 条按环境保留的依赖记录，其中 292 条 `approved`、34 条 `restricted`、4 条 `project-owned`；
 - 0 条缺失许可证、0 条缺失证据、0 条 `review-required`；
 - 17 个唯一受限组件，均为 Linux CUDA 路径下的 NVIDIA 专有传递依赖。
 
@@ -22,12 +22,12 @@
 
 | 环境 | 锁文件 | 记录数 |
 |---|---|---:|
-| 后端 Python | `backend/uv.lock` | 152 |
-| 模型工具 Python | `model-tools/uv.lock` | 99 |
+| 后端 Python | `backend/uv.lock` | 133 |
+| 模型工具 Python | `model-tools/uv.lock` | 65 |
 | 转换工具 Python | `conversion-tools/uv.lock` | 84 |
 | 演示工具 Python | `tools/demo/uv.lock` | 9 |
 | Flutter/Dart | `frontend/pubspec.lock` | 39 |
-| **合计** |  | **383** |
+| **合计** |  | **330** |
 
 同一组件出现在多个环境时保留多行，以便判断它在何处被直接或传递引入；审核基线按唯一名称和版本去重。项目自身的四个 Python 包标记为 `project-owned`。
 
@@ -78,7 +78,7 @@ Natural Questions 衍生样本保守按 CC BY-SA 3.0 处理；COCO 子集的 200
 
 | 发行类型 | 可包含 | 必须排除/额外条件 | 结论 |
 |---|---|---|---|
-| 公开源代码 | 项目代码、文档、锁文件、数据准备脚本、MobileCLIP MIT 源代码及其声明 | 排除模型权重、下载的数据二进制、用户文件和本地缓存 | 可标为“项目自有部分 Apache-2.0”；第三方按各自许可证。 |
+| 公开源代码 | 项目代码、文档、锁文件和数据准备脚本 | 排除 MobileCLIP 本机源码副本、模型权重、下载的数据二进制、用户文件和本地缓存 | 可标为“项目自有部分 Apache-2.0”；研究依赖按说明显式安装并保留其许可证。 |
 | 默认 CPU 二进制 | 上述内容、核准的 CPU wheels、Tika、许可已核准的便携运行时 | 排除 MobileCLIP-S0 权重、NVIDIA/CUDA、Oracle JDK、NQ/COCO、用户内容 | 通过依赖清单和归档内许可证检查后可发布。图片语义功能需由用户自行提供合规权重，或使用另行核准的替代模型。 |
 | 非商业研究包 | 默认包内容 + MobileCLIP-S0 权重 | 必须显式确认研究用途；随附 Apple 模型许可和模型卡；不得宣传为通用开源或商业包 | 仅限许可证允许的非商业研究场景。 |
 
