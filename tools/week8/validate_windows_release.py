@@ -64,6 +64,7 @@ def validate_windows_archive(
         with ZipFile(path) as archive:
             infos = archive.infolist()
             names = [info.filename.replace("\\", "/") for info in infos]
+            lower_names = [name.casefold() for name in names]
             if len(names) != len(set(names)):
                 raise ValueError("archive contains duplicate member paths")
             for name in names:
@@ -116,6 +117,13 @@ def validate_windows_archive(
                     raise ValueError(
                         "public package contains a research-only model"
                     )
+                if any(
+                    "/site-packages/mobileclip/" in name
+                    for name in lower_names
+                ):
+                    raise ValueError(
+                        "public package contains the MobileCLIP runtime"
+                    )
             else:
                 if package_manifest.get("distribution_class") != "research-only":
                     raise ValueError(
@@ -143,6 +151,13 @@ def validate_windows_archive(
                 ):
                     raise ValueError(
                         "research package is missing the model license text"
+                    )
+                if not any(
+                    name.endswith("/site-packages/mobileclip/__init__.py")
+                    for name in lower_names
+                ):
+                    raise ValueError(
+                        "research package is missing the MobileCLIP runtime"
                     )
     except BadZipFile as error:
         raise ValueError(f"Windows archive is not a valid ZIP: {path}") from error

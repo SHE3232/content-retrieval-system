@@ -22,6 +22,7 @@ def _write_archive(
     include_legal: bool = True,
     release_frontend: bool = True,
     include_research_model: bool = False,
+    include_research_runtime: bool = True,
     extra_bytes: int = 0,
 ) -> None:
     model_entries = [
@@ -76,6 +77,11 @@ def _write_archive(
                 "app/models/mobileclip/mobileclip_s0.pt",
                 b"research-weight",
             )
+            if include_research_runtime:
+                archive.writestr(
+                    "app/runtime/python/Lib/site-packages/mobileclip/__init__.py",
+                    b"# research runtime fixture\n",
+                )
             archive.writestr(
                 "app/models/mobileclip/LICENSE_MODELS",
                 (
@@ -161,6 +167,24 @@ def test_research_archive_requires_license_and_restricted_manifest(
     )
 
     assert result["distribution"] == "research-only"
+
+
+def test_research_archive_requires_mobileclip_runtime(tmp_path: Path) -> None:
+    archive = tmp_path / "research-without-runtime.zip"
+    _write_archive(
+        archive,
+        distribution_class="research-only",
+        include_research_model=True,
+        include_research_runtime=False,
+    )
+
+    with pytest.raises(ValueError, match="MobileCLIP runtime"):
+        validate_windows_archive(
+            archive,
+            expected_commit=COMMIT,
+            distribution="research-only",
+            size_limit_bytes=1_000_000,
+        )
 
 
 def test_windows_builder_rejects_abbreviated_commit_before_other_inputs() -> None:
@@ -289,3 +313,12 @@ def test_windows_builder_keeps_mobileclip_source_out_of_public_package() -> None
     assert "$publicThirdPartySource = Join-Path $runRoot 'public-third-party-omitted'" in source
     assert "-ThirdPartySourceDir $publicThirdPartySource" in source
     assert "-ThirdPartySourceDir $researchThirdPartySource" in source
+
+
+def test_windows_builder_uses_separate_research_python_runtime() -> None:
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    assert "ResearchPythonRuntimeDir" in source
+    assert "$researchPythonRuntime -eq $pythonRuntime" in source
+    assert "import mobileclip" in source
+    assert "$researchPackageCommon['PythonRuntimeDir'] = $researchPythonRuntime" in source

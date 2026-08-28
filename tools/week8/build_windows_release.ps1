@@ -6,6 +6,7 @@ param(
     [string]$SourceModelManifestPath,
     [string]$FrontendReleaseDir,
     [string]$PythonRuntimeDir,
+    [string]$ResearchPythonRuntimeDir,
     [string]$JavaRuntimeDir,
     [string]$ResearchThirdPartySourceDir,
     [string]$TikaJar,
@@ -103,6 +104,23 @@ $pythonRuntime = Resolve-RequiredDirectory `
 $pythonExecutable = Resolve-RequiredFile `
     -Path (Join-Path $pythonRuntime 'Scripts/python.exe') `
     -Label 'Python executable'
+
+if ([string]::IsNullOrWhiteSpace($ResearchPythonRuntimeDir)) {
+    throw 'ResearchPythonRuntimeDir must identify a separate research-only Python runtime'
+}
+$researchPythonRuntime = Resolve-RequiredDirectory `
+    -Path $ResearchPythonRuntimeDir `
+    -Label 'Research-only Python runtime'
+$researchPythonExecutable = Resolve-RequiredFile `
+    -Path (Join-Path $researchPythonRuntime 'Scripts/python.exe') `
+    -Label 'Research-only Python executable'
+if ($researchPythonRuntime -eq $pythonRuntime) {
+    throw 'Research-only Python runtime must differ from the public Python runtime'
+}
+& $researchPythonExecutable -c 'import mobileclip; print(mobileclip.__file__)'
+if ($LASTEXITCODE -ne 0) {
+    throw 'Research-only Python runtime cannot import mobileclip'
+}
 
 if ([string]::IsNullOrWhiteSpace($JavaRuntimeDir)) {
     throw 'JavaRuntimeDir must identify a redistributable OpenJDK runtime'
@@ -280,8 +298,10 @@ $packageCommon = @{
     -OutputZip $publicIntermediate `
     -ReplaceExactTarget
 
+$researchPackageCommon = $packageCommon.Clone()
+$researchPackageCommon['PythonRuntimeDir'] = $researchPythonRuntime
 & (Join-Path $repository 'tools/week6/package_stable_build.ps1') `
-    @packageCommon `
+    @researchPackageCommon `
     -ModelRoot $researchModelRoot `
     -ModelManifestPath (Join-Path $researchModelRoot 'model-manifest.json') `
     -ThirdPartySourceDir $researchThirdPartySource `
