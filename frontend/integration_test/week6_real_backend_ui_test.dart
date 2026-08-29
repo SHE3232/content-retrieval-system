@@ -77,7 +77,7 @@ void main() {
           tester,
           () => library.state != LibraryViewState.loading,
         );
-        await tester.tap(find.widgetWithText(FilledButton, '添加文件夹'));
+        await tester.tap(find.widgetWithText(FilledButton, '添加资料文件夹'));
         operations['add_directory'] = picker.calls == 1;
         await _pumpUntil(
           tester,
@@ -95,9 +95,13 @@ void main() {
         operations['open_file'] = launcher.paths.contains(indexedTarget.path);
         operations['copy_path'] = clipboard.paths.contains(indexedTarget.path);
 
-        await tester.tap(find.byTooltip('重新索引 ${indexedTarget.name}'));
+        await tester.tap(
+          find.byKey(Key('more-actions-${indexedTarget.fileId}')),
+        );
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(FilledButton, '重新索引'));
+        await tester.tap(find.text('重新索引文件'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, '重新索引文件'));
         await _pumpUntil(
           tester,
           () => !library.isMutationInProgress,
@@ -198,9 +202,13 @@ void main() {
         await tester.pump();
         final removeTarget = library.files.first;
         await tester.ensureVisible(find.text(removeTarget.name));
-        await tester.tap(find.byTooltip('从索引移除 ${removeTarget.name}'));
+        await tester.tap(
+          find.byKey(Key('more-actions-${removeTarget.fileId}')),
+        );
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(FilledButton, '从索引移除'));
+        await tester.tap(find.text('从索引库移除'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, '从索引库移除'));
         await _pumpUntil(tester, () => !library.isMutationInProgress);
         operations['delete_index'] = library.total == 4;
 
