@@ -143,3 +143,13 @@ def test_linux_builder_contains_fail_closed_release_policy() -> None:
     assert "THIRD_PARTY_SOURCE_DIR" not in source
     assert "third_party/mobileclip-src" not in source
     assert "Backend lock contains a CUDA/NVIDIA runtime" in source
+
+
+def test_linux_builder_excludes_nonessential_case_colliding_terminfo_tree() -> None:
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'cp -aL "$base_root" "$app_root/runtime/python"' not in source
+    assert 'cp -aL "$base_root/bin" "$app_root/runtime/python/"' in source
+    assert 'cp -aL "$base_root/lib" "$app_root/runtime/python/"' in source
+    assert 'cp -aL "$base_root/include" "$app_root/runtime/python/"' in source
+    assert 'cp -aL "$base_root/share" "$app_root/runtime/python/"' not in source

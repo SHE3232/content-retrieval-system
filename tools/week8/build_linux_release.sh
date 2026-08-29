@@ -135,8 +135,14 @@ cp -aL "$repo/backend/pyproject.toml" "$repo/backend/uv.lock" "$runtime_source/b
 "$uv_bin" sync --project "$runtime_source/backend" --locked --no-dev
 base_python="$($uv_bin python find 3.10)"
 base_root="$(dirname "$(dirname "$base_python")")"
-mkdir -p "$app_root/runtime"
-cp -aL "$base_root" "$app_root/runtime/python"
+mkdir -p "$app_root/runtime/python"
+cp -aL "$base_root/bin" "$app_root/runtime/python/"
+cp -aL "$base_root/include" "$app_root/runtime/python/"
+cp -aL "$base_root/lib" "$app_root/runtime/python/"
+if [[ -f "$base_root/BUILD" ]]; then
+  cp -aL "$base_root/BUILD" "$app_root/runtime/python/"
+fi
+require_file "$app_root/runtime/python/bin/python3.10" 'Bundled Linux Python'
 site_packages="$runtime_source/backend/.venv/lib/python3.10/site-packages"
 require_dir "$site_packages" 'Linux virtualenv site-packages'
 cp -aL "$site_packages/." "$app_root/runtime/python/lib/python3.10/site-packages/"
