@@ -56,8 +56,13 @@ def test_root_gitignore_excludes_week8_generated_and_scratch_trees() -> None:
 
 def test_cross_platform_shell_scripts_are_forced_to_lf() -> None:
     if not (REPOSITORY / ".git").exists():
-        attributes = (REPOSITORY / ".gitattributes").read_text(encoding="utf-8")
-        assert "*.sh text eol=lf" in attributes.splitlines()
+        for relative_path in (
+            "tools/week8/build_linux_release.sh",
+            "tools/week8/start-integrated-linux.sh",
+        ):
+            content = (REPOSITORY / relative_path).read_bytes()
+            assert b"\n" in content
+            assert b"\r\n" not in content
         return
 
     completed = subprocess.run(
