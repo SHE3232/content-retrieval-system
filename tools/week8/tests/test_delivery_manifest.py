@@ -78,7 +78,9 @@ def test_validate_manifest_accepts_explicit_blocked_platforms() -> None:
     [
         (lambda data: data.update(source_commit="abc123"), "full lowercase Git commit"),
         (
-            lambda data: data["platforms"]["windows"].update(status="PASS", evidence_paths=[]),
+            lambda data: data["platforms"]["windows"].update(
+                status="PASS", evidence_paths=[]
+            ),
             "PASS requires evidence_paths",
         ),
         (
@@ -115,18 +117,25 @@ def test_validate_manifest_requires_artifact_hash_size_class_and_provenance() ->
     errors = validate_manifest_data(data)
 
     assert any("bytes must be a positive integer" in error for error in errors)
-    assert any("sha256 must be 64 lowercase hexadecimal characters" in error for error in errors)
+    assert any(
+        "sha256 must be 64 lowercase hexadecimal characters" in error
+        for error in errors
+    )
     assert any("provenance is required" in error for error in errors)
 
 
 def _git_repository(root: Path) -> str:
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-    subprocess.run(["git", "config", "user.email", "week8@example.invalid"], cwd=root, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "week8@example.invalid"], cwd=root, check=True
+    )
     subprocess.run(["git", "config", "user.name", "Week 8 Test"], cwd=root, check=True)
     (root / "README.md").write_text("fixture\n", encoding="utf-8")
     subprocess.run(["git", "add", "README.md"], cwd=root, check=True)
     subprocess.run(["git", "commit", "-qm", "fixture"], cwd=root, check=True)
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    return subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=root, text=True
+    ).strip()
 
 
 def test_run_evidence_command_writes_logs_and_machine_metadata(tmp_path: Path) -> None:
@@ -148,20 +157,30 @@ def test_run_evidence_command_writes_logs_and_machine_metadata(tmp_path: Path) -
     assert record["command"] == [sys.executable, "-c", "print('hello evidence')"]
     assert record["host"]["os"]
     assert record["host"]["python"]
-    assert (evidence_dir / record["stdout_path"]).read_text(encoding="utf-8") == "hello evidence\n"
+    assert (evidence_dir / record["stdout_path"]).read_text(
+        encoding="utf-8"
+    ) == "hello evidence\n"
     assert (evidence_dir / record["stderr_path"]).read_text(encoding="utf-8") == ""
-    persisted = json.loads((evidence_dir / "sample-pass.json").read_text(encoding="utf-8"))
+    persisted = json.loads(
+        (evidence_dir / "sample-pass.json").read_text(encoding="utf-8")
+    )
     assert persisted == record
 
 
-def test_run_evidence_command_records_nonzero_exit_without_claiming_pass(tmp_path: Path) -> None:
+def test_run_evidence_command_records_nonzero_exit_without_claiming_pass(
+    tmp_path: Path,
+) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
     _git_repository(repository)
 
     record = run_evidence_command(
         evidence_id="sample-fail",
-        command=[sys.executable, "-c", "import sys; print('bad', file=sys.stderr); sys.exit(3)"],
+        command=[
+            sys.executable,
+            "-c",
+            "import sys; print('bad', file=sys.stderr); sys.exit(3)",
+        ],
         repository=repository,
         evidence_dir=tmp_path / "evidence",
     )
@@ -171,7 +190,9 @@ def test_run_evidence_command_records_nonzero_exit_without_claiming_pass(tmp_pat
     assert record["error"] == "command exited with status 3"
 
 
-def test_build_manifest_hashes_declared_artifacts_and_uses_exact_head(tmp_path: Path) -> None:
+def test_build_manifest_hashes_declared_artifacts_and_uses_exact_head(
+    tmp_path: Path,
+) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
     commit = _git_repository(repository)
@@ -282,7 +303,9 @@ def test_verify_delivery_accepts_consistent_blocked_state_but_all_platform_gate_
         )
 
 
-def test_verify_delivery_rejects_restricted_weight_in_public_zip(tmp_path: Path) -> None:
+def test_verify_delivery_rejects_restricted_weight_in_public_zip(
+    tmp_path: Path,
+) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
     commit = _git_repository(repository)
@@ -290,7 +313,9 @@ def test_verify_delivery_rejects_restricted_weight_in_public_zip(tmp_path: Path)
     delivery_root.mkdir()
     archive = delivery_root / "public.zip"
     with ZipFile(archive, "w", compression=ZIP_DEFLATED) as package:
-        package.writestr("CLEAN_SOURCE_MANIFEST.json", json.dumps({"source_commit": commit}))
+        package.writestr(
+            "CLEAN_SOURCE_MANIFEST.json", json.dumps({"source_commit": commit})
+        )
         package.writestr("models/mobileclip/model.safetensors", b"restricted")
     manifest = _blocked_manifest()
     manifest["source_commit"] = commit
@@ -300,6 +325,74 @@ def test_verify_delivery_rejects_restricted_weight_in_public_zip(tmp_path: Path)
             "bytes": archive.stat().st_size,
             "sha256": __import__("hashlib").sha256(archive.read_bytes()).hexdigest(),
             "distribution_class": "public-source",
+            "provenance": "test",
+        }
+    ]
+    _write_gate_evidence(repository, manifest)
+    manifest_path = delivery_root / "DELIVERY_MANIFEST.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="restricted public archive member"):
+        verify_delivery(repository, delivery_root, manifest_path)
+
+
+def test_verify_delivery_allows_frozen_text_model_in_default_public_zip(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    commit = _git_repository(repository)
+    delivery_root = tmp_path / "delivery"
+    delivery_root.mkdir()
+    archive = delivery_root / "default-public.zip"
+    with ZipFile(archive, "w", compression=ZIP_DEFLATED) as package:
+        package.writestr("PACKAGE_MANIFEST.json", json.dumps({"source_commit": commit}))
+        package.writestr(
+            "app/models/text/text-multilingual-v1/model.safetensors", b"text"
+        )
+        package.writestr(
+            "app/runtime/python/site-packages/distutils-precedence.pth", b"runtime"
+        )
+    manifest = _blocked_manifest()
+    manifest["source_commit"] = commit
+    manifest["artifacts"] = [
+        {
+            "path": "default-public.zip",
+            "bytes": archive.stat().st_size,
+            "sha256": __import__("hashlib").sha256(archive.read_bytes()).hexdigest(),
+            "distribution_class": "default-public",
+            "provenance": "test",
+        }
+    ]
+    _write_gate_evidence(repository, manifest)
+    manifest_path = delivery_root / "DELIVERY_MANIFEST.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    report = verify_delivery(repository, delivery_root, manifest_path)
+
+    assert report["status"] == "PASS"
+
+
+def test_verify_delivery_rejects_mobileclip_in_default_public_zip(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    commit = _git_repository(repository)
+    delivery_root = tmp_path / "delivery"
+    delivery_root.mkdir()
+    archive = delivery_root / "default-public.zip"
+    with ZipFile(archive, "w", compression=ZIP_DEFLATED) as package:
+        package.writestr("PACKAGE_MANIFEST.json", json.dumps({"source_commit": commit}))
+        package.writestr("app/models/mobileclip/mobileclip_s0.pt", b"restricted")
+    manifest = _blocked_manifest()
+    manifest["source_commit"] = commit
+    manifest["artifacts"] = [
+        {
+            "path": "default-public.zip",
+            "bytes": archive.stat().st_size,
+            "sha256": __import__("hashlib").sha256(archive.read_bytes()).hexdigest(),
+            "distribution_class": "default-public",
             "provenance": "test",
         }
     ]

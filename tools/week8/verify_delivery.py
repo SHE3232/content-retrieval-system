@@ -87,8 +87,29 @@ def _verify_zip(path: Path, artifact: dict[str, Any], source_commit: str) -> Non
             if distribution_class in {"public-source", "default-public"}:
                 for name in names:
                     lowered = name.lower()
-                    if lowered.endswith(RESTRICTED_PUBLIC_SUFFIXES) or "third_party/mobileclip-src/" in lowered:
+                    is_weight = lowered.endswith(RESTRICTED_PUBLIC_SUFFIXES)
+                    is_mobileclip_payload = any(
+                        marker in lowered
+                        for marker in (
+                            "third_party/mobileclip-src/",
+                            "models/mobileclip/",
+                            "site-packages/mobileclip/",
+                            "site-packages/mobileclip-",
+                        )
+                    )
+                    if is_mobileclip_payload:
                         raise ValueError(f"restricted public archive member: {name}")
+                    if distribution_class == "public-source" and is_weight:
+                        raise ValueError(f"restricted public archive member: {name}")
+                    if distribution_class == "default-public" and is_weight:
+                        is_frozen_text_model = "models/text/" in lowered
+                        is_python_path_file = (
+                            "site-packages/" in lowered and lowered.endswith(".pth")
+                        )
+                        if not (is_frozen_text_model or is_python_path_file):
+                            raise ValueError(
+                                f"restricted public archive member: {name}"
+                            )
             elif distribution_class == "research-only":
                 missing = [
                     suffix
@@ -124,7 +145,9 @@ def verify_delivery(
         ["git", "rev-parse", "HEAD"], cwd=repository, text=True
     ).strip()
     if manifest["source_commit"] != head:
-        raise ValueError("delivery manifest source_commit does not match repository HEAD")
+        raise ValueError(
+            "delivery manifest source_commit does not match repository HEAD"
+        )
 
     for gate in manifest["tests"].values():
         _safe_file(repository, gate["evidence_path"], label="test evidence")
