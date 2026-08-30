@@ -153,3 +153,10 @@ def test_linux_builder_excludes_nonessential_case_colliding_terminfo_tree() -> N
     assert 'cp -aL "$base_root/lib" "$app_root/runtime/python/"' in source
     assert 'cp -aL "$base_root/include" "$app_root/runtime/python/"' in source
     assert 'cp -aL "$base_root/share" "$app_root/runtime/python/"' not in source
+
+
+def test_linux_builder_dereferences_archive_links() -> None:
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+    assert "--dereference" in source
+    assert "--hard-dereference" in source

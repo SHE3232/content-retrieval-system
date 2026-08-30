@@ -180,7 +180,8 @@ archive="$output_root/offline-retrieval-v1.0.0-linux-x64.tar.gz"
   printf 'Output archive already exists: %s\n' "$archive" >&2
   exit 1
 }
-tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+tar --dereference --hard-dereference \
+  --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
   -C "$run_root" -czf "$archive" app
 
 python3.10 "$repo/tools/week8/validate_linux_release.py" "$archive" \
