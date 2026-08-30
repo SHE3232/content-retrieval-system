@@ -166,6 +166,6 @@ def test_linux_builder_hardlinks_same_filesystem_runtime_staging() -> None:
     source = BUILD_SCRIPT.read_text(encoding="utf-8")
 
     assert (
-        'cp -alL "$site_packages/." '
+        'cp -aflL "$site_packages/." '
         '"$app_root/runtime/python/lib/python3.10/site-packages/"'
     ) in source

@@ -145,7 +145,7 @@ fi
 require_file "$app_root/runtime/python/bin/python3.10" 'Bundled Linux Python'
 site_packages="$runtime_source/backend/.venv/lib/python3.10/site-packages"
 require_dir "$site_packages" 'Linux virtualenv site-packages'
-cp -alL "$site_packages/." "$app_root/runtime/python/lib/python3.10/site-packages/"
+cp -aflL "$site_packages/." "$app_root/runtime/python/lib/python3.10/site-packages/"
 
 "$linux_jdk/bin/jlink" \
   --add-modules java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.sql,java.xml,jdk.crypto.ec,jdk.unsupported \
