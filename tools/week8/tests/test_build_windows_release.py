@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -12,6 +13,9 @@ from tools.week8.validate_windows_release import validate_windows_archive
 COMMIT = "a" * 40
 REPOSITORY = Path(__file__).resolve().parents[3]
 BUILD_SCRIPT = REPOSITORY / "tools" / "week8" / "build_windows_release.ps1"
+WINDOWS_ONLY = pytest.mark.skipif(
+    os.name != "nt", reason="requires Windows PowerShell"
+)
 
 
 def _write_archive(
@@ -187,6 +191,7 @@ def test_research_archive_requires_mobileclip_runtime(tmp_path: Path) -> None:
         )
 
 
+@WINDOWS_ONLY
 def test_windows_builder_rejects_abbreviated_commit_before_other_inputs() -> None:
     completed = subprocess.run(
         [
@@ -236,6 +241,7 @@ def _run_builder_validation(commit: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+@WINDOWS_ONLY
 def test_windows_builder_rejects_source_commit_mismatch() -> None:
     completed = _run_builder_validation("b" * 40)
 
@@ -243,6 +249,7 @@ def test_windows_builder_rejects_source_commit_mismatch() -> None:
     assert "does not match repository HEAD" in completed.stdout + completed.stderr
 
 
+@WINDOWS_ONLY
 def test_windows_builder_rejects_dirty_worktree(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
