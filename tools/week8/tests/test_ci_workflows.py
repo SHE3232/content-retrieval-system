@@ -38,3 +38,9 @@ def test_release_workflow_is_tag_only_and_uploads_no_research_artifact() -> None
     assert "softprops/action-gh-release@v2" in source
     assert "research-only" not in source.lower()
     assert "MobileCLIP" not in source
+
+
+def test_week8_workflow_commands_can_import_local_validator_modules() -> None:
+    for workflow in (CI, RELEASE):
+        source = workflow.read_text(encoding="utf-8")
+        assert "PYTHONPATH: tools/week8" in source

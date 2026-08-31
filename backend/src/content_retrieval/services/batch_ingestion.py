@@ -95,57 +95,58 @@ class BatchIngestionService:
 
         for source in paths:
             source_path = Path(source).expanduser()
-            try:
-                resolved = source_path.resolve(strict=True)
-            except FileNotFoundError:
-                missing = source_path.absolute()
+            normalized = source_path.resolve(strict=False)
+            if not self._is_authorized(normalized, authorized_roots):
                 expanded = [
                     _Candidate(
-                        missing,
+                        normalized,
                         explicit=True,
-                        error=PathNotFoundError(missing),
+                        error=PathNotAuthorizedError(normalized),
                     )
                 ]
             else:
-                if not self._is_authorized(resolved, authorized_roots):
+                try:
+                    resolved = source_path.resolve(strict=True)
+                except FileNotFoundError:
                     expanded = [
                         _Candidate(
-                            resolved,
+                            normalized,
                             explicit=True,
-                            error=PathNotAuthorizedError(resolved),
+                            error=PathNotFoundError(normalized),
                         )
                     ]
-                elif resolved.is_file():
-                    expanded = [_Candidate(resolved, explicit=True)]
                 else:
-                    children = (
-                        resolved.rglob("*") if recursive else resolved.iterdir()
-                    )
-                    child_paths = sorted(
-                        (path for path in children if path.is_file()),
-                        key=lambda path: self._sort_key(resolved, path),
-                    )
-                    expanded = []
-                    for path in child_paths:
-                        try:
-                            child = path.resolve(strict=True)
-                        except FileNotFoundError:
-                            missing = path.absolute()
-                            expanded.append(
-                                _Candidate(
-                                    missing,
-                                    explicit=False,
-                                    error=PathNotFoundError(missing),
-                                )
-                            )
-                            continue
-
-                        error = None
-                        if not self._is_authorized(child, authorized_roots):
-                            error = PathNotAuthorizedError(child)
-                        expanded.append(
-                            _Candidate(child, explicit=False, error=error)
+                    if resolved.is_file():
+                        expanded = [_Candidate(resolved, explicit=True)]
+                    else:
+                        children = (
+                            resolved.rglob("*") if recursive else resolved.iterdir()
                         )
+                        child_paths = sorted(
+                            (path for path in children if path.is_file()),
+                            key=lambda path: self._sort_key(resolved, path),
+                        )
+                        expanded = []
+                        for path in child_paths:
+                            try:
+                                child = path.resolve(strict=True)
+                            except FileNotFoundError:
+                                missing = path.absolute()
+                                expanded.append(
+                                    _Candidate(
+                                        missing,
+                                        explicit=False,
+                                        error=PathNotFoundError(missing),
+                                    )
+                                )
+                                continue
+
+                            error = None
+                            if not self._is_authorized(child, authorized_roots):
+                                error = PathNotAuthorizedError(child)
+                            expanded.append(
+                                _Candidate(child, explicit=False, error=error)
+                            )
 
             for candidate in expanded:
                 if candidate.path not in seen_paths:

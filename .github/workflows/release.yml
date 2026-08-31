@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  PYTHONPATH: tools/week8
+
 jobs:
   public-source:
     name: Validate and package public source
