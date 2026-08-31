@@ -38,7 +38,9 @@ jobs:
       - name: Run open-source compliance tests
         run: uv run --project backend python -m pytest tools/compliance/tests -q
       - name: Run deterministic demo-material tests
-        run: uv run --project backend python -m pytest tools/demo/tests -q
+        run: >-
+          uv run --project tools/week8 --locked python -m pytest
+          tools/demo/tests -q
 
   windows-policy:
     name: Windows launcher and packaging policy

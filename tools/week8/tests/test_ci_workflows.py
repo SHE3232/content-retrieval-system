@@ -44,3 +44,11 @@ def test_week8_workflow_commands_can_import_local_validator_modules() -> None:
     for workflow in (CI, RELEASE):
         source = workflow.read_text(encoding="utf-8")
         assert "PYTHONPATH: tools/week8" in source
+
+
+def test_demo_material_tests_use_week8_dependency_environment() -> None:
+    for workflow in (CI, RELEASE):
+        source = workflow.read_text(encoding="utf-8")
+        assert source.count(
+            "uv run --project tools/week8 --locked python -m pytest"
+        ) >= 2

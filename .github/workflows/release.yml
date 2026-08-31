@@ -30,13 +30,20 @@ jobs:
           set -euo pipefail
           git rev-parse HEAD
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
-      - name: Validate public source
-        run: |
-          uv sync --project backend --locked
-          uv run --project tools/week8 --locked python -m pytest \
-            tools/week8/tests -q
-          uv run --project backend python -m pytest \
-            tools/compliance/tests tools/demo/tests -q --import-mode=importlib
+      - name: Install locked public dependencies
+        run: uv sync --project backend --locked
+      - name: Validate Week 8 source and release policy
+        run: >-
+          uv run --project tools/week8 --locked python -m pytest
+          tools/week8/tests -q
+      - name: Validate open-source compliance
+        run: >-
+          uv run --project backend python -m pytest
+          tools/compliance/tests -q --import-mode=importlib
+      - name: Validate deterministic demo materials
+        run: >-
+          uv run --project tools/week8 --locked python -m pytest
+          tools/demo/tests -q --import-mode=importlib
       - name: Build source archive and hashes
         shell: bash
         run: |
