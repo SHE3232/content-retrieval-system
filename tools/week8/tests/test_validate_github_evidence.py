@@ -47,6 +47,13 @@ def test_accepts_complete_public_release_evidence() -> None:
     assert result["asset_count"] == 1
 
 
+def test_accepts_actual_public_repository_slug() -> None:
+    evidence = copy.deepcopy(_evidence())
+    evidence["repository_url"] = "https://github.com/SHE3232/content-retrieval-system"
+    result = validate_github_evidence(evidence, _manifest(), source_commit=COMMIT)
+    assert result["status"] == "PASS"
+
+
 def test_rejects_research_asset() -> None:
     evidence = copy.deepcopy(_evidence())
     evidence["release_assets"][0]["distribution_class"] = "research-only"

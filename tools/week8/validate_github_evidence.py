@@ -9,7 +9,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-EXPECTED_REPOSITORY = "offline-accessible-multimodal-retrieval"
+# Keep the historical project slug for backwards-compatible evidence, while
+# accepting the actual public repository created for v1.0.0.
+EXPECTED_REPOSITORIES = (
+    "offline-accessible-multimodal-retrieval",
+    "content-retrieval-system",
+)
 REQUIRED_ANONYMOUS_CHECKS = (
     "readme",
     "license",
@@ -43,9 +48,8 @@ def validate_github_evidence(
     if manifest.get("source_commit") != source_commit:
         raise ValueError("delivery manifest is not bound to the frozen commit")
     repository_url = str(evidence.get("repository_url", ""))
-    if not re.fullmatch(
-        rf"https://github\.com/[^/]+/{EXPECTED_REPOSITORY}", repository_url
-    ):
+    repository_pattern = "|".join(re.escape(name) for name in EXPECTED_REPOSITORIES)
+    if not re.fullmatch(rf"https://github\.com/[^/]+/(?:{repository_pattern})", repository_url):
         raise ValueError("unexpected or missing public repository URL")
     if evidence.get("tag") != "v1.0.0" or evidence.get("tag_commit") != source_commit:
         raise ValueError("v1.0.0 tag must point to the frozen commit")
